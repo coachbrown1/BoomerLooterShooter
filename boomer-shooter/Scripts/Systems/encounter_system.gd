@@ -6,112 +6,7 @@ const THREAT_BASE: float = 3.0
 const THREAT_DEPTH_SCALE: float = 2.0
 const THREAT_SIZE_SCALE: float = 0.05
 
-# Enemy definitions: { scene, cost, biomes[], min_floor }
-const ENEMY_ROSTER: Array = [
-	{
-		"scene": "res://Scenes/Enemies/skeleton.tscn",
-		"sprite": "res://Assets/Enemies/Skeleton/skeleton_spritesheet.png",
-		"cost": 1.0,
-		"biomes": ["crypt"],
-		"min_floor": 1,
-		"name": "Skeleton",
-		"scale": 1.4,
-	},
-	{
-		"scene": "res://Scenes/Enemies/goblin_melee.tscn",
-		"sprite": "res://Assets/Enemies/GoblinForward/goblin_forward_spritesheet.png",
-		"cost": 1.0,
-		"biomes": ["fungal", "crypt"],
-		"min_floor": 1,
-		"name": "Goblin",
-		"scale": 1.15,
-		"hframes": 8,
-	},
-	{
-		"scene": "res://Scenes/Enemies/goblin_archer.tscn",
-		"sprite": "res://Assets/Enemies/GoblinArcherForward/goblin_archer_forward_spritesheet.png",
-		"cost": 1.5,
-		"biomes": ["fungal", "crypt"],
-		"min_floor": 1,
-		"name": "GoblinArcher",
-		"scale": 1.15,
-		"hframes": 8,
-	},
-	{
-		"scene": "res://Scenes/Enemies/kobold.tscn",
-		"sprite": "res://Assets/Enemies/Kobold/kobold_spritesheet.png",
-		"cost": 1.0,
-		"biomes": ["lava", "crypt"],
-		"min_floor": 1,
-		"name": "Kobold",
-		"scale": 1.1,
-	},
-	{
-		"scene": "res://Scenes/Enemies/orc.tscn",
-		"sprite": "res://Assets/Enemies/Orc/orc_spritesheet.png",
-		"cost": 2.0,
-		"biomes": ["fungal", "crypt"],
-		"min_floor": 2,
-		"name": "Orc",
-		"scale": 1.7,
-	},
-	{
-		"scene": "res://Scenes/Enemies/cultist.tscn",
-		"sprite": "res://Assets/Enemies/Cultist/cultist_spritesheet.png",
-		"cost": 2.0,
-		"biomes": ["crypt"],
-		"min_floor": 2,
-		"name": "Cultist",
-		"scale": 1.4,
-	},
-	{
-		"scene": "res://Scenes/Enemies/flaming_skull.tscn",
-		"sprite": "res://Assets/Enemies/FlamingSkull/flaming_skull_spritesheet.png",
-		"cost": 2.0,
-		"biomes": ["lava"],
-		"min_floor": 2,
-		"name": "FlamingSkull",
-		"scale": 1.0,
-	},
-	{
-		"scene": "res://Scenes/Enemies/death_knight.tscn",
-		"sprite": "res://Assets/Enemies/DeathKnight/death_knight_spritesheet.png",
-		"cost": 3.0,
-		"biomes": ["crypt"],
-		"min_floor": 3,
-		"name": "DeathKnight",
-		"scale": 1.8,
-	},
-	{
-		"scene": "res://Scenes/Enemies/gargoyle.tscn",
-		"sprite": "res://Assets/Enemies/Gargoyle/gargoyle_spritesheet.png",
-		"cost": 3.0,
-		"biomes": ["crypt", "lava"],
-		"min_floor": 3,
-		"name": "Gargoyle",
-		"scale": 1.5,
-	},
-	{
-		"scene": "res://Scenes/Enemies/fungal_cube.tscn",
-		"sprite": "res://Assets/Enemies/FungalCube/fungalcube_spritesheet.png",
-		"cost": 3.0,
-		"biomes": ["fungal"],
-		"min_floor": 3,
-		"name": "FungalCube",
-		"scale": 2.2,
-		"hframes": 8,
-	},
-	{
-		"scene": "res://Scenes/Enemies/spore_husk.tscn",
-		"sprite": "res://Assets/Enemies/SporeHusk/sporehusk_spritesheet.png",
-		"cost": 1.5,
-		"biomes": ["fungal"],
-		"min_floor": 1,
-		"name": "SporeHusk",
-		"scale": 1.5,
-		"hframes": 8,
-	},
-]
+const FALLBACK_ROSTER_DATA: Resource = preload("res://Data/enemies/fallback_enemy_roster.tres")
 
 var rng: RandomNumberGenerator
 
@@ -133,9 +28,17 @@ func populate_room(room: RoomData, floor_num: int, parent: Node3D, biome_data: R
 		budget = ceil(budget * 0.5)
 
 	# Filter valid enemies for this biome + floor
-	var roster: Array = ENEMY_ROSTER
+	var roster: Array = []
 	if _has_biome_data(biome_data) and not biome_data.enemy_roster.is_empty():
 		roster = biome_data.enemy_roster
+	else:
+		push_error("EncounterSystem: Missing or empty enemy_roster for biome '%s' on floor %d. Using fallback roster data table." % [room.biome, floor_num])
+		if FALLBACK_ROSTER_DATA != null and not FALLBACK_ROSTER_DATA.enemy_roster.is_empty():
+			roster = FALLBACK_ROSTER_DATA.enemy_roster
+
+	if roster.is_empty():
+		push_error("EncounterSystem: Fallback enemy roster is also empty. No enemies will spawn.")
+		return
 
 	var valid: Array = []
 	for entry in roster:

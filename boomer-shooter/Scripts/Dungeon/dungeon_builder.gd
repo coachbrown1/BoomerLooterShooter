@@ -278,12 +278,33 @@ func _get_materials(biome: String, surface: String, biome_data: Resource = null)
 			var tex = load(tex_path)
 			if tex:
 				mat.albedo_texture = tex
+				
+				# Enable emission to make the brightest parts of the tiles 'pop'
+				mat.emission_enabled = true
+				mat.emission_texture = tex
+				mat.emission_operator = StandardMaterial3D.EMISSION_OP_MULTIPLY
+				
+				var emission_energy := 0.2
 				if biome == "fungal":
+					emission_energy = 0.4
+					mat.emission = Color(0.4, 0.8, 0.5) # Subtler green
 					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 					mat.uv1_scale = Vector3(1.0, 1.0, 1.0)
+				elif biome == "lava":
+					emission_energy = 0.7
+					mat.emission = Color(1.0, 0.2, 0.0) # Hot orange tint
+					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
+				elif biome == "crypt":
+					emission_energy = 0.15
+					mat.emission = Color(0.2, 0.3, 0.6) # Very subtle blue highlights
+					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
 				else:
 					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
+				
+				mat.emission_energy_multiplier = emission_energy
 		mats.append(mat)
 
 	if mats.is_empty():
