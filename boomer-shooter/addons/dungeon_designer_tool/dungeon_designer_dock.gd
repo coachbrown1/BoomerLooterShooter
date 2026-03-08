@@ -11,15 +11,18 @@ var _status_label: Label
 var _biome_selector: OptionButton
 var _manager_inspector: EditorInspector
 var _biome_inspector: EditorInspector
+var _preview_room_selector: OptionButton
 var _grid_min_spin: SpinBox
 var _grid_max_spin: SpinBox
 var _room_size_spin: SpinBox
 var _corridor_width_spin: SpinBox
 var _corridor_length_spin: SpinBox
+var _seed_spin: SpinBox
 
 var _biome_db: Resource = null
 var _biomes: Array = []
 var _selected_biome: Resource = null
+var _preview_targets: Array = []
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
@@ -62,6 +65,8 @@ func _build_ui() -> void:
 	layout_action_row.add_child(_make_button("Open Dungeon Scene", _on_open_dungeon_scene_pressed))
 	layout_action_row.add_child(_make_button("Refresh", _on_refresh_pressed))
 	layout_action_row.add_child(_make_button("Save Open Scene", _on_save_scene_pressed))
+	layout_action_row.add_child(_make_button("Create Preview", _on_create_preview_pressed))
+	layout_action_row.add_child(_make_button("Clear Preview", _on_clear_preview_pressed))
 	layout_tab.add_child(layout_action_row)
 
 	var quick_layout := PanelContainer.new()
@@ -82,11 +87,24 @@ func _build_ui() -> void:
 	_room_size_spin = _add_spin_row(quick_layout_grid, "Room Size (tiles)", 3, 200, 1)
 	_corridor_width_spin = _add_spin_row(quick_layout_grid, "Corridor Width (tiles)", 1, 20, 1)
 	_corridor_length_spin = _add_spin_row(quick_layout_grid, "Corridor Length (tiles)", 1, 200, 1)
+	_seed_spin = _add_spin_row(quick_layout_grid, "Generation Seed (0=random)", 0, 2147483647, 1)
 
 	var quick_layout_actions := HBoxContainer.new()
 	quick_layout_actions.add_child(_make_button("Load From Scene", _on_load_layout_pressed))
 	quick_layout_actions.add_child(_make_button("Apply + Save Layout", _on_apply_layout_pressed))
 	quick_layout_root.add_child(quick_layout_actions)
+
+	var preview_nav_header := Label.new()
+	preview_nav_header.text = "Preview Room Jump (START/EXIT + handcrafted)"
+	quick_layout_root.add_child(preview_nav_header)
+
+	var preview_nav_row := HBoxContainer.new()
+	_preview_room_selector = OptionButton.new()
+	_preview_room_selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	preview_nav_row.add_child(_preview_room_selector)
+	preview_nav_row.add_child(_make_button("Refresh Rooms", _on_refresh_preview_rooms_pressed))
+	preview_nav_row.add_child(_make_button("Go To Room", _on_go_to_preview_room_pressed))
+	quick_layout_root.add_child(preview_nav_row)
 
 	var manager_header := Label.new()
 	manager_header.text = "Layout Inspector (All DungeonManager Fields)"
@@ -158,10 +176,12 @@ func _refresh_manager_section() -> void:
 	if manager == null:
 		_manager_inspector.edit(null)
 		_load_layout_from_scene_defaults()
+		_clear_preview_target_list()
 		_set_status("Open %s to edit layout settings." % DUNGEON_SCENE_PATH)
 		return
 	_manager_inspector.edit(manager)
 	_pull_layout_from_manager(manager)
+	_refresh_preview_room_targets(manager)
 	_set_status("DungeonManager loaded from edited scene.")
 
 func _refresh_biome_section() -> void:
@@ -241,14 +261,10 @@ func _on_load_layout_pressed() -> void:
 func _on_apply_layout_pressed() -> void:
 	if plugin == null:
 		return
-	var manager := _get_dungeon_manager_from_edited_scene()
+	var manager := await _ensure_open_manager()
 	if manager == null:
-		plugin.get_editor_interface().open_scene_from_path(DUNGEON_SCENE_PATH)
-		await get_tree().process_frame
-		manager = _get_dungeon_manager_from_edited_scene()
-		if manager == null:
-			_set_status("Could not load DungeonManager from scene.", true)
-			return
+		_set_status("Could not load DungeonManager from scene.", true)
+		return
 
 	_push_layout_to_manager(manager)
 	var err := plugin.get_editor_interface().save_scene()
@@ -256,6 +272,87 @@ func _on_apply_layout_pressed() -> void:
 		_set_status("Applied layout values and saved %s." % DUNGEON_SCENE_PATH)
 	else:
 		_set_status("Apply succeeded but save failed with error %d." % err, true)
+
+func _on_create_preview_pressed() -> void:
+	if plugin == null:
+		return
+	var manager := await _ensure_open_manager()
+	if manager == null:
+		_set_status("Could not load DungeonManager from scene.", true)
+		return
+
+	_push_layout_to_manager(manager)
+
+	var seed := int(manager.get("generation_seed"))
+	if seed == 0:
+		seed = int(Time.get_unix_time_from_system()) ^ int(Time.get_ticks_usec() & 0x7fffffff)
+		if seed == 0:
+			seed = 1
+		manager.set("generation_seed", seed)
+		_seed_spin.value = seed
+
+	manager.call("generate_floor", int(manager.get("floor_number")), true)
+	await get_tree().process_frame
+
+	var err := plugin.get_editor_interface().save_scene()
+	if err == OK:
+		_refresh_preview_room_targets(manager)
+		_set_status("Preview generated with seed %d. Press Play to run this exact layout." % seed)
+	else:
+		_set_status("Preview generated, but save failed with error %d." % err, true)
+
+func _on_clear_preview_pressed() -> void:
+	if plugin == null:
+		return
+	var manager := await _ensure_open_manager()
+	if manager == null:
+		_set_status("Could not load DungeonManager from scene.", true)
+		return
+
+	if manager.has_method("clear_editor_preview"):
+		manager.call("clear_editor_preview")
+	else:
+		var nav_region: Node = manager.get_node_or_null("NavigationRegion3D")
+		if nav_region != null:
+			for child in nav_region.get_children():
+				child.queue_free()
+
+	await get_tree().process_frame
+	_clear_preview_target_list()
+	_set_status("Preview cleared from editor scene.")
+
+func _on_refresh_preview_rooms_pressed() -> void:
+	var manager := _get_dungeon_manager_from_edited_scene()
+	_refresh_preview_room_targets(manager)
+	if _preview_targets.is_empty():
+		_set_status("No preview room targets found. Generate preview first.", true)
+	else:
+		_set_status("Loaded %d preview room targets." % _preview_targets.size())
+
+func _on_go_to_preview_room_pressed() -> void:
+	if _preview_targets.is_empty():
+		_set_status("No preview room targets found. Generate preview first.", true)
+		return
+	var index := _preview_room_selector.selected
+	if index < 0 or index >= _preview_targets.size():
+		_set_status("Select a room target first.", true)
+		return
+
+	var target: Dictionary = _preview_targets[index]
+	var world_position_variant: Variant = target.get("world_position", Vector3.ZERO)
+	if typeof(world_position_variant) != TYPE_VECTOR3:
+		_set_status("Selected room target is missing a valid world position.", true)
+		return
+	var world_position: Vector3 = world_position_variant
+
+	_move_player_to(world_position)
+	_move_preview_marker(world_position)
+	var focused := _focus_editor_camera(world_position)
+	var label := str(target.get("label", "Room"))
+	if focused:
+		_set_status("Moved to %s." % label)
+	else:
+		_set_status("Moved marker/player to %s. Manually frame in viewport if needed." % label)
 
 func _on_refresh_pressed() -> void:
 	_refresh_all()
@@ -319,6 +416,82 @@ func _set_status(message: String, is_error: bool = false) -> void:
 		color = Color(1.0, 0.45, 0.45, 1.0)
 	_status_label.add_theme_color_override("font_color", color)
 
+func _clear_preview_target_list() -> void:
+	_preview_targets = []
+	if _preview_room_selector != null:
+		_preview_room_selector.clear()
+
+func _refresh_preview_room_targets(manager: Node = null) -> void:
+	_clear_preview_target_list()
+	if manager == null:
+		manager = _get_dungeon_manager_from_edited_scene()
+	if manager == null:
+		return
+	if not manager.has_method("get_editor_preview_room_targets"):
+		return
+
+	var targets_variant: Variant = manager.call("get_editor_preview_room_targets")
+	if typeof(targets_variant) != TYPE_ARRAY:
+		return
+	for target_variant in targets_variant:
+		if typeof(target_variant) != TYPE_DICTIONARY:
+			continue
+		var target: Dictionary = target_variant
+		_preview_targets.append(target)
+		_preview_room_selector.add_item(str(target.get("label", "Room")))
+
+	if not _preview_targets.is_empty():
+		_preview_room_selector.select(0)
+
+func _move_player_to(world_position: Vector3) -> void:
+	if plugin == null:
+		return
+	var root := plugin.get_editor_interface().get_edited_scene_root()
+	if root == null:
+		return
+	var player := root.get_node_or_null("Player")
+	if player is Node3D:
+		var player_node: Node3D = player
+		player_node.global_position = Vector3(world_position.x, 1.0, world_position.z)
+
+func _move_preview_marker(world_position: Vector3) -> void:
+	if plugin == null:
+		return
+	var root := plugin.get_editor_interface().get_edited_scene_root()
+	if root == null:
+		return
+	var marker: Marker3D = root.get_node_or_null("PreviewRoomFocus")
+	if marker == null:
+		marker = Marker3D.new()
+		marker.name = "PreviewRoomFocus"
+		root.add_child(marker)
+	marker.global_position = world_position + Vector3(0.0, 0.5, 0.0)
+	var selection := plugin.get_editor_interface().get_selection()
+	if selection != null:
+		selection.clear()
+		selection.add_node(marker)
+
+func _focus_editor_camera(world_position: Vector3) -> bool:
+	if plugin == null:
+		return false
+	var editor_interface := plugin.get_editor_interface()
+	if editor_interface == null:
+		return false
+	if not editor_interface.has_method("get_editor_viewport_3d"):
+		return false
+	var viewport: Variant = editor_interface.call("get_editor_viewport_3d", 0)
+	if viewport == null:
+		return false
+	if not viewport.has_method("get_camera_3d"):
+		return false
+	var camera_variant: Variant = viewport.call("get_camera_3d")
+	if not (camera_variant is Camera3D):
+		return false
+	var camera: Camera3D = camera_variant
+	camera.global_position = world_position + Vector3(0.0, 22.0, 18.0)
+	camera.look_at(world_position, Vector3.UP)
+	return true
+
 func _load_layout_from_scene_defaults() -> void:
 	var scene := load(DUNGEON_SCENE_PATH) as PackedScene
 	if scene == null:
@@ -339,6 +512,7 @@ func _pull_layout_from_manager(manager: Node) -> void:
 	_room_size_spin.value = int(manager.get("room_size_tiles"))
 	_corridor_width_spin.value = int(manager.get("corridor_width_tiles"))
 	_corridor_length_spin.value = int(manager.get("corridor_length_tiles"))
+	_seed_spin.value = int(manager.get("generation_seed"))
 
 func _push_layout_to_manager(manager: Node) -> void:
 	if manager == null:
@@ -353,6 +527,17 @@ func _push_layout_to_manager(manager: Node) -> void:
 	manager.set("room_size_tiles", int(_room_size_spin.value))
 	manager.set("corridor_width_tiles", int(_corridor_width_spin.value))
 	manager.set("corridor_length_tiles", int(_corridor_length_spin.value))
+	manager.set("generation_seed", int(_seed_spin.value))
+
+func _ensure_open_manager() -> Node:
+	var manager := _get_dungeon_manager_from_edited_scene()
+	if manager != null:
+		return manager
+	if plugin == null:
+		return null
+	plugin.get_editor_interface().open_scene_from_path(DUNGEON_SCENE_PATH)
+	await get_tree().process_frame
+	return _get_dungeon_manager_from_edited_scene()
 
 func _has_property(resource: Resource, property_name: String) -> bool:
 	if resource == null:

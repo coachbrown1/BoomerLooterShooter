@@ -19,3 +19,12 @@ Editor dock for dungeon-focused tuning.
 5. Switch to the `Biome Data` tab and pick a biome.
 6. Edit biome fields (textures, props, lights, handcrafted scene pools, enemy roster).
 7. Click `Save Selected Biome`.
+
+## Preview workflow
+
+1. In `Dungeon Layout`, set `Generation Seed` (or leave `0` to auto-pick one on preview).
+2. Click `Create Preview` to build the level directly in the editor scene.
+3. Inspect the generated level in-editor.
+4. Use `Preview Room Jump` to select START/EXIT/custom rooms and jump focus.
+5. Press Play to run the same layout (seed is saved into the scene).
+6. Click `Clear Preview` to remove generated preview geometry from the editor scene.

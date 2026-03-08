@@ -1,3 +1,4 @@
+@tool
 extends Node3D
 class_name DungeonManager
 
@@ -11,6 +12,7 @@ class_name DungeonManager
 @export var room_size_tiles: int = 20
 @export var corridor_width_tiles: int = 4
 @export var corridor_length_tiles: int = 10
+@export var generation_seed: int = 0
 
 @onready var nav_region: NavigationRegion3D = $NavigationRegion3D
 
@@ -24,6 +26,9 @@ var _spawned_enemy_rooms := {}
 var _last_player_room_id: int = -1
 
 func _ready() -> void:
+	if Engine.is_editor_hint():
+		set_process(false)
+		return
 	set_process(true)
 	generate_floor(floor_number)
 
@@ -41,7 +46,7 @@ func _process(_delta: float) -> void:
 	_last_player_room_id = room_id
 	_spawn_room_and_adjacent(room_id)
 
-func generate_floor(floor_num: int) -> void:
+func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 	floor_number = floor_num
 
 	# Clear old geometry + entities under nav region.
@@ -61,7 +66,7 @@ func generate_floor(floor_num: int) -> void:
 	_generator.room_size_tiles = room_size_tiles
 	_generator.corridor_width_tiles = corridor_width_tiles
 	_generator.corridor_length_tiles = corridor_length_tiles
-	_generator.generate(floor_num)
+	_generator.generate(floor_num, generation_seed)
 	_rooms = _generator.rooms
 
 	var biome_id := "crypt"
@@ -97,6 +102,20 @@ func generate_floor(floor_num: int) -> void:
 	await get_tree().process_frame
 	nav_region.bake_navigation_mesh(false)
 
+	if preview_mode:
+		_build_room_lookup()
+		_encounter = null
+		print(
+			"DungeonManager: Preview generated for floor %d with %d rooms (grid=%dx%d seed=%d)." % [
+				floor_num,
+				_rooms.size(),
+				_generator.sampled_grid_size,
+				_generator.sampled_grid_size,
+				generation_seed,
+			]
+		)
+		return
+
 	_build_room_lookup()
 	_encounter = EncounterSystem.new()
 
@@ -110,13 +129,84 @@ func generate_floor(floor_num: int) -> void:
 	_prime_progressive_enemy_spawning()
 
 	print(
-		"DungeonManager: Floor %d generated with %d rooms (grid=%dx%d)." % [
+		"DungeonManager: Floor %d generated with %d rooms (grid=%dx%d seed=%d)." % [
 			floor_num,
 			_rooms.size(),
 			_generator.sampled_grid_size,
 			_generator.sampled_grid_size,
+			generation_seed,
 		]
 	)
+
+func clear_editor_preview() -> void:
+	for child in nav_region.get_children():
+		child.queue_free()
+	_rooms = []
+	_room_lookup = {}
+	_spawned_enemy_rooms = {}
+	_last_player_room_id = -1
+	_encounter = null
+
+func get_editor_preview_room_targets() -> Array:
+	var targets: Array = []
+	for room_variant in _rooms:
+		var room: RoomData = room_variant
+		if room == null:
+			continue
+		var is_start := room.room_type == RoomData.RoomType.START
+		var is_exit := room.room_type == RoomData.RoomType.EXIT
+		var include := is_start or is_exit or room.has_handcrafted_layout
+		if not include:
+			continue
+
+		var type_name := _room_type_name(room.room_type)
+		var handcrafted_tag := " [custom]" if room.has_handcrafted_layout else ""
+		var label := "%s%s | room %d | lattice (%d,%d)" % [
+			type_name,
+			handcrafted_tag,
+			room.id,
+			room.lattice_coord.x,
+			room.lattice_coord.y,
+		]
+		targets.append({
+			"id": room.id,
+			"label": label,
+			"room_type": int(room.room_type),
+			"lattice_coord": room.lattice_coord,
+			"world_position": room.get_world_center(DungeonBuilder.TILE_SIZE),
+			"is_handcrafted": room.has_handcrafted_layout,
+			"handcrafted_scene_path": room.handcrafted_scene_path,
+		})
+
+	targets.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var a_priority := _room_type_priority(int(a.get("room_type", RoomData.RoomType.NORMAL)))
+		var b_priority := _room_type_priority(int(b.get("room_type", RoomData.RoomType.NORMAL)))
+		if a_priority == b_priority:
+			return int(a.get("id", 0)) < int(b.get("id", 0))
+		return a_priority < b_priority
+	)
+
+	return targets
+
+func _room_type_name(room_type: int) -> String:
+	match room_type:
+		RoomData.RoomType.START:
+			return "START"
+		RoomData.RoomType.EXIT:
+			return "EXIT"
+		RoomData.RoomType.SPECIAL:
+			return "SPECIAL"
+		_:
+			return "NORMAL"
+
+func _room_type_priority(room_type: int) -> int:
+	match room_type:
+		RoomData.RoomType.START:
+			return 0
+		RoomData.RoomType.EXIT:
+			return 1
+		_:
+			return 2
 
 func _update_environment(biome_data: Resource = null) -> void:
 	if _rooms.size() == 0:

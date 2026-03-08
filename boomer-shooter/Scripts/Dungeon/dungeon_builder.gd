@@ -646,8 +646,10 @@ func _place_lights(
 
 func _place_generated_doors(parent: Node3D, doorways: Array, biome_data: Resource = null) -> void:
 	var door_scene_path := "res://Scenes/World/door.tscn"
-	if _has_biome_data(biome_data) and biome_data.door_scene != "":
-		door_scene_path = biome_data.door_scene
+	if biome_data != null:
+		var candidate: String = str(biome_data.get("door_scene"))
+		if candidate != "":
+			door_scene_path = candidate
 	var door_scene = load(door_scene_path)
 	if not door_scene:
 		return
@@ -680,13 +682,15 @@ func _place_generated_doors(parent: Node3D, doorways: Array, biome_data: Resourc
 func _place_generated_doorway_assemblies(parent: Node3D, doorways: Array, biome_data: Resource = null) -> void:
 	var assembly_path := ""
 	var door_scene_path := "res://Scenes/World/door.tscn"
-	if _has_biome_data(biome_data):
-		assembly_path = biome_data.doorway_assembly_scene
-		if biome_data.door_scene != "":
-			door_scene_path = biome_data.door_scene
+	if biome_data != null:
+		var assembly_candidate: String = str(biome_data.get("doorway_assembly_scene"))
+		if assembly_candidate != "":
+			assembly_path = assembly_candidate
+		var door_candidate: String = str(biome_data.get("door_scene"))
+		if door_candidate != "":
+			door_scene_path = door_candidate
 
 	var assembly_scene = load(assembly_path) if assembly_path != "" else null
-	var fallback_door_scene = load(door_scene_path)
 	if assembly_scene == null:
 		# Fallback to legacy door placement if assembly scene is unavailable.
 		_place_generated_doors(parent, doorways, biome_data)
