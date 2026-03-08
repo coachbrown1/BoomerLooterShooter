@@ -1,0 +1,35 @@
+[gd_scene load_steps=4 format=3]
+
+[sub_resource type="BoxMesh" id="BoxMesh_blood"]
+size = Vector3(0.12, 0.12, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="Mat_blood"]
+albedo_color = Color(0.9, 0, 0, 1)
+emission_enabled = true
+emission = Color(0.7, 0, 0, 1)
+
+[sub_resource type="GDScript" id="GDScript_cleanup"]
+script/source = "extends CPUParticles3D
+func _ready():
+	restart()
+	emitting = true
+	await get_tree().create_timer(lifetime + 1.0).timeout
+	queue_free()
+"
+
+[node name="BloodParticles" type="CPUParticles3D"]
+emitting = false
+amount = 20
+one_shot = true
+explosiveness = 1.0
+mesh = SubResource("BoxMesh_blood")
+direction = Vector3(0, 1, 0)
+spread = 65.0
+gravity = Vector3(0, -14, 0)
+initial_velocity_min = 4.0
+initial_velocity_max = 9.0
+scale_amount_min = 0.5
+scale_amount_max = 1.6
+color = Color(1, 0.1, 0.1, 1)
+material_override = SubResource("Mat_blood")
+script = SubResource("GDScript_cleanup")

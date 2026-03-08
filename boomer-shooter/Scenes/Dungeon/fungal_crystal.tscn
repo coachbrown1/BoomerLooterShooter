@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" uid="uid_crystal" path="res://Assets/Environment/Fungal/prop_fungal_crystal.png" id="1_crystal"]
+
+[node name="FungalCrystal" type="Sprite3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+pixel_size = 0.005
+billboard = 0
+texture = ExtResource("1_crystal")
+modulate = Color(1.2, 1, 1.4, 1)

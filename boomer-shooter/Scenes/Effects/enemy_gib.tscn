@@ -1,0 +1,41 @@
+[gd_scene load_steps=4 format=3]
+
+[sub_resource type="BoxMesh" id="BoxMesh_gib"]
+size = Vector3(0.15, 0.15, 0.15)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_gib"]
+size = Vector3(0.15, 0.15, 0.15)
+
+[sub_resource type="StandardMaterial3D" id="Mat_gib"]
+albedo_color = Color(0.6, 0, 0, 1)
+roughness = 0.8
+
+[sub_resource type="GDScript" id="GDScript_gib"]
+script/source = "extends RigidBody3D
+func _ready():
+	# Randomized initial toss
+	var force = Vector3(randf_range(-4, 4), randf_range(4, 9), randf_range(-4, 4))
+	apply_impulse(force)
+	apply_torque_impulse(Vector3(randf(), randf(), randf()) * 0.5)
+	
+	# Scale variation
+	scale = Vector3.ONE * randf_range(0.8, 1.5)
+	
+	await get_tree().create_timer(7.0).timeout
+	var tween = create_tween()
+	tween.tween_property(self, \"scale\", Vector3.ZERO, 1.0)
+	tween.finished.connect(queue_free)
+"
+
+[node name="Gib" type="RigidBody3D"]
+collision_layer = 4
+collision_mask = 1
+mass = 0.5
+script = SubResource("GDScript_gib")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_gib")
+surface_material_override/0 = SubResource("Mat_gib")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("BoxShape3D_gib")

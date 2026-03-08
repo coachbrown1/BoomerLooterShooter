@@ -1,0 +1,44 @@
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_casing"]
+top_radius = 0.015
+bottom_radius = 0.02
+height = 0.08
+radial_segments = 6
+
+[sub_resource type="StandardMaterial3D" id="Mat_casing"]
+albedo_color = Color(0.8, 0.6, 0.2, 1)
+metallic = 1.0
+roughness = 0.3
+
+[sub_resource type="GDScript" id="GDScript_casing"]
+script/source = "extends RigidBody3D
+func _ready():
+	# Randomized initial toss
+	apply_impulse(Vector3(randf_range(-0.5, 0.5), randf_range(1.0, 2.0), randf_range(-0.5, 0.5)))
+	apply_torque_impulse(Vector3(randf(), randf(), randf()) * 0.1)
+	
+	await get_tree().create_timer(10.0).timeout
+	var tween = create_tween()
+	tween.tween_property(self, \"scale\", Vector3.ZERO, 1.0)
+	tween.finished.connect(queue_free)
+"
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_casing"]
+radius = 0.02
+height = 0.08
+
+[node name="ShellCasing" type="RigidBody3D"]
+collision_layer = 4
+collision_mask = 1
+mass = 0.1
+script = SubResource("GDScript_casing")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0)
+mesh = SubResource("CylinderMesh_casing")
+surface_material_override/0 = SubResource("Mat_casing")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0)
+shape = SubResource("CapsuleShape3D_casing")

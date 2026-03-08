@@ -1,0 +1,47 @@
+[gd_scene load_steps=8 format=3 uid="uid://f9a8b7c6d5e4"]
+
+[ext_resource type="Script" path="res://Scripts/Enemies/enemy_chaser.gd" id="1_xxx"]
+[ext_resource type="Script" path="res://Scripts/Components/health_component.gd" id="2_yyy"]
+[ext_resource type="Script" path="res://Scripts/Components/hitbox_component.gd" id="3_zzz"]
+[ext_resource type="Script" path="res://Scripts/Components/billboard_sprite.gd" id="4_www"]
+[ext_resource type="Texture" path="res://Assets/Enemies/Skeleton/skeleton_idle.png" id="5_vvv"]
+[ext_resource type="Material" uid="uid://cx6i4m3cny0m1" path="res://Materials/enemy_outline_material.tres" id="6_mat"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_xx"]
+radius = 0.4
+height = 1.8
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_yy"]
+radius = 0.5
+height = 1.9
+
+[node name="EnemyChaser" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 7
+script = ExtResource("1_xxx")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_xx")
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("2_yyy")
+
+[node name="HitboxComponent" type="Area3D" parent="." node_paths=PackedStringArray("health_component")]
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("3_zzz")
+health_component = NodePath("../HealthComponent")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="HitboxComponent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_yy")
+
+[node name="Sprite3D" type="Sprite3D" parent="."]
+material_override = ExtResource("6_mat")
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0.9, 0)
+texture = ExtResource("5_vvv")
+hframes = 4
+script = ExtResource("4_www")
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]

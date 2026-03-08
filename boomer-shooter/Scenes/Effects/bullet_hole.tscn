@@ -1,0 +1,22 @@
+[gd_scene load_steps=3 format=3 uid="uid://bullet_hole_001"]
+
+[ext_resource type="Texture2D" uid="uid://bullet_hole_tex_001" path="res://Assets/Effects/bullet_hole_0.png" id="1_tex"]
+[ext_resource type="Script" path="res://Scripts/Effects/bullet_hole.gd" id="2_bh"]
+
+[node name="BulletHole" type="Decal"]
+size = Vector3(0.3, 0.8, 0.3)
+albedo_mix = 1.0
+upper_fade = 0.5
+lower_fade = 0.5
+distance_fade_enabled = true
+distance_fade_begin = 35.0
+distance_fade_length = 5.0
+cull_mask = 1048575
+script = ExtResource("2_bh")
+
+[node name="Timer" type="Timer" parent="."]
+wait_time = 15.0
+one_shot = true
+autostart = true
+
+[connection signal="timeout" from="Timer" to="." method="queue_free"]

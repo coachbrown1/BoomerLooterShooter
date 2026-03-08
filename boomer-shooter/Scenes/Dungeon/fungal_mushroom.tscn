@@ -1,0 +1,50 @@
+[gd_scene format=3 uid="uid://8kv1bp8iue40"]
+
+[ext_resource type="Texture2D" uid="uid://64cdld0nh1lb" path="res://Assets/Environment/Fungal/prop_fungal_mushroom_cap.png" id="1_cap"]
+[ext_resource type="Texture2D" uid="uid://oidobtl2rb74" path="res://Assets/Environment/Fungal/prop_fungal_mushroom_stalk.png" id="2_stalk"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cap"]
+albedo_color = Color(0.05, 0.15, 0.05, 1)
+albedo_texture = ExtResource("1_cap")
+emission_enabled = true
+emission = Color(0.1, 0.3, 0.1, 1)
+emission_energy_multiplier = 0.2
+emission_texture = ExtResource("1_cap")
+uv1_scale = Vector3(1.2, 1.2, 1.2)
+uv1_triplanar = true
+texture_filter = 4
+
+[sub_resource type="SphereMesh" id="SphereMesh_cap"]
+material = SubResource("StandardMaterial3D_cap")
+radius = 0.6
+height = 0.4
+
+[node name="FungalMushroom" type="Node3D" unique_id=1473904530]
+
+[node name="Stalk1" type="Sprite3D" parent="." unique_id=38713441]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+modulate = Color(0.7, 1.2, 0.7, 1)
+pixel_size = 0.005
+alpha_cut = 1
+texture_filter = 2
+texture = ExtResource("2_stalk")
+
+[node name="Stalk2" type="Sprite3D" parent="." unique_id=1489869632]
+transform = Transform3D(0.5, 0, 0.866025, 0, 1, 0, -0.866025, 0, 0.5, 0, 0.4, 0)
+modulate = Color(0.7, 1.2, 0.7, 1)
+pixel_size = 0.005
+alpha_cut = 1
+texture_filter = 2
+texture = ExtResource("2_stalk")
+
+[node name="Stalk3" type="Sprite3D" parent="." unique_id=344803058]
+transform = Transform3D(-0.5, 0, 0.866025, 0, 1, 0, -0.866025, 0, -0.5, 0, 0.4, 0)
+modulate = Color(0.7, 1.2, 0.7, 1)
+pixel_size = 0.005
+alpha_cut = 1
+texture_filter = 2
+texture = ExtResource("2_stalk")
+
+[node name="CapMesh" type="MeshInstance3D" parent="." unique_id=1122035038]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0528449, 0)
+mesh = SubResource("SphereMesh_cap")

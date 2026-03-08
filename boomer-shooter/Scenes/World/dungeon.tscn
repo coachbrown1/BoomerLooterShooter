@@ -1,0 +1,50 @@
+[gd_scene load_steps=6 format=3 uid="uid://dungeon_main_001"]
+
+[ext_resource type="Script" path="res://Scripts/Dungeon/dungeon_manager.gd" id="1_dmgr"]
+[ext_resource type="PackedScene" path="res://Scenes/Player/player.tscn" id="2_player"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/hud.tscn" id="3_hud"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+sky_top_color = Color(0.05, 0.03, 0.08, 1)
+sky_horizon_color = Color(0.1, 0.07, 0.12, 1)
+ground_horizon_color = Color(0.05, 0.03, 0.08, 1)
+ground_bottom_color = Color(0.02, 0.01, 0.04, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 2
+ambient_light_color = Color(0.3, 0.2, 0.35, 1)
+ambient_light_energy = 0.1
+tonemap_mode = 2
+glow_enabled = true
+glow_intensity = 0.8
+glow_bloom = 0.15
+fog_enabled = true
+fog_light_color = Color(0.05, 0.03, 0.08, 1)
+fog_density = 0.03
+ssao_enabled = true
+ssao_radius = 1.5
+
+[node name="Dungeon" type="Node3D"]
+script = ExtResource("1_dmgr")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 0, 10, 0)
+light_color = Color(0.8, 0.7, 0.9, 1)
+light_energy = 0.05
+# No shadows for subtle fill
+shadow_enabled = false
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+
+[node name="HUD" parent="." instance=ExtResource("3_hud")]

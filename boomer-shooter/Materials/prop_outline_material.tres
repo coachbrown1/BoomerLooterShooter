@@ -1,0 +1,18 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://b7v8lam0n1p2"]
+
+[ext_resource type="Shader" uid="uid://dqyk77oa5aom7" path="res://Shaders/pixel_outline.gdshader" id="1_a"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_a")
+shader_parameter/outline_color = Color(0, 0, 0, 1)
+shader_parameter/outline_width = 1.0
+shader_parameter/enable_outline = true
+shader_parameter/billboard = true
+shader_parameter/alpha_scissor_threshold = 0.5
+shader_parameter/distance_fade_min = 15.0
+shader_parameter/distance_fade_max = 30.0
+shader_parameter/rim_steepness = 3.0
+shader_parameter/rim_color = Color(1, 1, 1, 1)
+shader_parameter/emission_energy = 2.0
+shader_parameter/enable_emission = false

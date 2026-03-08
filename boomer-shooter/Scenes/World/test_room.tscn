@@ -1,0 +1,62 @@
+[gd_scene load_steps=8 format=3 uid="uid://d9y0z1a2b3c4d"]
+
+[ext_resource type="PackedScene" uid="uid://b8q7t4y0a1m2x" path="res://Scenes/Player/player.tscn" id="1_yyy"]
+[ext_resource type="PackedScene" uid="uid://c7x8w9z1a2b3c" path="res://Scenes/UI/hud.tscn" id="2_zzz"]
+[ext_resource type="PackedScene" uid="uid://f9a8b7c6d5e4" path="res://Scenes/Enemies/enemy_chaser.tscn" id="3_www"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_xx"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+
+[sub_resource type="Sky" id="Sky_yy"]
+sky_material = SubResource("ProceduralSkyMaterial_xx")
+
+[sub_resource type="Environment" id="Environment_zz"]
+background_mode = 2
+sky = SubResource("Sky_yy")
+tonemap_mode = 2
+glow_enabled = true
+glow_intensity = 0.8
+glow_bloom = 0.3
+glow_hdr_threshold = 0.5
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_xx"]
+size = Vector3(50, 1, 50)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
+albedo_color = Color(0.3, 0.3, 0.3, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_xx"]
+material = SubResource("StandardMaterial3D_floor")
+size = Vector3(50, 1, 50)
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_nav"]
+
+[node name="TestRoom" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_zz")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, 0.75, -0.433013, 0, 0, 0)
+shadow_enabled = true
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavigationMesh_nav")
+
+[node name="Floor" type="StaticBody3D" parent="NavigationRegion3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Floor"]
+shape = SubResource("BoxShape3D_xx")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/Floor"]
+mesh = SubResource("BoxMesh_xx")
+
+[node name="Player" parent="." instance=ExtResource("1_yyy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+
+[node name="EnemyChaser" parent="." instance=ExtResource("3_www")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -10)
+
+[node name="HUD" parent="." instance=ExtResource("2_zzz")]

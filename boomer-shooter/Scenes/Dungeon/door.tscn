@@ -1,0 +1,34 @@
+[gd_scene load_steps=5 format=3 uid="uid://b5e6f7g8h9i0j"]
+
+[ext_resource type="Script" path="res://Scripts/Dungeon/door.gd" id="1_door"]
+[ext_resource type="Texture2D" path="res://Assets/Environment/door_wood_fitted.png" id="2_tex"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_door"]
+size = Vector3(2.7, 3.6, 0.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_door"]
+albedo_texture = ExtResource("2_tex")
+texture_repeat = 1
+cull_mode = 2
+uv1_scale = Vector3(1, 1, 1)
+shading_mode = 0
+
+[sub_resource type="QuadMesh" id="QuadMesh_door"]
+size = Vector2(2.7, 3.6)
+material = SubResource("StandardMaterial3D_door")
+
+[node name="Door" type="StaticBody3D"]
+script = ExtResource("1_door")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
+shape = SubResource("BoxShape3D_door")
+
+[node name="Hinge" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.35, 0, 0)
+
+[node name="DoorMesh" type="MeshInstance3D" parent="Hinge"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.35, 1.8, 0)
+mesh = SubResource("QuadMesh_door")
+
+

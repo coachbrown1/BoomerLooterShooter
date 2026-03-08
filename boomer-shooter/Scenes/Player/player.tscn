@@ -1,0 +1,34 @@
+[gd_scene load_steps=4 format=3 uid="uid://b8q7t4y0a1m2x"]
+
+[ext_resource type="Script" path="res://Scripts/Player/player.gd" id="1_xxx"]
+[ext_resource type="PackedScene" uid="uid://e8y7z8w1a2b3c" path="res://Scenes/Weapons/weapon.tscn" id="2_yyy"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_xx"]
+radius = 0.4
+height = 1.8
+
+[node name="Player" type="CharacterBody3D" groups=["player"]]
+collision_layer = 2
+collision_mask = 5
+script = ExtResource("1_xxx")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_xx")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
+
+[node name="FillLight" type="OmniLight3D" parent="Head"]
+light_color = Color(0.8, 0.85, 0.9, 1)
+light_energy = 0.2
+light_specular = 0.2
+shadow_enabled = false
+omni_range = 8.0
+omni_attenuation = 1.0
+
+[node name="WeaponMount" type="Node3D" parent="Head"]
+
+[node name="Weapon" parent="Head/WeaponMount" instance=ExtResource("2_yyy")]

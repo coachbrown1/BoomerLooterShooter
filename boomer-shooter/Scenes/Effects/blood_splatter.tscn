@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://blood_splatter_001"]
+
+[ext_resource type="Texture2D" uid="uid://blood_splatter_tex_001" path="res://Assets/Effects/blood_splatter_0.png" id="1_tex"]
+[ext_resource type="Script" path="res://Scripts/Effects/blood_splatter.gd" id="2_bs"]
+
+[node name="BloodSplatter" type="Decal"]
+size = Vector3(0.8, 1.2, 0.8)
+albedo_mix = 1.0
+upper_fade = 0.5
+lower_fade = 0.5
+distance_fade_enabled = true
+distance_fade_begin = 40.0
+distance_fade_length = 10.0
+cull_mask = 1048575
+script = ExtResource("2_bs")

@@ -1,0 +1,22 @@
+[gd_scene load_steps=4 format=3 uid="uid://b2p3q4r5s6t7"]
+
+[ext_resource type="Script" path="res://Scripts/Projectiles/projectile.gd" id="1_a"]
+[ext_resource type="Texture2D" uid="uid://b3p4q5r6s7t8" path="res://Assets/Projectiles/arrow.png" id="2_b"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_1"]
+radius = 0.3
+
+[node name="Projectile" type="Area3D"]
+collision_layer = 16
+collision_mask = 3
+script = ExtResource("1_a")
+speed = 12.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("SphereShape3D_1")
+
+[node name="Sprite_H" type="Sprite3D" parent="."]
+texture = ExtResource("2_b")
+
+[node name="Sprite_V" type="Sprite3D" parent="."]
+texture = ExtResource("2_b")
