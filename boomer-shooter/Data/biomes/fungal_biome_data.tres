@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="BiomeDungeonData" format=3 uid="uid://d0yoq0pn57sbk"]
 
 [ext_resource type="Script" uid="uid://w367lbpicfnt" path="res://Scripts/Data/biome_dungeon_data.gd" id="1_biome_data"]
-[ext_resource type="PackedScene" path="res://Scenes/Dungeon/Handcrafted/Fungal_Start.tscn" id="2_fungal_start"]
+[ext_resource type="PackedScene" uid="uid://c82820u086h5v" path="res://Scenes/Dungeon/Handcrafted/Fungal_Start.tscn" id="2_fungal_start"]
 
 [resource]
 script = ExtResource("1_biome_data")
@@ -11,8 +11,6 @@ wall_textures = PackedStringArray("res://Assets/Environment/Fungal/fungal_wall_v
 ceiling_textures = PackedStringArray("res://Assets/Environment/Fungal/fungal_ceiling_v1.png", "res://Assets/Environment/Fungal/fungal_ceiling_v2.png", "res://Assets/Environment/Fungal/fungal_ceiling_v3.png")
 doorway_assembly_scene = "res://Scenes/Dungeon/doorway_assembly.tscn"
 handcrafted_start_room_scene = ExtResource("2_fungal_start")
-handcrafted_normal_room_scenes = Array[PackedScene]([])
-handcrafted_normal_room_chance = 0.25
 room_light_color = Color(0.4, 0.9, 0.5, 1)
 room_light_cookie_texture = ""
 corridor_light_color = Color(0.2, 1, 0.5, 1)
@@ -40,7 +38,7 @@ bioluminescent_light_sources = Array[Dictionary]([{
 }])
 mushroom_scene = "res://Scenes/Dungeon/fungal_mushroom.tscn"
 crystal_scene = "res://Scenes/Dungeon/fungal_crystal.tscn"
-fog_light_color = Color(0.02, 0.06, 0.03, 1)
+fog_light_color = Color(0.007857886, 0.44709885, 0.010007731, 1)
 universal_prop_textures = PackedStringArray("res://Assets/Environment/prop_barrel_side.png", "res://Assets/Environment/prop_crate.png", "res://Assets/Environment/prop_skull_pile.png", "res://Assets/Environment/prop_broken_pillar.png")
 biome_prop_textures = PackedStringArray("res://Assets/Environment/Fungal/prop_fungal_slime_pool.png", "res://Assets/Environment/Fungal/prop_fungal_vines.png", "res://Assets/Environment/Fungal/prop_fungal_pods.png", "res://Assets/Environment/Fungal/prop_fungal_moss_rock.png")
 universal_prop_scenes = PackedStringArray("res://Scenes/Props/Common/prop_barrel.tscn", "res://Scenes/Props/Common/prop_crate.tscn", "res://Scenes/Props/Common/propskullpile.tscn", "res://Scenes/Props/Common/propbrokenpillar.tscn")

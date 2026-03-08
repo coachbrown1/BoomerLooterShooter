@@ -284,20 +284,20 @@ func _get_materials(biome: String, surface: String, biome_data: Resource = null)
 				mat.emission_texture = tex
 				mat.emission_operator = StandardMaterial3D.EMISSION_OP_MULTIPLY
 				
-				var emission_energy := 0.2
+				var emission_energy := 0.1
 				if biome == "fungal":
-					emission_energy = 0.4
-					mat.emission = Color(0.4, 0.8, 0.5) # Subtler green
+					emission_energy = 0.2
+					mat.emission = Color(0.3, 0.6, 0.4) # Even subtler green
 					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 					mat.uv1_scale = Vector3(1.0, 1.0, 1.0)
 				elif biome == "lava":
-					emission_energy = 0.7
-					mat.emission = Color(1.0, 0.2, 0.0) # Hot orange tint
+					emission_energy = 0.4
+					mat.emission = Color(0.8, 0.15, 0.0)
 					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
 				elif biome == "crypt":
-					emission_energy = 0.15
-					mat.emission = Color(0.2, 0.3, 0.6) # Very subtle blue highlights
+					emission_energy = 0.08
+					mat.emission = Color(0.15, 0.25, 0.5)
 					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
 				else:
