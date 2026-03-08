@@ -1,0 +1,50 @@
+[gd_scene format=3 uid="uid://r1a2n3g4e5d6"]
+
+[ext_resource type="Script" path="res://Scripts/Enemies/goblin_archer.gd" id="1_a"]
+[ext_resource type="Script" path="res://Scripts/Components/health_component.gd" id="2_b"]
+[ext_resource type="Script" path="res://Scripts/Components/hitbox_component.gd" id="3_c"]
+[ext_resource type="Script" path="res://Scripts/Components/billboard_sprite.gd" id="4_d"]
+[ext_resource type="Texture" path="res://Assets/Enemies/GoblinArcherForward/goblin_archer_forward_spritesheet.png" id="5_e"]
+[ext_resource type="Material" uid="uid://cx6i4m3cny0m1" path="res://Materials/enemy_outline_material.tres" id="6_mat"]
+
+[sub_resource type="CapsuleShape3D" id="1"]
+radius = 0.6
+height = 2.7
+
+[sub_resource type="CapsuleShape3D" id="2"]
+radius = 0.75
+height = 2.85
+
+[node name="GoblinArcher" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 7
+script = ExtResource("1_a")
+move_speed = 2.5
+windup_time = 0.7
+attack_range = 15.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 0)
+shape = SubResource("1")
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("2_b")
+
+[node name="HitboxComponent" type="Area3D" parent="." node_paths=PackedStringArray("health_component")]
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("3_c")
+health_component = NodePath("../HealthComponent")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="HitboxComponent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 0)
+shape = SubResource("2")
+
+[node name="Sprite3D" type="Sprite3D" parent="."]
+material_override = ExtResource("6_mat")
+texture = ExtResource("5_e")
+hframes = 8
+script = ExtResource("4_d")
+bounce_walk_mode = true
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
