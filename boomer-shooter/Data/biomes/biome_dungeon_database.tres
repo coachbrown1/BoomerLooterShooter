@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="BiomeDungeonDatabase" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Data/biome_dungeon_database.gd" id="1_db"]
+[ext_resource type="Resource" path="res://Data/biomes/crypt_biome_data.tres" id="2_crypt"]
+[ext_resource type="Resource" path="res://Data/biomes/fungal_biome_data.tres" id="3_fungal"]
+[ext_resource type="Resource" path="res://Data/biomes/lava_biome_data.tres" id="4_lava"]
+
+[resource]
+script = ExtResource("1_db")
+biomes = [ExtResource("2_crypt"), ExtResource("3_fungal"), ExtResource("4_lava")]

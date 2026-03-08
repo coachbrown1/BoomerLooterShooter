@@ -120,7 +120,7 @@ func _init() -> void:
 	rng.randomize()
 
 # Populate a room with enemies — returns Array of instanced nodes (not yet added to tree)
-func populate_room(room: RoomData, floor_num: int, parent: Node3D) -> void:
+func populate_room(room: RoomData, floor_num: int, parent: Node3D, biome_data: Resource = null) -> void:
 	# Skip start room
 	if room.room_type == RoomData.RoomType.START:
 		return
@@ -133,15 +133,19 @@ func populate_room(room: RoomData, floor_num: int, parent: Node3D) -> void:
 		budget = ceil(budget * 0.5)
 
 	# Filter valid enemies for this biome + floor
+	var roster: Array = ENEMY_ROSTER
+	if _has_biome_data(biome_data) and not biome_data.enemy_roster.is_empty():
+		roster = biome_data.enemy_roster
+
 	var valid: Array = []
-	for entry in ENEMY_ROSTER:
-		if floor_num >= entry["min_floor"] and room.biome in entry["biomes"]:
+	for entry in roster:
+		if _entry_matches_room(entry, room.biome, floor_num):
 			valid.append(entry)
 
 	# Fallback: if no biome match, use anything available for this floor
 	if valid.is_empty():
-		for entry in ENEMY_ROSTER:
-			if floor_num >= entry["min_floor"]:
+		for entry in roster:
+			if floor_num >= int(entry.get("min_floor", 1)):
 				valid.append(entry)
 
 	if valid.is_empty():
@@ -190,6 +194,22 @@ func populate_room(room: RoomData, floor_num: int, parent: Node3D) -> void:
 		# Random position within the room
 		var spawn_pos := _random_room_pos(room)
 		enemy.global_position = spawn_pos
+
+func _entry_matches_room(entry: Dictionary, room_biome: String, floor_num: int) -> bool:
+	if floor_num < int(entry.get("min_floor", 1)):
+		return false
+	var biomes: Variant = entry.get("biomes", [])
+	if typeof(biomes) == TYPE_ARRAY and biomes.size() > 0:
+		return room_biome in biomes
+	return true
+
+func _has_biome_data(biome_data: Resource) -> bool:
+	if biome_data == null:
+		return false
+	for p in biome_data.get_property_list():
+		if typeof(p) == TYPE_DICTIONARY and str(p.get("name", "")) == "enemy_roster":
+			return true
+	return false
 
 func _random_room_pos(room: RoomData) -> Vector3:
 	const TILE_SIZE := 3.0

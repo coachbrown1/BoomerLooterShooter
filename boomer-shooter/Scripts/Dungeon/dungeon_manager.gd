@@ -2,6 +2,7 @@ extends Node3D
 class_name DungeonManager
 
 @export var floor_number: int = 1
+@export var biome_database: Resource = preload("res://Data/biomes/biome_dungeon_database.tres")
 
 @onready var nav_region: NavigationRegion3D = $NavigationRegion3D
 
@@ -22,16 +23,20 @@ func generate_floor(floor_num: int) -> void:
 	_generator = DungeonGenerator.new()
 	_generator.generate(floor_num)
 	_rooms = _generator.rooms
+	var biome_id := "crypt"
+	if _rooms.size() > 0:
+		biome_id = _rooms[0].biome
+	var biome_data = _get_biome_data(biome_id)
 	
-	_update_environment()
+	_update_environment(biome_data)
 
 	# Build 3D geometry inside the NavigationRegion3D
 	_builder = DungeonBuilder.new()
-	_builder.build(_generator.tile_grid, _rooms, _generator.corridors, _generator.doorways, nav_region)
+	_builder.build(_generator.tile_grid, _rooms, _generator.corridors, _generator.doorways, nav_region, biome_data)
 
 	# Place props
 	var prop_placer = PropPlacer.new()
-	prop_placer.populate(nav_region, _rooms, _generator.tile_grid, _generator.rng)
+	prop_placer.populate(nav_region, _rooms, _generator.tile_grid, _generator.rng, biome_data)
 
 	# Bake navigation mesh
 	var nav_mesh := NavigationMesh.new()
@@ -51,24 +56,28 @@ func generate_floor(floor_num: int) -> void:
 	# Spawn enemies in each room
 	_encounter = EncounterSystem.new()
 	for room in _rooms:
-		_encounter.populate_room(room, floor_num, nav_region)
+		_encounter.populate_room(room, floor_num, nav_region, biome_data)
 
 	# Place player at start room
 	_place_player()
 
 	# Place exit portal in exit room
-	_place_exit()
+	_place_exit(biome_data)
 
 	print("DungeonManager: Floor %d generated with %d rooms." % [floor_num, _rooms.size()])
 
-func _update_environment() -> void:
+func _update_environment(biome_data: Resource = null) -> void:
 	if _rooms.size() == 0:
 		return
 		
 	var env = $WorldEnvironment.environment
 	if not env: return
-	
 	var biome = _rooms[0].biome
+	if biome_data and biome_data.has_method("get"):
+		var fog_color: Variant = biome_data.get("fog_light_color")
+		if typeof(fog_color) == TYPE_COLOR:
+			env.fog_light_color = fog_color
+			return
 	if biome == "crypt":
 		env.fog_light_color = Color(0.05, 0.03, 0.08)
 	elif biome == "fungal":
@@ -90,7 +99,7 @@ func _place_player() -> void:
 		pos.y = 1.0
 		player.global_position = pos
 
-func _place_exit() -> void:
+func _place_exit(biome_data: Resource = null) -> void:
 	var exit_room: RoomData = null
 	for r in _rooms:
 		if r.room_type == RoomData.RoomType.EXIT:
@@ -100,7 +109,12 @@ func _place_exit() -> void:
 		return
 
 	# Load and instance the exit portal scene
-	var portal_tex = load("res://Assets/Environment/exit_portal.png")
+	var portal_tex_path := "res://Assets/Environment/exit_portal.png"
+	if biome_data and biome_data.has_method("get"):
+		var candidate: String = str(biome_data.get("exit_portal_texture"))
+		if candidate != "":
+			portal_tex_path = candidate
+	var portal_tex = load(portal_tex_path)
 	if not portal_tex:
 		return
 
@@ -128,3 +142,10 @@ func _on_exit_entered(body: Node3D) -> void:
 		floor_number += 1
 		print("Descending to floor %d..." % floor_number)
 		generate_floor(floor_number)
+
+func _get_biome_data(biome_id: String) -> Resource:
+	if biome_database == null:
+		return null
+	if biome_database.has_method("get_biome"):
+		return biome_database.call("get_biome", biome_id)
+	return null

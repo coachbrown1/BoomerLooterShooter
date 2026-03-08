@@ -13,9 +13,9 @@ const TILE_WALL: int = 0
 const TILE_FLOOR: int = 1
 
 # -------------------------------------------------------
-# Biome texture paths
+# Default biome texture paths (fallback when biome data table is missing)
 # -------------------------------------------------------
-const BIOME_TEXTURES := {
+const DEFAULT_BIOME_TEXTURES := {
 	"crypt": {
 		"floor":   ["res://Assets/Environment/Crypt/crypt_floor_v1.png", "res://Assets/Environment/Crypt/crypt_floor_v2.png", "res://Assets/Environment/Crypt/crypt_floor_v3.png"],
 		"wall":    ["res://Assets/Environment/Crypt/crypt_wall_v1.png", "res://Assets/Environment/Crypt/crypt_wall_v2.png", "res://Assets/Environment/Crypt/crypt_wall_v3.png"],
@@ -33,17 +33,20 @@ const BIOME_TEXTURES := {
 	},
 }
 
-const DOORWAY_ASSEMBLY_SCENE := "res://Scenes/Dungeon/doorway_assembly.tscn"
-const FUNGAL_MUSHROOM_SCENE := "res://Scenes/Dungeon/fungal_mushroom.tscn"
-const FUNGAL_CRYSTAL_SCENE := "res://Scenes/Dungeon/fungal_crystal.tscn"
-
 # Cached materials per biome
 var _mat_cache := {}
 
 # -------------------------------------------------------
 # Main build entry
 # -------------------------------------------------------
-func build(tile_grid: Array, rooms: Array, corridors: Array, doorways: Array, parent: Node3D) -> void:
+func build(
+	tile_grid: Array,
+	rooms: Array,
+	corridors: Array,
+	doorways: Array,
+	parent: Node3D,
+	biome_data: Resource = null
+) -> void:
 	var grid_w: int = tile_grid.size()
 	var grid_h: int = tile_grid[0].size() if grid_w > 0 else 0
 
@@ -52,9 +55,9 @@ func build(tile_grid: Array, rooms: Array, corridors: Array, doorways: Array, pa
 	if rooms.size() > 0:
 		biome = rooms[0].biome
 
-	var mats_floor   := _get_materials(biome, "floor")
-	var mats_wall    := _get_materials(biome, "wall")
-	var mats_ceiling := _get_materials(biome, "ceiling")
+	var mats_floor   := _get_materials(biome, "floor", biome_data)
+	var mats_wall    := _get_materials(biome, "wall", biome_data)
+	var mats_ceiling := _get_materials(biome, "ceiling", biome_data)
 	var room_tile_owner := _build_room_tile_owner(rooms)
 	var corridor_tile_owner := _build_corridor_tile_owner(corridors)
 	var doorway_opening_owner := _build_doorway_opening_owner(doorways)
@@ -182,8 +185,8 @@ func build(tile_grid: Array, rooms: Array, corridors: Array, doorways: Array, pa
 	geo_root.add_child(wall_col)
 
 	# Post-processing: Place doorways and lights
-	_place_generated_doorway_assemblies(geo_root, doorways)
-	_place_lights(geo_root, rooms, tile_grid, biome, doorway_opening_owner)
+	_place_generated_doorway_assemblies(geo_root, doorways, biome_data)
+	_place_lights(geo_root, rooms, tile_grid, biome, doorway_opening_owner, biome_data)
 
 # -------------------------------------------------------
 # Quad helpers
@@ -262,18 +265,13 @@ func _add_wall_quad(
 # -------------------------------------------------------
 # Material cache
 # -------------------------------------------------------
-func _get_materials(biome: String, surface: String) -> Array:
-	var key := biome + "_" + surface
+func _get_materials(biome: String, surface: String, biome_data: Resource = null) -> Array:
+	var tex_paths: Array = _get_surface_texture_paths(biome, surface, biome_data)
+	var key := biome + "_" + surface + "_" + "|".join(tex_paths)
 	if _mat_cache.has(key):
 		return _mat_cache[key]
 
 	var mats = []
-	var paths: Dictionary = BIOME_TEXTURES.get(biome, BIOME_TEXTURES["crypt"])
-	var tex_paths: Array = paths.get(surface, [])
-	
-	if typeof(tex_paths) != TYPE_ARRAY:
-		tex_paths = [tex_paths] # fallback if it was a single string earlier
-		
 	for tex_path in tex_paths:
 		var mat := StandardMaterial3D.new()
 		if tex_path != "":
@@ -293,6 +291,21 @@ func _get_materials(biome: String, surface: String) -> Array:
 
 	_mat_cache[key] = mats
 	return mats
+
+func _get_surface_texture_paths(biome: String, surface: String, biome_data: Resource = null) -> Array:
+	if _has_biome_data(biome_data):
+		match surface:
+			"floor":
+				if biome_data.floor_textures.size() > 0:
+					return biome_data.floor_textures
+			"wall":
+				if biome_data.wall_textures.size() > 0:
+					return biome_data.wall_textures
+			"ceiling":
+				if biome_data.ceiling_textures.size() > 0:
+					return biome_data.ceiling_textures
+	var paths: Dictionary = DEFAULT_BIOME_TEXTURES.get(biome, DEFAULT_BIOME_TEXTURES["crypt"])
+	return paths.get(surface, [])
 
 func _build_room_tile_owner(rooms: Array) -> Dictionary:
 	var owner := {}
@@ -362,20 +375,63 @@ func _make_fungal_corridor_profile(floor_count: int, wall_count: int, ceiling_co
 # -------------------------------------------------------
 # Decorators: Doors and Lights
 # -------------------------------------------------------
-func _place_lights(parent: Node3D, rooms: Array, tile_grid: Array, biome: String, doorway_owner: Dictionary) -> void:
-	var room_color: Color
-	if biome == "crypt":
-		room_color = Color(0.9, 0.75, 0.5)
-	elif biome == "fungal":
-		room_color = Color(0.4, 0.9, 0.5)
-	else: # lava
-		room_color = Color(1.0, 0.4, 0.15)
+func _place_lights(
+	parent: Node3D,
+	rooms: Array,
+	tile_grid: Array,
+	biome: String,
+	doorway_owner: Dictionary,
+	biome_data: Resource = null
+) -> void:
+	var room_color: Color = Color(0.9, 0.75, 0.5)
+	var room_cookie_path := "res://Assets/Effects/cookie_grate.png"
+	var use_bioluminescent_props := biome == "fungal"
+	var corridor_color := Color(1.0, 0.6, 0.2) if biome == "crypt" else Color(1.0, 0.35, 0.1)
+	var corridor_energy := 0.5
+	var corridor_range := 6.0
+	var corridor_height_ratio := 0.6
+	var corridor_step := 4
+	var corridor_chance := 0.3
+	var bioluminescent_sources: Array = []
+
+	if _has_biome_data(biome_data):
+		room_color = biome_data.room_light_color
+		room_cookie_path = biome_data.room_light_cookie_texture
+		use_bioluminescent_props = biome_data.use_bioluminescent_props_for_room_lights
+		corridor_color = biome_data.corridor_light_color
+		corridor_energy = biome_data.corridor_light_energy
+		corridor_range = biome_data.corridor_light_range
+		corridor_height_ratio = biome_data.corridor_light_height
+		corridor_step = maxi(1, biome_data.corridor_light_step)
+		corridor_chance = clampf(biome_data.corridor_light_chance, 0.0, 1.0)
+		bioluminescent_sources = biome_data.bioluminescent_light_sources.duplicate()
+	if bioluminescent_sources.is_empty():
+		bioluminescent_sources = [
+			{
+				"tex": "res://Assets/Environment/Fungal/prop_fungal_crystal.png",
+				"color": Color(0.4, 0.3, 0.9),
+				"energy": 0.9,
+				"range": 7.0,
+				"height": 0.8,
+				"pixel_size": 0.004,
+				"requires_wall": true,
+			},
+			{
+				"tex": "res://Assets/Environment/Fungal/prop_fungal_mushroom.png",
+				"color": Color(0.2, 1.0, 0.5),
+				"energy": 0.6,
+				"range": 5.0,
+				"height": 0.9,
+				"pixel_size": 0.0035,
+				"requires_wall": false,
+			},
+		]
 		
 	# Room center lights
 	for r in rooms:
 		var pos = r.get_world_center(TILE_SIZE)
 
-		if biome == "fungal":
+		if use_bioluminescent_props:
 			# Try to place a wall crystal, otherwise use a center mushroom
 			var rect: Rect2i = r.grid_rect
 			var candidates := []
@@ -420,15 +476,18 @@ func _place_lights(parent: Node3D, rooms: Array, tile_grid: Array, biome: String
 						ry = 0.0
 			var holder := Node3D.new()
 			holder.position = Vector3(wx, 0.0, wz)
-			var tex_path = "res://Assets/Environment/Fungal/prop_fungal_crystal.png" if use_crystal else "res://Assets/Environment/Fungal/prop_fungal_mushroom.png"
+			var crystal_src: Dictionary = _pick_light_source(bioluminescent_sources, true)
+			var mushroom_src: Dictionary = _pick_light_source(bioluminescent_sources, false)
+			var active_src: Dictionary = crystal_src if use_crystal else mushroom_src
+			var tex_path := str(active_src.get("tex", ""))
 			if load(tex_path):
-				_add_3d_mushroom(holder, ry if use_crystal else 0.0, use_crystal)
+				_add_3d_mushroom(holder, ry if use_crystal else 0.0, use_crystal, biome_data)
 			var light := OmniLight3D.new()
-			light.light_color = Color(0.2, 0.6, 1.0) if use_crystal else Color(0.3, 1.0, 0.3)
-			light.light_energy = 1.2
-			light.omni_range = 15.0
+			light.light_color = _as_color(active_src.get("color", Color(0.2, 0.6, 1.0) if use_crystal else Color(0.3, 1.0, 0.3)))
+			light.light_energy = float(active_src.get("energy", 1.2))
+			light.omni_range = float(active_src.get("range", 15.0))
 			light.shadow_enabled = true
-			light.position.y = 1.4
+			light.position.y = float(active_src.get("height", 1.2)) + 0.2
 			holder.add_child(light)
 			
 			# Add pulsing effect for crystals
@@ -449,7 +508,7 @@ func _place_lights(parent: Node3D, rooms: Array, tile_grid: Array, biome: String
 				spot.spot_range = 25.0
 				spot.spot_angle = 75.0
 				
-				var cookie = load("res://Assets/Effects/cookie_grate.png")
+				var cookie = load(room_cookie_path) if room_cookie_path != "" else null
 				if cookie:
 					spot.light_projector = cookie
 				
@@ -483,30 +542,11 @@ func _place_lights(parent: Node3D, rooms: Array, tile_grid: Array, biome: String
 	var grid_h = tile_grid[0].size()
 	
 	# Fungal biome: use bioluminescent prop sprites as the light source
-	if biome == "fungal":
-		var fungal_light_sources := [
-			{
-				"tex": "res://Assets/Environment/Fungal/prop_fungal_crystal.png",
-				"color": Color(0.4, 0.3, 0.9),   # purple crystal glow
-				"energy": 0.9,
-				"range": 7.0,
-				"height": 0.8,
-				"pixel_size": 0.004,
-			},
-			{
-				"tex": "res://Assets/Environment/Fungal/prop_fungal_mushroom.png",
-				"color": Color(0.2, 1.0, 0.5),   # green mushroom glow
-				"energy": 0.6,
-				"range": 5.0,
-				"height": 0.9,
-				"pixel_size": 0.0035,
-			},
-		]
-		
-		for x in range(2, grid_w - 2, 5):
-			for z in range(2, grid_h - 2, 5):
-				if tile_grid[x][z] == TILE_FLOOR and randf() < 0.3:
-					var src = fungal_light_sources[randi() % fungal_light_sources.size()]
+	if use_bioluminescent_props:
+		for x in range(2, grid_w - 2, corridor_step):
+			for z in range(2, grid_h - 2, corridor_step):
+				if tile_grid[x][z] == TILE_FLOOR and randf() < corridor_chance:
+					var src: Dictionary = bioluminescent_sources[randi() % bioluminescent_sources.size()]
 					
 					# Container node so the sprite and light share a transform
 					var holder := Node3D.new()
@@ -515,7 +555,8 @@ func _place_lights(parent: Node3D, rooms: Array, tile_grid: Array, biome: String
 					# If crystal, shift to wall
 					var crystal_ry: float = 0.0
 					var is_wall_crystal: bool = false
-					if "crystal" in src["tex"]:
+					var requires_wall: bool = bool(src.get("requires_wall", false))
+					if requires_wall:
 						var key := _tile_key(x, z)
 						if not doorway_owner.has(key):
 							# Check neighbors for a flat wall segment
@@ -539,35 +580,35 @@ func _place_lights(parent: Node3D, rooms: Array, tile_grid: Array, biome: String
 					
 					# Sprite / Mesh
 					var sprite: Sprite3D = null
-					if "crystal" in src["tex"]:
+					if requires_wall:
 						if not is_wall_crystal:
 							holder.queue_free()
 							continue
 						sprite = Sprite3D.new()
-						sprite.texture = load(src["tex"])
+						sprite.texture = load(str(src.get("tex", "")))
 						sprite.billboard = BaseMaterial3D.BILLBOARD_DISABLED
 						sprite.rotation_degrees.y = crystal_ry
-						sprite.pixel_size = src["pixel_size"]
-						sprite.position.y = src["height"]
-						sprite.modulate = src["color"].lightened(0.3)
+						sprite.pixel_size = float(src.get("pixel_size", 0.004))
+						sprite.position.y = float(src.get("height", 0.8))
+						sprite.modulate = _as_color(src.get("color", Color(0.4, 0.3, 0.9))).lightened(0.3)
 						holder.add_child(sprite)
 					else:
 						# It's a mushroom, use the 3D mesh
-						_add_3d_mushroom(holder, 0.0, false)
+						_add_3d_mushroom(holder, 0.0, false, biome_data)
 					
 					# Light
 					var light := OmniLight3D.new()
-					light.light_color = src["color"]
-					light.light_energy = src["energy"]
-					light.omni_range = src["range"]
+					light.light_color = _as_color(src.get("color", corridor_color))
+					light.light_energy = float(src.get("energy", corridor_energy))
+					light.omni_range = float(src.get("range", corridor_range))
 					light.shadow_enabled = false
-					light.position.y = src["height"] + 0.2
+					light.position.y = float(src.get("height", 0.8)) + 0.2
 					holder.add_child(light)
 
 					# Give bio-lights a nice pulsing effect
 					var flicker := FlickerLight.new()
 					flicker.mode = FlickerLight.Mode.PULSE
-					flicker.base_energy = src["energy"]
+					flicker.base_energy = float(src.get("energy", corridor_energy))
 					flicker.max_variation = 0.5 # Substantial pulse
 					flicker.speed = 1.0 + randf() * 1.5
 					flicker.light_node = light
@@ -578,25 +619,24 @@ func _place_lights(parent: Node3D, rooms: Array, tile_grid: Array, biome: String
 					parent.add_child(holder)
 	else:
 		# Other biomes: plain invisible torchlight
-		var corridor_color = Color(1.0, 0.6, 0.2) if biome == "crypt" else Color(1.0, 0.35, 0.1)
-		for x in range(2, grid_w - 2, 4):
-			for z in range(2, grid_h - 2, 4):
-				if tile_grid[x][z] == TILE_FLOOR and randf() < 0.3:
+		for x in range(2, grid_w - 2, corridor_step):
+			for z in range(2, grid_h - 2, corridor_step):
+				if tile_grid[x][z] == TILE_FLOOR and randf() < corridor_chance:
 					var light = OmniLight3D.new()
 					light.light_color = corridor_color
-					light.light_energy = 0.5
-					light.omni_range = 6.0
+					light.light_energy = corridor_energy
+					light.omni_range = corridor_range
 					light.shadow_enabled = false
 					
 					var wx = x * TILE_SIZE + TILE_SIZE/2.0
 					var wz = z * TILE_SIZE + TILE_SIZE/2.0
-					light.position = Vector3(wx, WALL_HEIGHT * 0.6, wz)
+					light.position = Vector3(wx, WALL_HEIGHT * corridor_height_ratio, wz)
 					parent.add_child(light)
 
 					# Add flickering for torches
 					var flicker := FlickerLight.new()
 					flicker.mode = FlickerLight.Mode.FLICKER
-					flicker.base_energy = 0.5
+					flicker.base_energy = corridor_energy
 					flicker.max_variation = 0.3 # Punchier flicker
 					light.add_child(flicker)
 
@@ -604,8 +644,11 @@ func _place_lights(parent: Node3D, rooms: Array, tile_grid: Array, biome: String
 
 
 
-func _place_generated_doors(parent: Node3D, doorways: Array) -> void:
-	var door_scene = load("res://Scenes/World/door.tscn")
+func _place_generated_doors(parent: Node3D, doorways: Array, biome_data: Resource = null) -> void:
+	var door_scene_path := "res://Scenes/World/door.tscn"
+	if _has_biome_data(biome_data) and biome_data.door_scene != "":
+		door_scene_path = biome_data.door_scene
+	var door_scene = load(door_scene_path)
 	if not door_scene:
 		return
 
@@ -634,12 +677,19 @@ func _place_generated_doors(parent: Node3D, doorways: Array) -> void:
 
 		parent.add_child(door)
 
-func _place_generated_doorway_assemblies(parent: Node3D, doorways: Array) -> void:
-	var assembly_scene = load(DOORWAY_ASSEMBLY_SCENE)
-	var fallback_door_scene = load("res://Scenes/World/door.tscn")
+func _place_generated_doorway_assemblies(parent: Node3D, doorways: Array, biome_data: Resource = null) -> void:
+	var assembly_path := ""
+	var door_scene_path := "res://Scenes/World/door.tscn"
+	if _has_biome_data(biome_data):
+		assembly_path = biome_data.doorway_assembly_scene
+		if biome_data.door_scene != "":
+			door_scene_path = biome_data.door_scene
+
+	var assembly_scene = load(assembly_path) if assembly_path != "" else null
+	var fallback_door_scene = load(door_scene_path)
 	if assembly_scene == null:
 		# Fallback to legacy door placement if assembly scene is unavailable.
-		_place_generated_doors(parent, doorways)
+		_place_generated_doors(parent, doorways, biome_data)
 		return
 
 	for doorway in doorways:
@@ -660,31 +710,49 @@ func _place_generated_doorway_assemblies(parent: Node3D, doorways: Array) -> voi
 		else:
 			wz += center_offset_tiles * TILE_SIZE
 
-		var biome := str(doorway.get("biome", "crypt"))
-		if biome != "fungal":
-			# Non-fungal biomes currently use door-only until dedicated assembly art exists.
-			if fallback_door_scene:
-				var door = fallback_door_scene.instantiate()
-				door.position = Vector3(wx, 0.0, wz)
-				if orientation == "north_south":
-					door.rotation_degrees.y = 90.0
-				parent.add_child(door)
-			continue
-
 		var doorway_assembly = assembly_scene.instantiate()
 		doorway_assembly.position = Vector3(wx, 0.0, wz)
 		if orientation == "north_south":
 			doorway_assembly.rotation_degrees.y = 90.0
 		parent.add_child(doorway_assembly)
 
-func _add_3d_mushroom(parent: Node3D, ry: float, is_crystal: bool) -> void:
-	var scene_path = FUNGAL_CRYSTAL_SCENE if is_crystal else FUNGAL_MUSHROOM_SCENE
+func _add_3d_mushroom(parent: Node3D, ry: float, is_crystal: bool, biome_data: Resource = null) -> void:
+	var scene_path := "res://Scenes/Dungeon/fungal_crystal.tscn" if is_crystal else "res://Scenes/Dungeon/fungal_mushroom.tscn"
+	if _has_biome_data(biome_data):
+		if is_crystal and biome_data.crystal_scene != "":
+			scene_path = biome_data.crystal_scene
+		elif not is_crystal and biome_data.mushroom_scene != "":
+			scene_path = biome_data.mushroom_scene
 	var scene = load(scene_path)
 	if scene:
 		var inst = scene.instantiate()
 		parent.add_child(inst)
 		if is_crystal:
 			inst.rotation_degrees.y = ry
+
+func _pick_light_source(sources: Array, requires_wall: bool) -> Dictionary:
+	for src_variant in sources:
+		if typeof(src_variant) != TYPE_DICTIONARY:
+			continue
+		var src: Dictionary = src_variant
+		if bool(src.get("requires_wall", false)) == requires_wall:
+			return src
+	if not sources.is_empty() and typeof(sources[0]) == TYPE_DICTIONARY:
+		return sources[0]
+	return {}
+
+func _has_biome_data(biome_data: Resource) -> bool:
+	if biome_data == null:
+		return false
+	for p in biome_data.get_property_list():
+		if typeof(p) == TYPE_DICTIONARY and str(p.get("name", "")) == "biome_id":
+			return true
+	return false
+
+func _as_color(value: Variant) -> Color:
+	if typeof(value) == TYPE_COLOR:
+		return value
+	return Color(1, 1, 1, 1)
 
 func _get_doorway_orientation(doorway: Dictionary) -> String:
 	if doorway.has("orientation"):

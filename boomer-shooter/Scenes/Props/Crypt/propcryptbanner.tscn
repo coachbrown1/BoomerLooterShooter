@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://Scripts/Props/sprite_prop.gd" id="1_script"]
+[node name="PropCryptBanner" type="Node3D"]
+script = ExtResource("1_script")
+placement_kind = 1
+texture_path = "res://Assets/Environment/Crypt/prop_crypt_banner.png"
