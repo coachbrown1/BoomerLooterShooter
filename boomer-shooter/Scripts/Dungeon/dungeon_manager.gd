@@ -4,37 +4,79 @@ class_name DungeonManager
 @export var floor_number: int = 1
 @export var biome_database: Resource = preload("res://Data/biomes/biome_dungeon_database.tres")
 
+# Lattice generation config
+@export var grid_size_min: int = 10
+@export var grid_size_max: int = 10
+@export var min_start_end_distance_rooms: int = 3
+@export var room_size_tiles: int = 20
+@export var corridor_width_tiles: int = 4
+@export var corridor_length_tiles: int = 10
+
 @onready var nav_region: NavigationRegion3D = $NavigationRegion3D
 
 var _generator: DungeonGenerator
 var _builder: DungeonBuilder
 var _encounter: EncounterSystem
 var _rooms: Array = []
+var _active_biome_data: Resource = null
+var _room_lookup := {}
+var _spawned_enemy_rooms := {}
+var _last_player_room_id: int = -1
 
 func _ready() -> void:
+	set_process(true)
 	generate_floor(floor_number)
 
+func _process(_delta: float) -> void:
+	if _encounter == null or _rooms.is_empty():
+		return
+	var player := get_tree().get_first_node_in_group("player")
+	if player == null or not (player is Node3D):
+		return
+
+	var room_id := _find_room_id_for_world_position(player.global_position)
+	if room_id < 0 or room_id == _last_player_room_id:
+		return
+
+	_last_player_room_id = room_id
+	_spawn_room_and_adjacent(room_id)
+
 func generate_floor(floor_num: int) -> void:
-	# Clear old geometry
+	floor_number = floor_num
+
+	# Clear old geometry + entities under nav region.
 	for child in nav_region.get_children():
 		child.queue_free()
 
+	_room_lookup = {}
+	_spawned_enemy_rooms = {}
+	_last_player_room_id = -1
+	_active_biome_data = null
+
 	# Generate tile layout
 	_generator = DungeonGenerator.new()
+	_generator.grid_size_min = grid_size_min
+	_generator.grid_size_max = grid_size_max
+	_generator.min_start_end_distance_rooms = min_start_end_distance_rooms
+	_generator.room_size_tiles = room_size_tiles
+	_generator.corridor_width_tiles = corridor_width_tiles
+	_generator.corridor_length_tiles = corridor_length_tiles
 	_generator.generate(floor_num)
 	_rooms = _generator.rooms
+
 	var biome_id := "crypt"
 	if _rooms.size() > 0:
 		biome_id = _rooms[0].biome
 	var biome_data = _get_biome_data(biome_id)
-	
+	_active_biome_data = biome_data
+
 	_update_environment(biome_data)
 
 	# Build 3D geometry inside the NavigationRegion3D
 	_builder = DungeonBuilder.new()
 	_builder.build(_generator.tile_grid, _rooms, _generator.corridors, _generator.doorways, nav_region, biome_data)
 
-	# Place props
+	# Place props (static, not streamed)
 	var prop_placer = PropPlacer.new()
 	prop_placer.populate(nav_region, _rooms, _generator.tile_grid, _generator.rng, biome_data)
 
@@ -53,10 +95,8 @@ func generate_floor(floor_num: int) -> void:
 	await get_tree().process_frame
 	nav_region.bake_navigation_mesh(false)
 
-	# Spawn enemies in each room
+	_build_room_lookup()
 	_encounter = EncounterSystem.new()
-	for room in _rooms:
-		_encounter.populate_room(room, floor_num, nav_region, biome_data)
 
 	# Place player at start room
 	_place_player()
@@ -64,14 +104,25 @@ func generate_floor(floor_num: int) -> void:
 	# Place exit portal in exit room
 	_place_exit(biome_data)
 
-	print("DungeonManager: Floor %d generated with %d rooms." % [floor_num, _rooms.size()])
+	# Spawn only the start-room neighborhood; expand as player progresses.
+	_prime_progressive_enemy_spawning()
+
+	print(
+		"DungeonManager: Floor %d generated with %d rooms (grid=%dx%d)." % [
+			floor_num,
+			_rooms.size(),
+			_generator.sampled_grid_size,
+			_generator.sampled_grid_size,
+		]
+	)
 
 func _update_environment(biome_data: Resource = null) -> void:
 	if _rooms.size() == 0:
 		return
-		
+
 	var env = $WorldEnvironment.environment
-	if not env: return
+	if not env:
+		return
 	var biome = _rooms[0].biome
 	if biome_data and biome_data.has_method("get"):
 		var fog_color: Variant = biome_data.get("fog_light_color")
@@ -89,23 +140,16 @@ func _place_player() -> void:
 	var player = get_tree().get_first_node_in_group("player")
 	if not player:
 		return
-	var start_room: RoomData = null
-	for r in _rooms:
-		if r.room_type == RoomData.RoomType.START:
-			start_room = r
-			break
-	if start_room:
-		var pos = start_room.get_world_center(DungeonBuilder.TILE_SIZE)
-		pos.y = 1.0
-		player.global_position = pos
+	var start_room := _get_room_by_type(RoomData.RoomType.START)
+	if start_room == null:
+		return
+	var pos = start_room.get_world_center(DungeonBuilder.TILE_SIZE)
+	pos.y = 1.0
+	player.global_position = pos
 
 func _place_exit(biome_data: Resource = null) -> void:
-	var exit_room: RoomData = null
-	for r in _rooms:
-		if r.room_type == RoomData.RoomType.EXIT:
-			exit_room = r
-			break
-	if not exit_room:
+	var exit_room := _get_room_by_type(RoomData.RoomType.EXIT)
+	if exit_room == null:
 		return
 
 	# Load and instance the exit portal scene
@@ -149,3 +193,52 @@ func _get_biome_data(biome_id: String) -> Resource:
 	if biome_database.has_method("get_biome"):
 		return biome_database.call("get_biome", biome_id)
 	return null
+
+func _build_room_lookup() -> void:
+	_room_lookup = {}
+	for room_variant in _rooms:
+		var room: RoomData = room_variant
+		_room_lookup[room.id] = room
+
+func _get_room_by_type(room_type: int) -> RoomData:
+	for room_variant in _rooms:
+		var room: RoomData = room_variant
+		if room.room_type == room_type:
+			return room
+	return null
+
+func _prime_progressive_enemy_spawning() -> void:
+	if _encounter == null:
+		return
+	var start_room := _get_room_by_type(RoomData.RoomType.START)
+	if start_room == null:
+		return
+	_last_player_room_id = start_room.id
+	_spawn_room_and_adjacent(start_room.id)
+
+func _spawn_room_and_adjacent(room_id: int) -> void:
+	_spawn_room_once(room_id)
+	var room: RoomData = _room_lookup.get(room_id, null)
+	if room == null:
+		return
+	for neighbor_variant in room.connected_to:
+		_spawn_room_once(int(neighbor_variant))
+
+func _spawn_room_once(room_id: int) -> void:
+	if _spawned_enemy_rooms.has(room_id):
+		return
+	var room: RoomData = _room_lookup.get(room_id, null)
+	if room == null:
+		return
+	_spawned_enemy_rooms[room_id] = true
+	_encounter.populate_room(room, floor_number, nav_region, _active_biome_data)
+
+func _find_room_id_for_world_position(world_pos: Vector3) -> int:
+	var tx := int(floor(world_pos.x / DungeonBuilder.TILE_SIZE))
+	var tz := int(floor(world_pos.z / DungeonBuilder.TILE_SIZE))
+	for room_variant in _rooms:
+		var room: RoomData = room_variant
+		var rect: Rect2i = room.grid_rect
+		if tx >= rect.position.x and tx < rect.position.x + rect.size.x and tz >= rect.position.y and tz < rect.position.y + rect.size.y:
+			return room.id
+	return -1

@@ -4,6 +4,7 @@ class_name RoomData
 enum RoomType { START, NORMAL, EXIT, SPECIAL }
 
 var id: int = 0
+var lattice_coord: Vector2i = Vector2i(-1, -1)
 var grid_rect: Rect2i		# tile coordinates (x, y, w, h)
 var room_type: RoomType = RoomType.NORMAL
 var biome: String = "crypt"
