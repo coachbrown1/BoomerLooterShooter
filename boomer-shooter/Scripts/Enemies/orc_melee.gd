@@ -1,0 +1,2 @@
+extends EnemyMelee
+class_name OrcMelee

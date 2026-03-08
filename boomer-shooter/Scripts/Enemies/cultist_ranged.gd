@@ -1,0 +1,2 @@
+extends EnemyRanged
+class_name CultistRanged

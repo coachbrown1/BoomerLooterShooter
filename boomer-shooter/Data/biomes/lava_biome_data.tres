@@ -20,20 +20,20 @@ enemy_roster = Array[Dictionary]([{
 "min_floor": 1,
 "name": "Kobold",
 "scale": 1.1,
-"scene": "res://Scenes/Enemies/enemy_melee.tscn",
+"scene": "res://Scenes/Enemies/kobold.tscn",
 "sprite": "res://Assets/Enemies/Kobold/kobold_spritesheet.png"
 }, {
 "cost": 2.0,
 "min_floor": 2,
 "name": "FlamingSkull",
 "scale": 1.0,
-"scene": "res://Scenes/Enemies/enemy_ranged.tscn",
+"scene": "res://Scenes/Enemies/flaming_skull.tscn",
 "sprite": "res://Assets/Enemies/FlamingSkull/flaming_skull_spritesheet.png"
 }, {
 "cost": 3.0,
 "min_floor": 3,
 "name": "Gargoyle",
 "scale": 1.5,
-"scene": "res://Scenes/Enemies/enemy_melee.tscn",
+"scene": "res://Scenes/Enemies/gargoyle.tscn",
 "sprite": "res://Assets/Enemies/Gargoyle/gargoyle_spritesheet.png"
 }])

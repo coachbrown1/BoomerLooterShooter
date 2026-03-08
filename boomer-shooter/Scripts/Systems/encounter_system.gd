@@ -9,7 +9,7 @@ const THREAT_SIZE_SCALE: float = 0.05
 # Enemy definitions: { scene, cost, biomes[], min_floor }
 const ENEMY_ROSTER: Array = [
 	{
-		"scene": "res://Scenes/Enemies/enemy_melee.tscn",
+		"scene": "res://Scenes/Enemies/skeleton.tscn",
 		"sprite": "res://Assets/Enemies/Skeleton/skeleton_spritesheet.png",
 		"cost": 1.0,
 		"biomes": ["crypt"],
@@ -18,7 +18,7 @@ const ENEMY_ROSTER: Array = [
 		"scale": 1.4,
 	},
 	{
-		"scene": "res://Scenes/Enemies/enemy_melee.tscn",
+		"scene": "res://Scenes/Enemies/goblin_melee.tscn",
 		"sprite": "res://Assets/Enemies/GoblinForward/goblin_forward_spritesheet.png",
 		"cost": 1.0,
 		"biomes": ["fungal", "crypt"],
@@ -28,7 +28,7 @@ const ENEMY_ROSTER: Array = [
 		"hframes": 8,
 	},
 	{
-		"scene": "res://Scenes/Enemies/enemy_ranged.tscn",
+		"scene": "res://Scenes/Enemies/goblin_archer.tscn",
 		"sprite": "res://Assets/Enemies/GoblinArcherForward/goblin_archer_forward_spritesheet.png",
 		"cost": 1.5,
 		"biomes": ["fungal", "crypt"],
@@ -38,7 +38,7 @@ const ENEMY_ROSTER: Array = [
 		"hframes": 8,
 	},
 	{
-		"scene": "res://Scenes/Enemies/enemy_melee.tscn",
+		"scene": "res://Scenes/Enemies/kobold.tscn",
 		"sprite": "res://Assets/Enemies/Kobold/kobold_spritesheet.png",
 		"cost": 1.0,
 		"biomes": ["lava", "crypt"],
@@ -47,7 +47,7 @@ const ENEMY_ROSTER: Array = [
 		"scale": 1.1,
 	},
 	{
-		"scene": "res://Scenes/Enemies/enemy_melee.tscn",
+		"scene": "res://Scenes/Enemies/orc.tscn",
 		"sprite": "res://Assets/Enemies/Orc/orc_spritesheet.png",
 		"cost": 2.0,
 		"biomes": ["fungal", "crypt"],
@@ -56,7 +56,7 @@ const ENEMY_ROSTER: Array = [
 		"scale": 1.7,
 	},
 	{
-		"scene": "res://Scenes/Enemies/enemy_ranged.tscn",
+		"scene": "res://Scenes/Enemies/cultist.tscn",
 		"sprite": "res://Assets/Enemies/Cultist/cultist_spritesheet.png",
 		"cost": 2.0,
 		"biomes": ["crypt"],
@@ -65,7 +65,7 @@ const ENEMY_ROSTER: Array = [
 		"scale": 1.4,
 	},
 	{
-		"scene": "res://Scenes/Enemies/enemy_ranged.tscn",
+		"scene": "res://Scenes/Enemies/flaming_skull.tscn",
 		"sprite": "res://Assets/Enemies/FlamingSkull/flaming_skull_spritesheet.png",
 		"cost": 2.0,
 		"biomes": ["lava"],
@@ -74,7 +74,7 @@ const ENEMY_ROSTER: Array = [
 		"scale": 1.0,
 	},
 	{
-		"scene": "res://Scenes/Enemies/enemy_melee.tscn",
+		"scene": "res://Scenes/Enemies/death_knight.tscn",
 		"sprite": "res://Assets/Enemies/DeathKnight/death_knight_spritesheet.png",
 		"cost": 3.0,
 		"biomes": ["crypt"],
@@ -83,7 +83,7 @@ const ENEMY_ROSTER: Array = [
 		"scale": 1.8,
 	},
 	{
-		"scene": "res://Scenes/Enemies/enemy_melee.tscn",
+		"scene": "res://Scenes/Enemies/gargoyle.tscn",
 		"sprite": "res://Assets/Enemies/Gargoyle/gargoyle_spritesheet.png",
 		"cost": 3.0,
 		"biomes": ["crypt", "lava"],
@@ -92,7 +92,7 @@ const ENEMY_ROSTER: Array = [
 		"scale": 1.5,
 	},
 	{
-		"scene": "res://Scenes/Enemies/enemy_melee.tscn",
+		"scene": "res://Scenes/Enemies/fungal_cube.tscn",
 		"sprite": "res://Assets/Enemies/FungalCube/fungalcube_spritesheet.png",
 		"cost": 3.0,
 		"biomes": ["fungal"],
@@ -102,7 +102,7 @@ const ENEMY_ROSTER: Array = [
 		"hframes": 8,
 	},
 	{
-		"scene": "res://Scenes/Enemies/enemy_melee.tscn",
+		"scene": "res://Scenes/Enemies/spore_husk.tscn",
 		"sprite": "res://Assets/Enemies/SporeHusk/sporehusk_spritesheet.png",
 		"cost": 1.5,
 		"biomes": ["fungal"],
