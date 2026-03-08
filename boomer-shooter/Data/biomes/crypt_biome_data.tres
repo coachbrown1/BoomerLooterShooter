@@ -1,34 +1,17 @@
-[gd_resource type="Resource" script_class="BiomeDungeonData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="BiomeDungeonData" format=3 uid="uid://o1cny6gl2uga"]
 
-[ext_resource type="Script" path="res://Scripts/Data/biome_dungeon_data.gd" id="1_biome_data"]
+[ext_resource type="Script" uid="uid://w367lbpicfnt" path="res://Scripts/Data/biome_dungeon_data.gd" id="1_biome_data"]
 
 [resource]
 script = ExtResource("1_biome_data")
-biome_id = "crypt"
 floor_textures = PackedStringArray("res://Assets/Environment/Crypt/crypt_floor_v1.png", "res://Assets/Environment/Crypt/crypt_floor_v2.png", "res://Assets/Environment/Crypt/crypt_floor_v3.png")
 wall_textures = PackedStringArray("res://Assets/Environment/Crypt/crypt_wall_v1.png", "res://Assets/Environment/Crypt/crypt_wall_v2.png", "res://Assets/Environment/Crypt/crypt_wall_v3.png")
 ceiling_textures = PackedStringArray("res://Assets/Environment/Crypt/crypt_ceiling_v1.png", "res://Assets/Environment/Crypt/crypt_ceiling_v2.png", "res://Assets/Environment/Crypt/crypt_ceiling_v3.png")
-door_scene = "res://Scenes/World/door.tscn"
-doorway_assembly_scene = ""
-room_light_color = Color(0.9, 0.75, 0.5, 1)
-room_light_cookie_texture = "res://Assets/Effects/cookie_grate.png"
-corridor_light_color = Color(1, 0.6, 0.2, 1)
-corridor_light_energy = 0.5
-corridor_light_range = 6.0
-corridor_light_height = 0.6
-corridor_light_step = 4
-corridor_light_chance = 0.3
-use_bioluminescent_props_for_room_lights = false
-fog_light_color = Color(0.05, 0.03, 0.08, 1)
-exit_portal_texture = "res://Assets/Environment/exit_portal.png"
 universal_prop_textures = PackedStringArray("res://Assets/Environment/prop_barrel_side.png", "res://Assets/Environment/prop_crate.png", "res://Assets/Environment/prop_skull_pile.png", "res://Assets/Environment/prop_broken_pillar.png")
 biome_prop_textures = PackedStringArray("res://Assets/Environment/Crypt/prop_crypt_coffin.png", "res://Assets/Environment/Crypt/prop_crypt_tombstone.png", "res://Assets/Environment/Crypt/prop_crypt_iron_maiden.png", "res://Assets/Environment/Crypt/prop_crypt_candelabra.png", "res://Assets/Environment/Crypt/prop_crypt_banner.png", "res://Assets/Environment/Crypt/prop_crypt_bone_pile.png")
 universal_prop_scenes = PackedStringArray("res://Scenes/Props/Common/prop_barrel.tscn", "res://Scenes/Props/Common/prop_crate.tscn", "res://Scenes/Props/Common/propskullpile.tscn", "res://Scenes/Props/Common/propbrokenpillar.tscn")
 biome_prop_scenes = PackedStringArray("res://Scenes/Props/Crypt/propcryptcoffin.tscn", "res://Scenes/Props/Crypt/propcrypttombstone.tscn", "res://Scenes/Props/Crypt/propcryptironmaiden.tscn", "res://Scenes/Props/Crypt/propcryptcandelabra.tscn", "res://Scenes/Props/Crypt/propcryptbanner.tscn", "res://Scenes/Props/Crypt/propcryptbonepile.tscn")
-crate_texture = "res://Assets/Environment/prop_crate.png"
-barrel_side_texture = "res://Assets/Environment/prop_barrel_side.png"
-barrel_top_texture = "res://Assets/Environment/prop_barrel_top.png"
-enemy_roster = [{
+enemy_roster = Array[Dictionary]([{
 "biomes": PackedStringArray("crypt"),
 "cost": 1.0,
 "min_floor": 1,
@@ -94,4 +77,4 @@ enemy_roster = [{
 "scale": 1.5,
 "scene": "res://Scenes/Enemies/enemy_melee.tscn",
 "sprite": "res://Assets/Enemies/Gargoyle/gargoyle_spritesheet.png"
-}]
+}])

@@ -14,6 +14,9 @@ var reserved_tiles: Array = []	# Array of Vector2i
 var corridor_ids: Array = []	# Array of int
 var doorway_ids: Array = []	# Array of int
 var doorway_candidates: Array = []	# Array of { "tile", "orientation", "wall_line_key" }
+var has_handcrafted_layout: bool = false
+var handcrafted_scene: PackedScene = null
+var handcrafted_scene_path: String = ""
 # Per-room material variants used by the builder.
 var surface_profile := {
 	"floor_variant": 0,

@@ -1,0 +1,118 @@
+[gd_scene format=3 uid="uid://c82820u086h5v"]
+
+[ext_resource type="PackedScene" uid="uid://8kv1bp8iue40" path="res://Scenes/Dungeon/fungal_mushroom.tscn" id="1_mushroom"]
+[ext_resource type="PackedScene" path="res://Scenes/Dungeon/fungal_crystal.tscn" id="2_crystal"]
+
+[sub_resource type="StandardMaterial3D" id="1_pad_material"]
+albedo_color = Color(0.07, 0.12, 0.08, 1)
+roughness = 0.95
+emission_enabled = true
+emission = Color(0.04, 0.2, 0.08, 1)
+emission_energy_multiplier = 0.35
+
+[sub_resource type="CylinderMesh" id="2_pad_mesh"]
+material = SubResource("1_pad_material")
+top_radius = 2.5
+bottom_radius = 2.8
+height = 0.3
+
+[sub_resource type="StandardMaterial3D" id="3_room_bounds_mat"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.1, 0.95, 0.7, 0.55)
+
+[sub_resource type="BoxMesh" id="4_room_bounds_long"]
+material = SubResource("3_room_bounds_mat")
+size = Vector3(60, 0.2, 0.25)
+
+[sub_resource type="BoxMesh" id="5_room_bounds_short"]
+material = SubResource("3_room_bounds_mat")
+size = Vector3(0.25, 0.2, 60)
+
+[node name="Fungal_Start" type="Node3D" unique_id=1424852170]
+
+[node name="SpawnPad" type="MeshInstance3D" parent="." unique_id=2056314260]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+mesh = SubResource("2_pad_mesh")
+
+[node name="CrystalNorth" parent="." unique_id=329310298 instance=ExtResource("2_crystal")]
+transform = Transform3D(0.8, 0, 0, 0, 1, 0, 0, 0, 0.8, 0, 0, -3.2)
+
+[node name="CrystalSouth" parent="." unique_id=1493810691 instance=ExtResource("2_crystal")]
+transform = Transform3D(0.8, 0, 0, 0, 1, 0, 0, 0, 0.8, 0, 0, 3.2)
+
+[node name="MushroomWest" parent="." unique_id=1791633781 instance=ExtResource("1_mushroom")]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, -3.6, 0, 0)
+
+[node name="MushroomEast" parent="." unique_id=369888085 instance=ExtResource("1_mushroom")]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, 3.6, 0, 0)
+
+[node name="SpawnPad2" type="MeshInstance3D" parent="." unique_id=1824853853]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22.973526, 0.15, 0)
+mesh = SubResource("2_pad_mesh")
+
+[node name="CrystalNorth2" parent="." unique_id=1086793571 instance=ExtResource("2_crystal")]
+transform = Transform3D(0.8, 0, 0, 0, 1, 0, 0, 0, 0.8, -22.973526, 0, -3.2)
+
+[node name="CrystalSouth2" parent="." unique_id=1128867822 instance=ExtResource("2_crystal")]
+transform = Transform3D(0.8, 0, 0, 0, 1, 0, 0, 0, 0.8, -22.973526, 0, 3.2)
+
+[node name="MushroomWest2" parent="." unique_id=1473904530 instance=ExtResource("1_mushroom")]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, -26.573524, 0, 0)
+
+[node name="MushroomEast2" parent="." unique_id=1605455474 instance=ExtResource("1_mushroom")]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, -19.373526, 0, 0)
+
+[node name="SpawnPad3" type="MeshInstance3D" parent="." unique_id=2017472147]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24.305391, 0.15, 23.757046)
+mesh = SubResource("2_pad_mesh")
+
+[node name="CrystalNorth3" parent="." unique_id=1418632000 instance=ExtResource("2_crystal")]
+transform = Transform3D(0.8, 0, 0, 0, 1, 0, 0, 0, 0.8, -24.305391, 0, 20.557045)
+
+[node name="CrystalSouth3" parent="." unique_id=1064222639 instance=ExtResource("2_crystal")]
+transform = Transform3D(0.8, 0, 0, 0, 1, 0, 0, 0, 0.8, -24.305391, 0, 26.957047)
+
+[node name="MushroomWest3" parent="." unique_id=1727284475 instance=ExtResource("1_mushroom")]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, -27.90539, 0, 23.757046)
+
+[node name="MushroomEast3" parent="." unique_id=994924703 instance=ExtResource("1_mushroom")]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, -20.70539, 0, 23.757046)
+
+[node name="SpawnPad4" type="MeshInstance3D" parent="." unique_id=1455643979]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24.305391, 0.15, -26.390953)
+mesh = SubResource("2_pad_mesh")
+
+[node name="CrystalNorth4" parent="." unique_id=1027484099 instance=ExtResource("2_crystal")]
+transform = Transform3D(0.8, 0, 0, 0, 1, 0, 0, 0, 0.8, -24.305391, 0, -29.590954)
+
+[node name="CrystalSouth4" parent="." unique_id=2003851927 instance=ExtResource("2_crystal")]
+transform = Transform3D(0.8, 0, 0, 0, 1, 0, 0, 0, 0.8, -24.305391, 0, -23.190952)
+
+[node name="MushroomWest4" parent="." unique_id=1969776223 instance=ExtResource("1_mushroom")]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, -27.90539, 0, -26.390953)
+
+[node name="MushroomEast4" parent="." unique_id=1317750225 instance=ExtResource("1_mushroom")]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, -20.70539, 0, -26.390953)
+
+[node name="RoomBoundsDebug" type="Node3D" parent="." unique_id=1281634822]
+
+[node name="NorthEdge" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=617820187]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, -30)
+cast_shadow = 0
+mesh = SubResource("4_room_bounds_long")
+
+[node name="SouthEdge" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=1432224265]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 30)
+cast_shadow = 0
+mesh = SubResource("4_room_bounds_long")
+
+[node name="WestEdge" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=1296629457]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 0.1, 0)
+cast_shadow = 0
+mesh = SubResource("5_room_bounds_short")
+
+[node name="EastEdge" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=2064239730]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 0.1, 0)
+cast_shadow = 0
+mesh = SubResource("5_room_bounds_short")

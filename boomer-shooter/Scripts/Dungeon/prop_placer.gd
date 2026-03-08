@@ -19,7 +19,13 @@ func populate(
 		push_error("PropPlacer: biome data must define non-empty universal_prop_scenes.")
 		return
 
-	for room in rooms:
+	for room_variant in rooms:
+		var room: RoomData = room_variant
+		if room == null:
+			continue
+		if room.has_handcrafted_layout:
+			continue
+
 		var area = room.grid_rect.size.x * room.grid_rect.size.y
 		var prop_count = mini(8, max(3, area / 15))
 

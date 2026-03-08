@@ -9,6 +9,9 @@ class_name BiomeDungeonData
 
 @export var door_scene: String = "res://Scenes/World/door.tscn"
 @export var doorway_assembly_scene: String = ""
+@export var handcrafted_start_room_scene: PackedScene
+@export var handcrafted_normal_room_scenes: Array[PackedScene] = []
+@export_range(0.0, 1.0, 0.01) var handcrafted_normal_room_chance: float = 0.25
 
 @export var room_light_color: Color = Color(0.9, 0.75, 0.5, 1.0)
 @export var room_light_cookie_texture: String = "res://Assets/Effects/cookie_grate.png"

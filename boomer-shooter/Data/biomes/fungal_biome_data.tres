@@ -1,6 +1,7 @@
 [gd_resource type="Resource" script_class="BiomeDungeonData" format=3 uid="uid://d0yoq0pn57sbk"]
 
 [ext_resource type="Script" uid="uid://w367lbpicfnt" path="res://Scripts/Data/biome_dungeon_data.gd" id="1_biome_data"]
+[ext_resource type="PackedScene" path="res://Scenes/Dungeon/Handcrafted/Fungal_Start.tscn" id="2_fungal_start"]
 
 [resource]
 script = ExtResource("1_biome_data")
@@ -9,6 +10,9 @@ floor_textures = PackedStringArray("res://Assets/Environment/Fungal/fungal_floor
 wall_textures = PackedStringArray("res://Assets/Environment/Fungal/fungal_wall_v1.png", "res://Assets/Environment/Fungal/fungal_wall_v2.png", "res://Assets/Environment/Fungal/fungal_wall_v3.png")
 ceiling_textures = PackedStringArray("res://Assets/Environment/Fungal/fungal_ceiling_v1.png", "res://Assets/Environment/Fungal/fungal_ceiling_v2.png", "res://Assets/Environment/Fungal/fungal_ceiling_v3.png")
 doorway_assembly_scene = "res://Scenes/Dungeon/doorway_assembly.tscn"
+handcrafted_start_room_scene = ExtResource("2_fungal_start")
+handcrafted_normal_room_scenes = Array[PackedScene]([])
+handcrafted_normal_room_chance = 0.25
 room_light_color = Color(0.4, 0.9, 0.5, 1)
 room_light_cookie_texture = ""
 corridor_light_color = Color(0.2, 1, 0.5, 1)

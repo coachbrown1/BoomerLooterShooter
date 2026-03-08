@@ -69,12 +69,14 @@ func generate_floor(floor_num: int) -> void:
 		biome_id = _rooms[0].biome
 	var biome_data = _get_biome_data(biome_id)
 	_active_biome_data = biome_data
+	_assign_handcrafted_layouts(biome_data)
 
 	_update_environment(biome_data)
 
 	# Build 3D geometry inside the NavigationRegion3D
 	_builder = DungeonBuilder.new()
 	_builder.build(_generator.tile_grid, _rooms, _generator.corridors, _generator.doorways, nav_region, biome_data)
+	_spawn_handcrafted_room_overlays(nav_region)
 
 	# Place props (static, not streamed)
 	var prop_placer = PropPlacer.new()
@@ -206,6 +208,113 @@ func _get_room_by_type(room_type: int) -> RoomData:
 		if room.room_type == room_type:
 			return room
 	return null
+
+func _assign_handcrafted_layouts(biome_data: Resource = null) -> void:
+	for room_variant in _rooms:
+		var room: RoomData = room_variant
+		room.has_handcrafted_layout = false
+		room.handcrafted_scene = null
+		room.handcrafted_scene_path = ""
+
+	if biome_data == null:
+		return
+
+	var biome_id := ""
+	if _resource_has_property(biome_data, "biome_id"):
+		biome_id = str(biome_data.get("biome_id"))
+
+	var start_scene: PackedScene = null
+	if _resource_has_property(biome_data, "handcrafted_start_room_scene"):
+		var start_scene_variant: Variant = biome_data.get("handcrafted_start_room_scene")
+		if start_scene_variant is PackedScene:
+			start_scene = start_scene_variant
+
+	if biome_id == "fungal" and start_scene != null:
+		var start_room := _get_room_by_type(RoomData.RoomType.START)
+		_assign_handcrafted_scene_to_room(start_room, start_scene)
+	elif biome_id == "fungal":
+		push_warning("DungeonManager: fungal biome has no handcrafted_start_room_scene; start room will be procedural.")
+
+	var chance := 0.25
+	if _resource_has_property(biome_data, "handcrafted_normal_room_chance"):
+		chance = clampf(float(biome_data.get("handcrafted_normal_room_chance")), 0.0, 1.0)
+	if chance <= 0.0:
+		return
+
+	var normal_scene_pool: Array[PackedScene] = []
+	if _resource_has_property(biome_data, "handcrafted_normal_room_scenes"):
+		var normal_scene_variant: Variant = biome_data.get("handcrafted_normal_room_scenes")
+		if typeof(normal_scene_variant) == TYPE_ARRAY:
+			for scene_variant in normal_scene_variant:
+				if scene_variant is PackedScene:
+					normal_scene_pool.append(scene_variant)
+
+	if normal_scene_pool.is_empty():
+		return
+
+	for room_variant in _rooms:
+		var room: RoomData = room_variant
+		if room.room_type != RoomData.RoomType.NORMAL:
+			continue
+		if _generator == null or _generator.rng == null:
+			continue
+		if _generator.rng.randf() >= chance:
+			continue
+		var scene: PackedScene = normal_scene_pool[_generator.rng.randi() % normal_scene_pool.size()]
+		_assign_handcrafted_scene_to_room(room, scene)
+
+func _assign_handcrafted_scene_to_room(room: RoomData, scene: PackedScene) -> void:
+	if room == null or scene == null:
+		return
+	room.has_handcrafted_layout = true
+	room.handcrafted_scene = scene
+	room.handcrafted_scene_path = scene.resource_path
+
+func _spawn_handcrafted_room_overlays(parent: Node3D) -> void:
+	if parent == null:
+		return
+
+	var root := Node3D.new()
+	root.name = "HandcraftedRooms"
+	parent.add_child(root)
+
+	for room_variant in _rooms:
+		var room: RoomData = room_variant
+		if not room.has_handcrafted_layout:
+			continue
+		if room.handcrafted_scene == null:
+			continue
+
+		var inst := room.handcrafted_scene.instantiate()
+		if inst == null:
+			push_warning("DungeonManager: failed to instantiate handcrafted room scene for room %d." % room.id)
+			continue
+		if not (inst is Node3D):
+			push_warning(
+				"DungeonManager: handcrafted scene '%s' is not a Node3D root; skipping room %d."
+				% [room.handcrafted_scene_path, room.id]
+			)
+			inst.free()
+			continue
+
+		var room_overlay: Node3D = inst
+		room_overlay.position = room.get_world_center(DungeonBuilder.TILE_SIZE)
+		room_overlay.position.y = 0.0
+		room_overlay.set_meta("room_id", room.id)
+		room_overlay.set_meta("room_type", room.room_type)
+		room_overlay.set_meta("lattice_coord", room.lattice_coord)
+		root.add_child(room_overlay)
+
+func _resource_has_property(resource: Resource, property_name: String) -> bool:
+	if resource == null:
+		return false
+	for property_variant in resource.get_property_list():
+		if typeof(property_variant) != TYPE_DICTIONARY:
+			continue
+		var property_dict: Dictionary = property_variant
+		if str(property_dict.get("name", "")) == property_name:
+			return true
+	return false
 
 func _prime_progressive_enemy_spawning() -> void:
 	if _encounter == null:
