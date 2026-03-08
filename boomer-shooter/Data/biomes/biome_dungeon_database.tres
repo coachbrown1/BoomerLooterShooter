@@ -1,9 +1,9 @@
-[gd_resource type="Resource" script_class="BiomeDungeonDatabase" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="BiomeDungeonDatabase" format=3 uid="uid://b2euvef1qhjhv"]
 
-[ext_resource type="Script" path="res://Scripts/Data/biome_dungeon_database.gd" id="1_db"]
-[ext_resource type="Resource" path="res://Data/biomes/crypt_biome_data.tres" id="2_crypt"]
-[ext_resource type="Resource" path="res://Data/biomes/fungal_biome_data.tres" id="3_fungal"]
-[ext_resource type="Resource" path="res://Data/biomes/lava_biome_data.tres" id="4_lava"]
+[ext_resource type="Script" uid="uid://ufdgvx2d35bf" path="res://Scripts/Data/biome_dungeon_database.gd" id="1_db"]
+[ext_resource type="Resource" uid="uid://o1cny6gl2uga" path="res://Data/biomes/crypt_biome_data.tres" id="2_crypt"]
+[ext_resource type="Resource" uid="uid://d0yoq0pn57sbk" path="res://Data/biomes/fungal_biome_data.tres" id="3_fungal"]
+[ext_resource type="Resource" uid="uid://c0ak5nyjvredp" path="res://Data/biomes/lava_biome_data.tres" id="4_lava"]
 
 [resource]
 script = ExtResource("1_db")
