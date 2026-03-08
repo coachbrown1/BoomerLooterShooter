@@ -51,7 +51,7 @@ enemy_roster = Array[Dictionary]([{
 "min_floor": 1,
 "name": "Goblin",
 "scale": 1.15,
-"scene": "res://Scenes/Enemies/enemy_melee.tscn",
+"scene": "res://Scenes/Enemies/goblin_melee.tscn",
 "sprite": "res://Assets/Enemies/GoblinForward/goblin_forward_spritesheet.png"
 }, {
 "cost": 1.5,
@@ -59,7 +59,7 @@ enemy_roster = Array[Dictionary]([{
 "min_floor": 1,
 "name": "GoblinArcher",
 "scale": 1.15,
-"scene": "res://Scenes/Enemies/enemy_ranged.tscn",
+"scene": "res://Scenes/Enemies/goblin_archer.tscn",
 "sprite": "res://Assets/Enemies/GoblinArcherForward/goblin_archer_forward_spritesheet.png"
 }, {
 "cost": 2.0,
@@ -82,6 +82,6 @@ enemy_roster = Array[Dictionary]([{
 "min_floor": 1,
 "name": "SporeHusk",
 "scale": 1.5,
-"scene": "res://Scenes/Enemies/enemy_melee.tscn",
+"scene": "res://Scenes/Enemies/spore_husk.tscn",
 "sprite": "res://Assets/Enemies/SporeHusk/sporehusk_spritesheet.png"
 }])

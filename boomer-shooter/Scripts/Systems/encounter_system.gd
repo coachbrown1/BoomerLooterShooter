@@ -18,7 +18,7 @@ const ENEMY_ROSTER: Array = [
 		"scale": 1.4,
 	},
 	{
-		"scene": "res://Scenes/Enemies/enemy_melee.tscn",
+		"scene": "res://Scenes/Enemies/goblin_melee.tscn",
 		"sprite": "res://Assets/Enemies/GoblinForward/goblin_forward_spritesheet.png",
 		"cost": 1.0,
 		"biomes": ["fungal", "crypt"],
@@ -28,7 +28,7 @@ const ENEMY_ROSTER: Array = [
 		"hframes": 8,
 	},
 	{
-		"scene": "res://Scenes/Enemies/enemy_ranged.tscn",
+		"scene": "res://Scenes/Enemies/goblin_archer.tscn",
 		"sprite": "res://Assets/Enemies/GoblinArcherForward/goblin_archer_forward_spritesheet.png",
 		"cost": 1.5,
 		"biomes": ["fungal", "crypt"],
@@ -102,7 +102,7 @@ const ENEMY_ROSTER: Array = [
 		"hframes": 8,
 	},
 	{
-		"scene": "res://Scenes/Enemies/enemy_melee.tscn",
+		"scene": "res://Scenes/Enemies/spore_husk.tscn",
 		"sprite": "res://Assets/Enemies/SporeHusk/sporehusk_spritesheet.png",
 		"cost": 1.5,
 		"biomes": ["fungal"],
