@@ -7,9 +7,12 @@ var current_state: State = State.IDLE
 @export var move_speed: float = 3.0
 @export var attack_damage: int = 10
 @export var attack_range: float = 1.5
+@export var windup_start_range: float = -1.0
 @export var aggro_range: float = 15.0
 @export var windup_time: float = 0.5
 @export var cooldown_time: float = 1.0
+@export var base_max_health: int = 100
+@export var base_start_health: int = -1
 
 @onready var health_component: HealthComponent = $HealthComponent
 @onready var hitbox_component: HitboxComponent = $HitboxComponent
@@ -25,6 +28,13 @@ var actual_height: float = 1.0
 signal enemy_died
 
 func _ready() -> void:
+	if health_component:
+		health_component.max_health = max(1, base_max_health)
+		if base_start_health > 0:
+			health_component.current_health = clamp(base_start_health, 1, health_component.max_health)
+		else:
+			health_component.current_health = health_component.max_health
+
 	health_component.died.connect(_on_died)
 	health_component.health_changed.connect(_on_health_changed)
 	var players = get_tree().get_nodes_in_group("player")
@@ -89,7 +99,7 @@ func _process_state(delta: float) -> void:
 				velocity.z = 0
 
 		State.CHASE:
-			if dist_to_player <= attack_range:
+			if _should_start_windup(dist_to_player):
 				_start_windup()
 			elif dist_to_player > aggro_range * 2.0:
 				current_state = State.IDLE
@@ -133,6 +143,14 @@ func _move_towards_player() -> void:
 	dir = dir.normalized()
 	velocity.x = dir.x * move_speed
 	velocity.z = dir.z * move_speed
+
+func _get_windup_start_range() -> float:
+	if windup_start_range > 0.0:
+		return windup_start_range
+	return attack_range
+
+func _should_start_windup(dist_to_player: float) -> bool:
+	return dist_to_player <= _get_windup_start_range()
 
 func _start_windup() -> void:
 	current_state = State.WINDUP

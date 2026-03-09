@@ -22,6 +22,7 @@ script = ExtResource("1_a")
 move_speed = 2.5
 windup_time = 0.7
 attack_range = 15.0
+windup_start_range = 12.0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 0)

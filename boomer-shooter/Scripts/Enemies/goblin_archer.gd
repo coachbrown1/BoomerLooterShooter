@@ -6,10 +6,12 @@ class_name GoblinArcher
 @export var optimal_distance: float = 12.0
 @export var strafe_speed: float = 2.0
 @export var flee_health_threshold: int = 20
+@export var min_strafe_time_before_shot: float = 0.7
 
 var strafe_dir: float = 1.0
 var strafe_timer: float = 0.0
 var current_strafe_duration: float = 2.0
+var attack_ready_timer: float = 0.0
 
 func _ready() -> void:
 	super._ready()
@@ -18,6 +20,7 @@ func _ready() -> void:
 
 func _move_towards_player() -> void:
 	if not player: return
+	attack_ready_timer += get_physics_process_delta_time()
 
 	var dist = global_position.distance_to(player.global_position)
 	var dir_to_player = global_position.direction_to(player.global_position)
@@ -69,7 +72,27 @@ func _start_windup() -> void:
 		current_state = State.CHASE
 		return
 
+	attack_ready_timer = 0.0
 	super._start_windup()
+
+func _should_start_windup(dist_to_player: float) -> bool:
+	if player == null:
+		return false
+
+	var current_health = health_component.current_health if health_component else 100
+	if current_health <= flee_health_threshold:
+		return false
+
+	if dist_to_player < min_distance * 0.9:
+		return false
+
+	if attack_ready_timer < min_strafe_time_before_shot:
+		return false
+
+	if not _has_line_of_sight():
+		return false
+
+	return dist_to_player <= _get_windup_start_range()
 
 func _has_line_of_sight() -> bool:
 	if not player: return false
@@ -79,9 +102,8 @@ func _has_line_of_sight() -> bool:
 	var target = player.global_position + Vector3(0, 1.0, 0)
 
 	var query = PhysicsRayQueryParameters3D.create(origin, target)
-	# Exclude self and other enemies from blocking LOS
+	# Only world / prop geometry should block LOS.
 	query.exclude = [self.get_rid()]
-	# Only collide with world/environment
 	query.collision_mask = 1
 
 	var result = space_state.intersect_ray(query)
