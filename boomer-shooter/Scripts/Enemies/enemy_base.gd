@@ -20,6 +20,7 @@ var current_state: State = State.IDLE
 @onready var nav_agent: NavigationAgent3D = $NavigationAgent3D
 
 var player: Node3D = null
+var _dungeon_manager: Node = null
 var _flash_active: bool = false
 var _hitstop_active: bool = false
 var _attack_timer: float = 0.0
@@ -40,6 +41,7 @@ func _ready() -> void:
 	var players = get_tree().get_nodes_in_group("player")
 	if players.size() > 0:
 		player = players[0]
+	_dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
 	
 	# Align sprite to ground and adjust collision
 	if billboard_sprite and billboard_sprite.texture:
@@ -86,10 +88,11 @@ func _process_state(delta: float) -> void:
 		return
 
 	var dist_to_player = global_position.distance_to(player.global_position)
+	var player_in_same_room := _is_player_in_same_room()
 
 	match current_state:
 		State.IDLE:
-			if dist_to_player <= aggro_range:
+			if player_in_same_room and dist_to_player <= aggro_range:
 				current_state = State.CHASE
 			else:
 				if billboard_sprite.animate:
@@ -99,7 +102,11 @@ func _process_state(delta: float) -> void:
 				velocity.z = 0
 
 		State.CHASE:
-			if _should_start_windup(dist_to_player):
+			if not player_in_same_room:
+				current_state = State.IDLE
+				velocity.x = 0
+				velocity.z = 0
+			elif _should_start_windup(dist_to_player):
 				_start_windup()
 			elif dist_to_player > aggro_range * 2.0:
 				current_state = State.IDLE
@@ -109,6 +116,12 @@ func _process_state(delta: float) -> void:
 				_move_towards_player()
 
 		State.WINDUP:
+			if not player_in_same_room:
+				current_state = State.IDLE
+				_attack_timer = 0.0
+				velocity.x = 0
+				velocity.z = 0
+				return
 			velocity.x = 0
 			velocity.z = 0
 			_attack_timer += delta
@@ -133,7 +146,23 @@ func _process_state(delta: float) -> void:
 			_attack_timer += delta
 			if _attack_timer >= cooldown_time:
 				_attack_timer = 0.0
-				current_state = State.CHASE
+				current_state = State.CHASE if player_in_same_room else State.IDLE
+
+func _is_player_in_same_room() -> bool:
+	if player == null:
+		return false
+	if _dungeon_manager == null:
+		_dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
+	if _dungeon_manager == null:
+		return true
+	if not _dungeon_manager.has_method("get_room_id_for_world_position"):
+		return true
+
+	var enemy_room_id := int(_dungeon_manager.call("get_room_id_for_world_position", global_position))
+	var player_room_id := int(_dungeon_manager.call("get_room_id_for_world_position", player.global_position))
+	if enemy_room_id < 0 or player_room_id < 0:
+		return false
+	return enemy_room_id == player_room_id
 
 func _move_towards_player() -> void:
 	nav_agent.target_position = player.global_position

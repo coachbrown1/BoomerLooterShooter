@@ -33,6 +33,15 @@ const DEFAULT_BIOME_TEXTURES := {
 	},
 }
 
+const MURAL_TEXTURES := {
+	"crypt": "res://Assets/Environment/Crypt/crypt_wall_mural.png",
+	"fungal": "res://Assets/Environment/Fungal/fungal_wall_mural.png",
+	"lava": "res://Assets/Environment/Lava/lava_wall_mural.png",
+}
+const MURAL_TILING: float = 3.0
+
+
+
 # Cached materials per biome
 var _mat_cache := {}
 
@@ -58,7 +67,10 @@ func build(
 	var mats_floor   := _get_materials(biome, "floor", biome_data)
 	var mats_wall    := _get_materials(biome, "wall", biome_data)
 	var mats_ceiling := _get_materials(biome, "ceiling", biome_data)
+	var mat_mural    := _get_mural_material(biome)
+	
 	var room_tile_owner := _build_room_tile_owner(rooms)
+
 	var corridor_tile_owner := _build_corridor_tile_owner(corridors)
 	var doorway_opening_owner := _build_doorway_opening_owner(doorways)
 	var fungal_corridor_profile := _make_fungal_corridor_profile(
@@ -106,6 +118,11 @@ func build(
 		st.set_material(m)
 		ceil_sts.append(st)
 
+	var mural_st = SurfaceTool.new()
+	mural_st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	mural_st.set_material(mat_mural)
+
+
 	for x in range(grid_w):
 		for z in range(grid_h):
 			if tile_grid[x][z] != TILE_FLOOR:
@@ -145,13 +162,57 @@ func build(
 
 			# Walls — pick random per wall quad
 			if x == 0               or tile_grid[x - 1][z] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(-1, 0, 0), randi())
+				var is_mural := false
+				if room != null:
+					var rect = room.grid_rect
+					if x == rect.position.x:
+						var u_start = (float(z - rect.position.y) / rect.size.y) * MURAL_TILING
+						var u_size = MURAL_TILING / rect.size.y
+						_add_wall_quad(mural_st, wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(-1, 0, 0), 0, Rect2(u_start, 0, u_size, 1))
+						is_mural = true
+
+				if not is_mural:
+					_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(-1, 0, 0), randi())
+					
 			if x == grid_w - 1      or tile_grid[x + 1][z] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(1, 0, 0), randi())
+				var is_mural := false
+				if room != null:
+					var rect = room.grid_rect
+					if x == rect.position.x + rect.size.x - 1:
+						var u_start = (1.0 - float(z - rect.position.y + 1) / rect.size.y) * MURAL_TILING
+						var u_size = MURAL_TILING / rect.size.y
+						_add_wall_quad(mural_st, wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(1, 0, 0), 0, Rect2(u_start, 0, u_size, 1))
+						is_mural = true
+
+				if not is_mural:
+					_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(1, 0, 0), randi())
+					
 			if z == 0               or tile_grid[x][z - 1] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, -1), randi())
+				var is_mural := false
+				if room != null:
+					var rect = room.grid_rect
+					if z == rect.position.y:
+						var u_start = (1.0 - float(x - rect.position.x + 1) / rect.size.x) * MURAL_TILING
+						var u_size = MURAL_TILING / rect.size.x
+						_add_wall_quad(mural_st, wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, -1), 0, Rect2(u_start, 0, u_size, 1))
+						is_mural = true
+
+				if not is_mural:
+					_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, -1), randi())
+					
 			if z == grid_h - 1      or tile_grid[x][z + 1] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, 1), randi())
+				var is_mural := false
+				if room != null:
+					var rect = room.grid_rect
+					if z == rect.position.y + rect.size.y - 1:
+						var u_start = (float(x - rect.position.x) / rect.size.x) * MURAL_TILING
+						var u_size = MURAL_TILING / rect.size.x
+						_add_wall_quad(mural_st, wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, 1), 0, Rect2(u_start, 0, u_size, 1))
+						is_mural = true
+
+				if not is_mural:
+					_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, 1), randi())
+
 
 	var floor_mesh = ArrayMesh.new()
 	for st in floor_sts:
@@ -163,7 +224,10 @@ func build(
 	for st in wall_sts:
 		st.generate_normals()
 		st.commit(wall_mesh)
+	mural_st.generate_normals()
+	mural_st.commit(wall_mesh)
 	wall_mesh_inst.mesh = wall_mesh
+
 
 	var ceil_mesh = ArrayMesh.new()
 	for st in ceil_sts:
@@ -232,8 +296,10 @@ func _add_ceil_quad(st: SurfaceTool, wx: float, wz: float, size: float, height: 
 func _add_wall_quad(
 		st: SurfaceTool, wx: float, wz: float,
 		size: float, height: float, normal: Vector3,
-		rand_val: int = 0
+		rand_val: int = 0,
+		uv_rect: Rect2 = Rect2(0, 0, 1, 1)
 ) -> void:
+
 	# Build a quad on the face indicated by `normal`
 	var v0: Vector3
 	var v1: Vector3
@@ -261,16 +327,17 @@ func _add_wall_quad(
 		v2 = Vector3(wx + size, height, wz + size)
 		v3 = Vector3(wx,        height, wz + size)
 
-	# For walls, we only apply horizontal flipping (bit 0)
-	var uv0 := Vector2(0, 1)
-	var uv1 := Vector2(1, 1)
-	var uv2 := Vector2(1, 0)
-	var uv3 := Vector2(0, 0)
+	# For walls, we only apply horizontal flipping (bit 0) if no custom UV rect is provided
+	var uv0 := Vector2(uv_rect.position.x, uv_rect.position.y + uv_rect.size.y)
+	var uv1 := Vector2(uv_rect.position.x + uv_rect.size.x, uv_rect.position.y + uv_rect.size.y)
+	var uv2 := Vector2(uv_rect.position.x + uv_rect.size.x, uv_rect.position.y)
+	var uv3 := Vector2(uv_rect.position.x, uv_rect.position.y)
 	
-	if (rand_val % 2) == 1:
+	if uv_rect.size == Vector2(1, 1) and (rand_val % 2) == 1:
 		# Swap left/right UVs
 		uv0 = Vector2(1, 1); uv1 = Vector2(0, 1)
 		uv2 = Vector2(0, 0); uv3 = Vector2(1, 0)
+
 
 	st.set_normal(normal); st.set_uv(uv0); st.add_vertex(v0)
 	st.set_normal(normal); st.set_uv(uv1); st.add_vertex(v1)
@@ -360,6 +427,42 @@ func _get_materials(biome: String, surface: String, biome_data: Resource = null)
 
 	_mat_cache[key] = mats
 	return mats
+
+func _get_mural_material(biome: String) -> Material:
+	var key := "mural_" + biome
+	if _mat_cache.has(key):
+		return _mat_cache[key]
+		
+	var tex_path: String = MURAL_TEXTURES.get(biome, MURAL_TEXTURES["crypt"])
+	var mat := StandardMaterial3D.new()
+	var tex = load(tex_path)
+	if tex:
+		mat.albedo_texture = tex
+		
+		# Mural is special, disable tiling (repeat=false) and add emission
+		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		
+		# Set UV mapping to clamp to avoid bleeding
+		mat.uv1_scale = Vector3(1, 1, 1)
+		
+		if biome == "fungal":
+			mat.emission_enabled = true
+			mat.emission_texture = tex
+			mat.emission_energy_multiplier = 0.15
+			mat.emission = Color(0.2, 0.4, 0.3)
+		elif biome == "lava":
+			mat.emission_enabled = true
+			mat.emission_texture = tex
+			mat.emission_energy_multiplier = 0.3
+			mat.emission = Color(0.8, 0.2, 0.0)
+		elif biome == "crypt":
+			mat.emission_enabled = true
+			mat.emission_texture = tex
+			mat.emission_energy_multiplier = 0.08
+			mat.emission = Color(0.2, 0.3, 0.6)
+			
+	_mat_cache[key] = mat
+	return mat
 
 func _get_surface_texture_paths(biome: String, surface: String, biome_data: Resource = null) -> Array:
 	if _has_biome_data(biome_data):

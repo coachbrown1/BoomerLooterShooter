@@ -26,6 +26,7 @@ var _spawned_enemy_rooms := {}
 var _last_player_room_id: int = -1
 
 func _ready() -> void:
+	add_to_group("dungeon_manager")
 	if Engine.is_editor_hint():
 		set_process(false)
 		return
@@ -441,3 +442,6 @@ func _find_room_id_for_world_position(world_pos: Vector3) -> int:
 		if tx >= rect.position.x and tx < rect.position.x + rect.size.x and tz >= rect.position.y and tz < rect.position.y + rect.size.y:
 			return room.id
 	return -1
+
+func get_room_id_for_world_position(world_pos: Vector3) -> int:
+	return _find_room_id_for_world_position(world_pos)
