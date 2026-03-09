@@ -1,7 +1,8 @@
-[gd_scene format=3 uid="uid://8kv1bp8iue40"]
+[gd_scene load_steps=4 format=3 uid="uid://8kv1bp8iue40"]
 
 [ext_resource type="Texture2D" uid="uid://64cdld0nh1lb" path="res://Assets/Environment/Fungal/prop_fungal_mushroom_cap.png" id="1_cap"]
 [ext_resource type="Texture2D" uid="uid://oidobtl2rb74" path="res://Assets/Environment/Fungal/prop_fungal_mushroom_stalk.png" id="2_stalk"]
+[ext_resource type="Script" path="res://Scripts/Environment/fungal_prop_vfx.gd" id="3_vfx"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cap"]
 albedo_color = Color(0.05, 0.15, 0.05, 1)
@@ -20,6 +21,11 @@ radius = 0.6
 height = 0.4
 
 [node name="FungalMushroom" type="Node3D" unique_id=1473904530]
+script = ExtResource("3_vfx")
+emission_color = Color(0.3, 1, 0.6, 1)
+particle_amount = 12
+radius = 0.8
+intensity = 1.0
 
 [node name="Stalk1" type="Sprite3D" parent="." unique_id=38713441]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)

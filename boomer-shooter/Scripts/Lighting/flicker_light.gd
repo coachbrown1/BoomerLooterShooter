@@ -32,10 +32,16 @@ func _ready() -> void:
 		if p is Sprite3D:
 			sprite_node = p
 		else:
-			for child in p.get_children():
-				if child is Sprite3D:
-					sprite_node = child
-					break
+			sprite_node = _find_sprite_recursive(p)
+
+func _find_sprite_recursive(node: Node) -> Sprite3D:
+	for child in node.get_children():
+		if child is Sprite3D:
+			return child
+		var res = _find_sprite_recursive(child)
+		if res:
+			return res
+	return null
 	
 	if light_node:
 		base_energy = light_node.light_energy

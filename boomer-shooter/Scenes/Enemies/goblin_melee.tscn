@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://c1m2e3l4e5e6"]
 
-[ext_resource type="Script" path="res://Scripts/Enemies/goblin_melee.gd" id="1_a"]
-[ext_resource type="Script" path="res://Scripts/Components/health_component.gd" id="2_b"]
-[ext_resource type="Script" path="res://Scripts/Components/hitbox_component.gd" id="3_c"]
-[ext_resource type="Script" path="res://Scripts/Components/billboard_sprite.gd" id="4_d"]
-[ext_resource type="Texture" path="res://Assets/Enemies/GoblinForward/goblin_forward_spritesheet.png" id="5_e"]
+[ext_resource type="Script" uid="uid://ctr7tft27najg" path="res://Scripts/Enemies/goblin_melee.gd" id="1_a"]
+[ext_resource type="Script" uid="uid://cjjywi22247q4" path="res://Scripts/Components/health_component.gd" id="2_b"]
+[ext_resource type="Script" uid="uid://cq7c3rgbvvmh2" path="res://Scripts/Components/hitbox_component.gd" id="3_c"]
+[ext_resource type="Script" uid="uid://d11y815ukmppm" path="res://Scripts/Components/billboard_sprite.gd" id="4_d"]
+[ext_resource type="Texture2D" uid="uid://8ncq84cpyvo5" path="res://Assets/Enemies/GoblinForward/goblin_forward_spritesheet.png" id="5_e"]
 [ext_resource type="Material" uid="uid://cx6i4m3cny0m1" path="res://Materials/enemy_outline_material.tres" id="6_mat"]
 
 [sub_resource type="CapsuleShape3D" id="1"]
@@ -15,35 +15,38 @@ height = 2.7
 radius = 0.75
 height = 2.85
 
-[node name="GoblinMelee" type="CharacterBody3D"]
+[node name="GoblinMelee" type="CharacterBody3D" unique_id=1900553387]
 collision_layer = 4
 collision_mask = 7
 script = ExtResource("1_a")
+lunge_speed_multiplier = 10.0
 move_speed = 3.5
-windup_start_range = 3.5
+attack_range = 10.0
+windup_start_range = 10.0
+aggro_range = 30.0
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=358386061]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 0)
 shape = SubResource("1")
 
-[node name="HealthComponent" type="Node" parent="."]
+[node name="HealthComponent" type="Node" parent="." unique_id=2010741763]
 script = ExtResource("2_b")
 
-[node name="HitboxComponent" type="Area3D" parent="." node_paths=PackedStringArray("health_component")]
+[node name="HitboxComponent" type="Area3D" parent="." unique_id=306079532 node_paths=PackedStringArray("health_component")]
 collision_layer = 4
 collision_mask = 2
 script = ExtResource("3_c")
 health_component = NodePath("../HealthComponent")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="HitboxComponent"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="HitboxComponent" unique_id=68383215]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 0)
 shape = SubResource("2")
 
-[node name="Sprite3D" type="Sprite3D" parent="."]
+[node name="Sprite3D" type="Sprite3D" parent="." unique_id=1057019444]
 material_override = ExtResource("6_mat")
 texture = ExtResource("5_e")
 hframes = 8
 script = ExtResource("4_d")
 bounce_walk_mode = true
 
-[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="." unique_id=1200633817]

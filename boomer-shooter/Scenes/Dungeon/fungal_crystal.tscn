@@ -1,8 +1,17 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Texture2D" uid="uid_crystal" path="res://Assets/Environment/Fungal/prop_fungal_crystal.png" id="1_crystal"]
+[ext_resource type="Script" path="res://Scripts/Environment/fungal_prop_vfx.gd" id="2_vfx"]
 
-[node name="FungalCrystal" type="Sprite3D"]
+[node name="FungalCrystal" type="Node3D"]
+script = ExtResource("2_vfx")
+emission_color = Color(0.5, 0.4, 1.0, 1)
+particle_amount = 0
+enable_particles = false
+radius = 1.0
+intensity = 1.2
+
+[node name="Sprite3D" type="Sprite3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
 pixel_size = 0.005
 billboard = 0
