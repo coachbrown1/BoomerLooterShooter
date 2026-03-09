@@ -138,20 +138,20 @@ func build(
 					wall_idx = fungal_corridor_profile["wall_variant"]
 
 			# Floor quad
-			_add_floor_quad(floor_sts[floor_idx], wx, wz, TILE_SIZE)
+			_add_floor_quad(floor_sts[floor_idx], wx, wz, TILE_SIZE, rand_val)
 
 			# Ceiling quad
-			_add_ceil_quad(ceil_sts[ceil_idx], wx, wz, TILE_SIZE, WALL_HEIGHT)
+			_add_ceil_quad(ceil_sts[ceil_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, rand_val >> 4)
 
 			# Walls — pick random per wall quad
 			if x == 0               or tile_grid[x - 1][z] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(-1, 0, 0))
+				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(-1, 0, 0), randi())
 			if x == grid_w - 1      or tile_grid[x + 1][z] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(1, 0, 0))
+				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(1, 0, 0), randi())
 			if z == 0               or tile_grid[x][z - 1] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, -1))
+				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, -1), randi())
 			if z == grid_h - 1      or tile_grid[x][z + 1] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, 1))
+				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, 1), randi())
 
 	var floor_mesh = ArrayMesh.new()
 	for st in floor_sts:
@@ -191,7 +191,7 @@ func build(
 # -------------------------------------------------------
 # Quad helpers
 # -------------------------------------------------------
-func _add_floor_quad(st: SurfaceTool, wx: float, wz: float, size: float) -> void:
+func _add_floor_quad(st: SurfaceTool, wx: float, wz: float, size: float, rand_val: int = 0) -> void:
 	# Vertices: counter-clockwise from above
 	var v0 := Vector3(wx,        0.0, wz)
 	var v1 := Vector3(wx + size, 0.0, wz)
@@ -199,15 +199,18 @@ func _add_floor_quad(st: SurfaceTool, wx: float, wz: float, size: float) -> void
 	var v3 := Vector3(wx,        0.0, wz + size)
 	var n   := Vector3.UP
 
-	st.set_normal(n); st.set_uv(Vector2(0, 0)); st.add_vertex(v0)
-	st.set_normal(n); st.set_uv(Vector2(1, 0)); st.add_vertex(v1)
-	st.set_normal(n); st.set_uv(Vector2(1, 1)); st.add_vertex(v2)
+	var uvs := _get_randomized_uvs(rand_val)
+	var uv0: Vector2 = uvs[0]; var uv1: Vector2 = uvs[1]; var uv2: Vector2 = uvs[2]; var uv3: Vector2 = uvs[3]
 
-	st.set_normal(n); st.set_uv(Vector2(0, 0)); st.add_vertex(v0)
-	st.set_normal(n); st.set_uv(Vector2(1, 1)); st.add_vertex(v2)
-	st.set_normal(n); st.set_uv(Vector2(0, 1)); st.add_vertex(v3)
+	st.set_normal(n); st.set_uv(uv0); st.add_vertex(v0)
+	st.set_normal(n); st.set_uv(uv1); st.add_vertex(v1)
+	st.set_normal(n); st.set_uv(uv2); st.add_vertex(v2)
 
-func _add_ceil_quad(st: SurfaceTool, wx: float, wz: float, size: float, height: float) -> void:
+	st.set_normal(n); st.set_uv(uv0); st.add_vertex(v0)
+	st.set_normal(n); st.set_uv(uv2); st.add_vertex(v2)
+	st.set_normal(n); st.set_uv(uv3); st.add_vertex(v3)
+
+func _add_ceil_quad(st: SurfaceTool, wx: float, wz: float, size: float, height: float, rand_val: int = 0) -> void:
 	var y   := height
 	var v0  := Vector3(wx,        y, wz)
 	var v1  := Vector3(wx,        y, wz + size)
@@ -215,17 +218,21 @@ func _add_ceil_quad(st: SurfaceTool, wx: float, wz: float, size: float, height: 
 	var v3  := Vector3(wx + size, y, wz)
 	var n   := Vector3.DOWN
 
-	st.set_normal(n); st.set_uv(Vector2(0, 0)); st.add_vertex(v0)
-	st.set_normal(n); st.set_uv(Vector2(0, 1)); st.add_vertex(v1)
-	st.set_normal(n); st.set_uv(Vector2(1, 1)); st.add_vertex(v2)
+	var uvs := _get_randomized_uvs(rand_val)
+	var uv0: Vector2 = uvs[0]; var uv1: Vector2 = uvs[1]; var uv2: Vector2 = uvs[2]; var uv3: Vector2 = uvs[3]
 
-	st.set_normal(n); st.set_uv(Vector2(0, 0)); st.add_vertex(v0)
-	st.set_normal(n); st.set_uv(Vector2(1, 1)); st.add_vertex(v2)
-	st.set_normal(n); st.set_uv(Vector2(1, 0)); st.add_vertex(v3)
+	st.set_normal(n); st.set_uv(uv0); st.add_vertex(v0)
+	st.set_normal(n); st.set_uv(uv1); st.add_vertex(v1)
+	st.set_normal(n); st.set_uv(uv2); st.add_vertex(v2)
+
+	st.set_normal(n); st.set_uv(uv0); st.add_vertex(v0)
+	st.set_normal(n); st.set_uv(uv2); st.add_vertex(v2)
+	st.set_normal(n); st.set_uv(uv3); st.add_vertex(v3)
 
 func _add_wall_quad(
 		st: SurfaceTool, wx: float, wz: float,
-		size: float, height: float, normal: Vector3
+		size: float, height: float, normal: Vector3,
+		rand_val: int = 0
 ) -> void:
 	# Build a quad on the face indicated by `normal`
 	var v0: Vector3
@@ -254,13 +261,54 @@ func _add_wall_quad(
 		v2 = Vector3(wx + size, height, wz + size)
 		v3 = Vector3(wx,        height, wz + size)
 
-	st.set_normal(normal); st.set_uv(Vector2(0, 1)); st.add_vertex(v0)
-	st.set_normal(normal); st.set_uv(Vector2(1, 1)); st.add_vertex(v1)
-	st.set_normal(normal); st.set_uv(Vector2(1, 0)); st.add_vertex(v2)
+	# For walls, we only apply horizontal flipping (bit 0)
+	var uv0 := Vector2(0, 1)
+	var uv1 := Vector2(1, 1)
+	var uv2 := Vector2(1, 0)
+	var uv3 := Vector2(0, 0)
+	
+	if (rand_val % 2) == 1:
+		# Swap left/right UVs
+		uv0 = Vector2(1, 1); uv1 = Vector2(0, 1)
+		uv2 = Vector2(0, 0); uv3 = Vector2(1, 0)
 
-	st.set_normal(normal); st.set_uv(Vector2(0, 1)); st.add_vertex(v0)
-	st.set_normal(normal); st.set_uv(Vector2(1, 0)); st.add_vertex(v2)
-	st.set_normal(normal); st.set_uv(Vector2(0, 0)); st.add_vertex(v3)
+	st.set_normal(normal); st.set_uv(uv0); st.add_vertex(v0)
+	st.set_normal(normal); st.set_uv(uv1); st.add_vertex(v1)
+	st.set_normal(normal); st.set_uv(uv2); st.add_vertex(v2)
+
+	st.set_normal(normal); st.set_uv(uv0); st.add_vertex(v0)
+	st.set_normal(normal); st.set_uv(uv2); st.add_vertex(v2)
+	st.set_normal(normal); st.set_uv(uv3); st.add_vertex(v3)
+
+func _get_randomized_uvs(rand_val: int) -> Array:
+	var uv_00 := Vector2(0, 0)
+	var uv_10 := Vector2(1, 0)
+	var uv_11 := Vector2(1, 1)
+	var uv_01 := Vector2(0, 1)
+	
+	var coords = [uv_00, uv_10, uv_11, uv_01]
+	
+	if rand_val != 0:
+		var rot := rand_val % 4
+		var flip_h := (rand_val >> 2) % 2 == 1
+		var flip_v := (rand_val >> 3) % 2 == 1
+		
+		# Apply rotation
+		for i in range(rot):
+			var first = coords.pop_front()
+			coords.push_back(first)
+		
+		# Apply flips
+		if flip_h:
+			# Swap index 0<->1 and 3<->2
+			var tmp = coords[0]; coords[0] = coords[1]; coords[1] = tmp
+			tmp = coords[3]; coords[3] = coords[2]; coords[2] = tmp
+		if flip_v:
+			# Swap index 0<->3 and 1<->2
+			var tmp = coords[0]; coords[0] = coords[3]; coords[3] = tmp
+			tmp = coords[1]; coords[1] = coords[2]; coords[2] = tmp
+			
+	return coords
 
 # -------------------------------------------------------
 # Material cache
@@ -284,10 +332,10 @@ func _get_materials(biome: String, surface: String, biome_data: Resource = null)
 				mat.emission_texture = tex
 				mat.emission_operator = StandardMaterial3D.EMISSION_OP_MULTIPLY
 				
-				var emission_energy := 0.1
+				var emission_energy := 0.05
 				if biome == "fungal":
-					emission_energy = 0.2
-					mat.emission = Color(0.3, 0.6, 0.4) # Even subtler green
+					emission_energy = 0.04
+					mat.emission = Color(0.1, 0.2, 0.15) # Much darker, subtle glow
 					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 					mat.uv1_scale = Vector3(1.0, 1.0, 1.0)
 				elif biome == "lava":
@@ -430,18 +478,18 @@ func _place_lights(
 		bioluminescent_sources = [
 			{
 				"tex": "res://Assets/Environment/Fungal/prop_fungal_crystal.png",
-				"color": Color(0.4, 0.3, 0.9),
-				"energy": 0.9,
-				"range": 7.0,
+				"color": Color(0.5, 0.4, 1.0),
+				"energy": 2.5,
+				"range": 12.0,
 				"height": 0.8,
 				"pixel_size": 0.004,
 				"requires_wall": true,
 			},
 			{
 				"tex": "res://Assets/Environment/Fungal/prop_fungal_mushroom.png",
-				"color": Color(0.2, 1.0, 0.5),
-				"energy": 0.6,
-				"range": 5.0,
+				"color": Color(0.3, 1.0, 0.6),
+				"energy": 1.8,
+				"range": 9.0,
 				"height": 0.9,
 				"pixel_size": 0.0035,
 				"requires_wall": false,
