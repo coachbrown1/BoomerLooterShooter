@@ -186,7 +186,7 @@ func build(
 
 	# Post-processing: Place doorways and lights
 	_place_generated_doorway_assemblies(geo_root, doorways, biome_data)
-	_place_lights(geo_root, rooms, tile_grid, biome, doorway_opening_owner, biome_data)
+	_place_lights(geo_root, rooms, tile_grid, biome, doorway_opening_owner, room_tile_owner, biome_data)
 
 # -------------------------------------------------------
 # Quad helpers
@@ -450,6 +450,7 @@ func _place_lights(
 	tile_grid: Array,
 	biome: String,
 	doorway_owner: Dictionary,
+	room_tile_owner: Dictionary,
 	biome_data: Resource = null
 ) -> void:
 	var room_color: Color = Color(0.9, 0.75, 0.5)
@@ -498,6 +499,8 @@ func _place_lights(
 		
 	# Room center lights
 	for r in rooms:
+		if r != null and (r.has_handcrafted_layout or r.handcrafted_scene != null or r.handcrafted_scene_path != ""):
+			continue
 		var pos = r.get_world_center(TILE_SIZE)
 
 		if use_bioluminescent_props:
@@ -614,6 +617,9 @@ func _place_lights(
 	if use_bioluminescent_props:
 		for x in range(2, grid_w - 2, corridor_step):
 			for z in range(2, grid_h - 2, corridor_step):
+				var tile_room: RoomData = room_tile_owner.get(_tile_key(x, z), null)
+				if tile_room != null and (tile_room.has_handcrafted_layout or tile_room.handcrafted_scene != null or tile_room.handcrafted_scene_path != ""):
+					continue
 				if tile_grid[x][z] == TILE_FLOOR and randf() < corridor_chance:
 					var src: Dictionary = bioluminescent_sources[randi() % bioluminescent_sources.size()]
 					
@@ -690,6 +696,9 @@ func _place_lights(
 		# Other biomes: plain invisible torchlight
 		for x in range(2, grid_w - 2, corridor_step):
 			for z in range(2, grid_h - 2, corridor_step):
+				var tile_room: RoomData = room_tile_owner.get(_tile_key(x, z), null)
+				if tile_room != null and (tile_room.has_handcrafted_layout or tile_room.handcrafted_scene != null or tile_room.handcrafted_scene_path != ""):
+					continue
 				if tile_grid[x][z] == TILE_FLOOR and randf() < corridor_chance:
 					var light = OmniLight3D.new()
 					light.light_color = corridor_color

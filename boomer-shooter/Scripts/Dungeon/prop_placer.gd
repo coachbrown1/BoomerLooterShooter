@@ -23,7 +23,7 @@ func populate(
 		var room: RoomData = room_variant
 		if room == null:
 			continue
-		if room.has_handcrafted_layout:
+		if room.has_handcrafted_layout or room.handcrafted_scene != null or room.handcrafted_scene_path != "":
 			continue
 
 		var area = room.grid_rect.size.x * room.grid_rect.size.y
