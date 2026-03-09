@@ -25,3 +25,12 @@ func update_ammo(ammo: int, max_ammo: int) -> void:
 		await ready
 	if ammo_label:
 		ammo_label.text = "Ammo: " + str(ammo) + " / " + str(max_ammo)
+
+func update_ammo_display(current_mag: int, mag_size: int, reserve: int, is_infinite: bool) -> void:
+	if not is_node_ready():
+		await ready
+	if ammo_label:
+		if is_infinite:
+			ammo_label.text = "Ammo: \u221E / \u221E" # Infinity symbol
+		else:
+			ammo_label.text = "Ammo: " + str(current_mag) + " / " + str(reserve)

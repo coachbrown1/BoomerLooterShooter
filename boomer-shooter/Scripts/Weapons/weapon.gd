@@ -1,20 +1,37 @@
 extends Node3D
 class_name Weapon
 
+@export_group("General")
+@export var weapon_name: String = "Weapon"
 @export var damage: int = 15
 @export var fire_rate: float = 0.15
+
+@export_group("Ammo & Reload")
+@export var ammo_type: String = "light" # "light", "shells", "energy", "arrows", "none"
+@export var mag_size: int = 30
+@export var reload_time: float = 1.0
+var current_mag: int = 0
+var is_reloading: bool = false
+
+@export_group("Projectile Settings")
+@export var is_projectile: bool = false
+@export var projectile_scene: PackedScene = null
 @export var ray_range: float = 200.0
+
+@export_group("Recoil")
+@export var fov_kick_amount: float = 2.0
+@export var recoil_pitch: float = 0.05
+@export var recoil_yaw: float = 0.02
 
 @onready var sprite: Sprite3D = $WeaponSprite
 @onready var muzzle_flash: Node3D = $MuzzleFlash
 @onready var tracer: MeshInstance3D = $BulletTracer
 @onready var ejection_port: Node3D = $EjectionPort
 
-@export var fov_kick_amount: float = 2.0
-
 var can_fire: bool = true
 var fire_timer: float = 0.0
 var sprite_origin_z: float = 0.0
+var weapon_manager: Node = null
 
 # 2D Viewmodel elements
 var _canvas_layer: CanvasLayer
@@ -33,6 +50,7 @@ const CASING_SCENE = preload("res://Scenes/Effects/shell_casing.tscn")
 func _ready() -> void:
 	muzzle_flash.visible = false
 	tracer.visible = false
+	current_mag = mag_size
 	
 	# Hide the 3D sprite as we'll use a 2D overlay
 	if sprite:
@@ -115,7 +133,75 @@ func _update_viewmodel_position() -> void:
 		_muzzle_2d.position = _viewmodel_2d.position + (Vector2(-20, -110) * scale_factor)
 		_muzzle_2d.scale = Vector2(scale_factor * 1.5, scale_factor * 1.5)
 
+func show_weapon() -> void:
+	visible = true
+	set_process(true)
+	set_physics_process(true)
+	if _canvas_layer:
+		_canvas_layer.visible = true
+
+	# Reset animations and timers when drawn
+	can_fire = true
+	fire_timer = 0.0
+	is_reloading = false
+	if _viewmodel_2d:
+		_viewmodel_2d.position.y = get_viewport().get_visible_rect().size.y
+
+func hide_weapon() -> void:
+	visible = false
+	set_process(false)
+	set_physics_process(false)
+	if _canvas_layer:
+		_canvas_layer.visible = false
+	is_reloading = false
+
+func can_reload() -> bool:
+	if ammo_type == "none" or is_reloading or current_mag == mag_size:
+		return false
+	if weapon_manager and weapon_manager.get_ammo(ammo_type) <= 0:
+		return false
+	return true
+
+func reload() -> void:
+	if not can_reload(): return
+
+	is_reloading = true
+
+	if _viewmodel_2d:
+		var tween = create_tween()
+		var orig_y = _viewmodel_2d.position.y
+		var hidden_y = orig_y + _viewmodel_2d.texture.get_height() * _viewmodel_2d.scale.y
+
+		# Move gun down
+		tween.tween_property(_viewmodel_2d, "position:y", hidden_y, 0.2)
+
+		# Wait
+		tween.tween_interval(max(0.1, reload_time - 0.4))
+
+		# Perform ammo math
+		tween.tween_callback(func():
+			var ammo_needed = mag_size - current_mag
+			var reserve = weapon_manager.get_ammo(ammo_type)
+			var ammo_to_take = min(ammo_needed, reserve)
+
+			weapon_manager.consume_ammo(ammo_type, ammo_to_take)
+			current_mag += ammo_to_take
+
+			# Force HUD update
+			if weapon_manager: weapon_manager._update_hud()
+		)
+
+		# Move gun up
+		tween.tween_property(_viewmodel_2d, "position:y", orig_y, 0.2)
+
+		tween.finished.connect(func():
+			is_reloading = false
+			can_fire = true
+		)
+
 func _physics_process(delta: float) -> void:
+	if is_reloading: return
+
 	if not can_fire:
 		fire_timer += delta
 		if fire_timer >= fire_rate:
@@ -123,10 +209,18 @@ func _physics_process(delta: float) -> void:
 			fire_timer = 0.0
 
 	if Input.is_action_pressed("shoot") and can_fire:
-		fire()
+		if current_mag <= 0 and ammo_type != "none":
+			if can_reload():
+				reload()
+		else:
+			fire()
 
 func fire() -> void:
 	can_fire = false
+
+	if ammo_type != "none":
+		current_mag -= 1
+
 	fired.emit()
 
 	# Recoil animation in 2D
@@ -147,17 +241,50 @@ func fire() -> void:
 
 	_eject_shell()
 	
-	# FOV Kick
+	# FOV Kick & Pitch/Yaw Recoil
 	var player = get_tree().get_first_node_in_group("player")
-	if player and player.has_method("apply_fov_kick"):
-		player.apply_fov_kick(fov_kick_amount)
+	if player:
+		if player.has_method("apply_fov_kick"):
+			player.apply_fov_kick(fov_kick_amount)
+		if player.has_method("add_camera_recoil"):
+			# Add some randomness to yaw
+			var r_yaw = recoil_yaw * randf_range(-1.0, 1.0)
+			player.add_camera_recoil(recoil_pitch, r_yaw)
 
 	var cam: Camera3D = get_viewport().get_camera_3d()
 	if not cam: return
 
-	var space_state = get_world_3d().direct_space_state
 	var cam_origin = cam.global_position
 	var cam_forward = -cam.global_transform.basis.z.normalized()
+
+	if is_projectile and projectile_scene:
+		_fire_projectile(cam_origin, cam_forward)
+		_show_muzzle_flash()
+	else:
+		_fire_hitscan(cam_origin, cam_forward)
+
+func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3) -> void:
+	var proj = projectile_scene.instantiate() as Node3D
+
+	# Start projectile slightly ahead of camera
+	proj.global_position = cam_origin + cam_forward * 1.0
+
+	if proj is Projectile:
+		proj.direction = cam_forward
+		proj.damage = damage
+
+	# Must add child AFTER setting properties so _ready has correct direction
+	get_tree().current_scene.add_child(proj)
+
+	if proj is Projectile:
+		# Look in direction of travel
+		if cam_forward.abs().is_equal_approx(Vector3(0, 1, 0)):
+			proj.look_at(proj.global_position + cam_forward, Vector3.RIGHT)
+		else:
+			proj.look_at(proj.global_position + cam_forward, Vector3.UP)
+
+func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3) -> void:
+	var space_state = get_world_3d().direct_space_state
 	var ray_end = cam_origin + cam_forward * ray_range
 
 	var query = PhysicsRayQueryParameters3D.create(cam_origin, ray_end)
