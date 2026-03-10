@@ -67,7 +67,6 @@ func build(
 	var mats_floor   := _get_materials(biome, "floor", biome_data)
 	var mats_wall    := _get_materials(biome, "wall", biome_data)
 	var mats_ceiling := _get_materials(biome, "ceiling", biome_data)
-	var mat_mural    := _get_mural_material(biome)
 	
 	var room_tile_owner := _build_room_tile_owner(rooms)
 
@@ -118,10 +117,6 @@ func build(
 		st.set_material(m)
 		ceil_sts.append(st)
 
-	var mural_st = SurfaceTool.new()
-	mural_st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	mural_st.set_material(mat_mural)
-
 
 	for x in range(grid_w):
 		for z in range(grid_h):
@@ -162,56 +157,16 @@ func build(
 
 			# Walls — pick random per wall quad
 			if x == 0               or tile_grid[x - 1][z] == TILE_WALL:
-				var is_mural := false
-				if room != null:
-					var rect = room.grid_rect
-					if x == rect.position.x:
-						var u_start = (float(z - rect.position.y) / rect.size.y) * MURAL_TILING
-						var u_size = MURAL_TILING / rect.size.y
-						_add_wall_quad(mural_st, wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(-1, 0, 0), 0, Rect2(u_start, 0, u_size, 1))
-						is_mural = true
-
-				if not is_mural:
-					_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(-1, 0, 0), randi())
+				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(-1, 0, 0), randi())
 					
 			if x == grid_w - 1      or tile_grid[x + 1][z] == TILE_WALL:
-				var is_mural := false
-				if room != null:
-					var rect = room.grid_rect
-					if x == rect.position.x + rect.size.x - 1:
-						var u_start = (1.0 - float(z - rect.position.y + 1) / rect.size.y) * MURAL_TILING
-						var u_size = MURAL_TILING / rect.size.y
-						_add_wall_quad(mural_st, wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(1, 0, 0), 0, Rect2(u_start, 0, u_size, 1))
-						is_mural = true
-
-				if not is_mural:
-					_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(1, 0, 0), randi())
+				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(1, 0, 0), randi())
 					
 			if z == 0               or tile_grid[x][z - 1] == TILE_WALL:
-				var is_mural := false
-				if room != null:
-					var rect = room.grid_rect
-					if z == rect.position.y:
-						var u_start = (1.0 - float(x - rect.position.x + 1) / rect.size.x) * MURAL_TILING
-						var u_size = MURAL_TILING / rect.size.x
-						_add_wall_quad(mural_st, wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, -1), 0, Rect2(u_start, 0, u_size, 1))
-						is_mural = true
-
-				if not is_mural:
-					_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, -1), randi())
+				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, -1), randi())
 					
 			if z == grid_h - 1      or tile_grid[x][z + 1] == TILE_WALL:
-				var is_mural := false
-				if room != null:
-					var rect = room.grid_rect
-					if z == rect.position.y + rect.size.y - 1:
-						var u_start = (float(x - rect.position.x) / rect.size.x) * MURAL_TILING
-						var u_size = MURAL_TILING / rect.size.x
-						_add_wall_quad(mural_st, wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, 1), 0, Rect2(u_start, 0, u_size, 1))
-						is_mural = true
-
-				if not is_mural:
-					_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, 1), randi())
+				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, 1), randi())
 
 
 	var floor_mesh = ArrayMesh.new()
@@ -224,8 +179,6 @@ func build(
 	for st in wall_sts:
 		st.generate_normals()
 		st.commit(wall_mesh)
-	mural_st.generate_normals()
-	mural_st.commit(wall_mesh)
 	wall_mesh_inst.mesh = wall_mesh
 
 

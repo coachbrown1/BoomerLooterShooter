@@ -1,122 +1,52 @@
 [gd_scene format=3 uid="uid://bamyeedre1p87"]
 
-[ext_resource type="PackedScene" uid="uid://cxhwb12mhiynr" path="res://Scenes/World/door.tscn" id="1_door_scene"]
-[ext_resource type="Texture2D" uid="" path="res://Assets/Environment/Castle/castle_doorway_left.png" id="2_left_tex"]
-[ext_resource type="Texture2D" uid="" path="res://Assets/Environment/Castle/castle_doorway_top.png" id="3_top_tex"]
-[ext_resource type="Texture2D" uid="" path="res://Assets/Environment/Castle/castle_doorway_right.png" id="4_right_tex"]
+[ext_resource type="PackedScene" uid="uid://cxhwb12mhiynr" path="res://Scenes/World/door.tscn" id="1_door"]
+[ext_resource type="Texture2D" path="res://Assets/Environment/Castle/CastleDoorwayNew.png" id="2_tex"]
 
-[sub_resource type="BoxShape3D" id="11_jamb_shape"]
-size = Vector3(0.20274414, 4, 0.55)
-
-[sub_resource type="StandardMaterial3D" id="2_left_decal_mat"]
-transparency = 1
-albedo_texture = ExtResource("2_left_tex")
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_doorway"]
+transparency = 2
+alpha_scissor_threshold = 0.5
+alpha_antialiasing_mode = 0
+albedo_texture = ExtResource("2_tex")
 emission_enabled = true
-emission = Color(0.08, 0.24, 0.12, 1)
-emission_energy_multiplier = 0.18
-emission_texture = ExtResource("2_left_tex")
+emission = Color(0.1, 0.1, 0.1, 1)
+emission_energy_multiplier = 0.2
+emission_texture = ExtResource("2_tex")
+texture_filter = 0
 
-[sub_resource type="QuadMesh" id="6_jamb_decal_mesh"]
-size = Vector2(0.56, 4)
+[sub_resource type="QuadMesh" id="QuadMesh_doorway"]
+material = SubResource("StandardMaterial3D_doorway")
+size = Vector2(3.0, 4.5)
 
-[sub_resource type="StandardMaterial3D" id="4_right_decal_mat"]
-transparency = 1
-albedo_texture = ExtResource("2_left_tex")
-emission_enabled = true
-emission = Color(0.08, 0.24, 0.12, 1)
-emission_energy_multiplier = 0.18
-emission_texture = ExtResource("4_right_tex")
+[sub_resource type="BoxShape3D" id="BoxShape3D_jamb"]
+size = Vector3(0.5, 4.0, 0.6)
 
-[sub_resource type="BoxShape3D" id="12_top_shape"]
-size = Vector3(3.2, 0.54816896, 0.55)
+[sub_resource type="BoxShape3D" id="BoxShape3D_top"]
+size = Vector3(3.0, 1.0, 0.6)
 
-[sub_resource type="StandardMaterial3D" id="3_top_decal_mat"]
-transparency = 1
-albedo_texture = ExtResource("3_top_tex")
-emission_enabled = true
-emission = Color(0.08, 0.24, 0.12, 1)
-emission_energy_multiplier = 0.18
-emission_texture = ExtResource("3_top_tex")
+[node name="DoorwayAssembly" type="Node3D"]
 
-[sub_resource type="QuadMesh" id="8_top_decal_mesh"]
-size = Vector2(3.2, 1.1)
+[node name="Door" parent="." instance=ExtResource("1_door")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
-[sub_resource type="StandardMaterial3D" id="9_tile_guide_mat"]
-transparency = 1
-shading_mode = 0
-albedo_color = Color(0.1, 0.8, 1, 0.18)
+[node name="FrontDecal" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, 0.28)
+mesh = SubResource("QuadMesh_doorway")
 
-[sub_resource type="BoxMesh" id="10_tile_guide_mesh"]
-size = Vector3(3, 4, 3)
+[node name="BackDecal" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 2.25, -0.28)
+mesh = SubResource("QuadMesh_doorway")
 
-[node name="DoorwayAssembly" type="Node3D" unique_id=660195648]
+[node name="StaticBody3D" type="StaticBody3D" parent="."]
 
-[node name="Door" parent="." unique_id=2083897814 instance=ExtResource("1_door_scene")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.52895534, 0, 0)
+[node name="LeftJamb" type="CollisionShape3D" parent="StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.25, 2.0, 0)
+shape = SubResource("BoxShape3D_jamb")
 
-[node name="FrameRoot" type="Node3D" parent="." unique_id=1481739935]
+[node name="RightJamb" type="CollisionShape3D" parent="StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.25, 2.0, 0)
+shape = SubResource("BoxShape3D_jamb")
 
-[node name="LeftFrame" type="Node3D" parent="FrameRoot" unique_id=2058745031]
-transform = Transform3D(4.51793, 0, 0, 0, 1, 0, 0, 0, 1.050469, -1.924, 2, 0)
-
-[node name="ColliderBody" type="StaticBody3D" parent="FrameRoot/LeftFrame" unique_id=1177986410]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="FrameRoot/LeftFrame/ColliderBody" unique_id=1710452756]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.06621581, 0, 0)
-shape = SubResource("11_jamb_shape")
-
-[node name="FrontDecal" type="MeshInstance3D" parent="FrameRoot/LeftFrame" unique_id=1092822098]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.285)
-material_override = SubResource("2_left_decal_mat")
-mesh = SubResource("6_jamb_decal_mesh")
-
-[node name="BackDecal" type="MeshInstance3D" parent="FrameRoot/LeftFrame" unique_id=1901029235]
-transform = Transform3D(1, 8.742278e-08, -8.74228e-08, -8.742278e-08, 1, 0, -8.74228e-08, -7.6427436e-15, -1, 0, 0, -0.285)
-material_override = SubResource("2_left_decal_mat")
-mesh = SubResource("6_jamb_decal_mesh")
-
-[node name="RightFrame" type="Node3D" parent="FrameRoot" unique_id=1360092408]
-transform = Transform3D(4.5120883, 0, 0.053402666, 0, 1, 0, -0.22967789, 0, 1.0491108, 1.9239475, 2, 0)
-
-[node name="ColliderBody" type="StaticBody3D" parent="FrameRoot/RightFrame" unique_id=330537226]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="FrameRoot/RightFrame/ColliderBody" unique_id=1846269936]
-transform = Transform3D(1.0000081, 0, 6.7055225e-08, 0, 1, 0, 4.172325e-07, 0, 1.0000008, 0.112412125, 0, 0)
-shape = SubResource("11_jamb_shape")
-
-[node name="FrontDecal" type="MeshInstance3D" parent="FrameRoot/RightFrame" unique_id=2099737467]
-transform = Transform3D(-1, -9.266814e-08, 8.348875e-08, -8.742278e-08, 1.06, 0, 8.742278e-08, 8.101306e-15, 0.955, 2.9802322e-08, 0, 0.28500003)
-material_override = SubResource("4_right_decal_mat")
-mesh = SubResource("6_jamb_decal_mesh")
-
-[node name="BackDecal" type="MeshInstance3D" parent="FrameRoot/RightFrame" unique_id=2075034073]
-transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, -0.285)
-material_override = SubResource("4_right_decal_mat")
-mesh = SubResource("6_jamb_decal_mesh")
-
-[node name="TopFrame" type="Node3D" parent="FrameRoot" unique_id=1945495992]
-transform = Transform3D(1.6185633, 0, 0, 0, 1, 0, 0, 0, 1.176058, 0.050821066, 3.4982042, 0)
-
-[node name="ColliderBody" type="StaticBody3D" parent="FrameRoot/TopFrame" unique_id=1831851511]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="FrameRoot/TopFrame/ColliderBody" unique_id=408110792]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.0000001, 0, 0.27591562, 0)
-shape = SubResource("12_top_shape")
-
-[node name="FrontDecal" type="MeshInstance3D" parent="FrameRoot/TopFrame" unique_id=846307050]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 0.3420087, 0, 0, 0.3229904)
-material_override = SubResource("3_top_decal_mat")
-mesh = SubResource("8_top_decal_mesh")
-
-[node name="BackDecal" type="MeshInstance3D" parent="FrameRoot/TopFrame" unique_id=365187332]
-transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, -0.285)
-material_override = SubResource("3_top_decal_mat")
-cast_shadow = 0
-mesh = SubResource("8_top_decal_mesh")
-
-[node name="TileGuide" type="MeshInstance3D" parent="." unique_id=1340894944]
-transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
-visible = false
-material_override = SubResource("9_tile_guide_mat")
-mesh = SubResource("10_tile_guide_mesh")
-
+[node name="TopJamb" type="CollisionShape3D" parent="StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.5, 0)
+shape = SubResource("BoxShape3D_top")

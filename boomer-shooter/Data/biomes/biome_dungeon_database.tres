@@ -4,7 +4,7 @@
 [ext_resource type="Resource" uid="uid://o1cny6gl2uga" path="res://Data/biomes/crypt_biome_data.tres" id="2_crypt"]
 [ext_resource type="Resource" uid="uid://d0yoq0pn57sbk" path="res://Data/biomes/fungal_biome_data.tres" id="3_fungal"]
 [ext_resource type="Resource" uid="uid://c0ak5nyjvredp" path="res://Data/biomes/lava_biome_data.tres" id="4_lava"]
-[ext_resource type="Resource" path="res://Data/biomes/castle_biome_data.tres" id="5_castle"]
+[ext_resource type="Resource" uid="uid://cklux0y2ekxew" path="res://Data/biomes/castle_biome_data.tres" id="5_castle"]
 
 [resource]
 script = ExtResource("1_db")
