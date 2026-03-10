@@ -16,37 +16,37 @@ texture_filter = 0
 
 [sub_resource type="QuadMesh" id="QuadMesh_doorway"]
 material = SubResource("StandardMaterial3D_doorway")
-size = Vector2(3.0, 4.5)
+size = Vector2(3, 4.5)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_jamb"]
-size = Vector3(0.5, 4.0, 0.6)
+size = Vector3(0.5, 4, 0.6)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_top"]
-size = Vector3(3.0, 1.0, 0.6)
+size = Vector3(3, 1, 0.6)
 
-[node name="DoorwayAssembly" type="Node3D"]
+[node name="DoorwayAssembly" type="Node3D" unique_id=1948476388]
 
-[node name="Door" parent="." instance=ExtResource("1_door")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+[node name="Door" parent="." unique_id=1594035494 instance=ExtResource("1_door")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6665525, 0, 0)
 
-[node name="FrontDecal" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, 0.28)
+[node name="FrontDecal" type="MeshInstance3D" parent="." unique_id=1730636691]
+transform = Transform3D(1.943819, 0, 0, 0, 0.8867615, 0, 0, 0, 1, 0, 2.069, 0.306)
 mesh = SubResource("QuadMesh_doorway")
 
-[node name="BackDecal" type="MeshInstance3D" parent="."]
-transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 2.25, -0.28)
+[node name="BackDecal" type="MeshInstance3D" parent="." unique_id=535510441]
+transform = Transform3D(-1.943819, 0, -1.509958e-07, 0, 0.8867615, 0, 2.9350852e-07, 0, -1, 0, 2.069, -0.3)
 mesh = SubResource("QuadMesh_doorway")
 
-[node name="StaticBody3D" type="StaticBody3D" parent="."]
+[node name="StaticBody3D" type="StaticBody3D" parent="." unique_id=1370475562]
 
-[node name="LeftJamb" type="CollisionShape3D" parent="StaticBody3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.25, 2.0, 0)
+[node name="LeftJamb" type="CollisionShape3D" parent="StaticBody3D" unique_id=642064379]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.25, 2, 0)
 shape = SubResource("BoxShape3D_jamb")
 
-[node name="RightJamb" type="CollisionShape3D" parent="StaticBody3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.25, 2.0, 0)
+[node name="RightJamb" type="CollisionShape3D" parent="StaticBody3D" unique_id=1702758205]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.25, 2, 0)
 shape = SubResource("BoxShape3D_jamb")
 
-[node name="TopJamb" type="CollisionShape3D" parent="StaticBody3D"]
+[node name="TopJamb" type="CollisionShape3D" parent="StaticBody3D" unique_id=1815638779]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.5, 0)
 shape = SubResource("BoxShape3D_top")
