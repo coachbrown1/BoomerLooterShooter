@@ -1,0 +1,28 @@
+[gd_scene load_steps=5 format=3 uid="uid://castle_torch_uid"]
+
+[ext_resource type="Texture2D" path="res://Assets/Environment/Castle/prop_castle_torch.png" id="1_torch"]
+[ext_resource type="Script" path="res://Scripts/Environment/fungal_prop_vfx.gd" id="2_vfx"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_torch"]
+albedo_texture = ExtResource("1_torch")
+emission_enabled = true
+emission_energy_multiplier = 0.5
+emission_texture = ExtResource("1_torch")
+uv1_scale = Vector3(1, 1, 1)
+texture_filter = 0
+
+[sub_resource type="BoxMesh" id="BoxMesh_torch"]
+material = SubResource("StandardMaterial3D_torch")
+size = Vector3(0.5, 1.0, 0.5)
+
+[node name="CastleTorch" type="Node3D"]
+script = ExtResource("2_vfx")
+emission_color = Color(1.0, 0.6, 0.2, 1)
+particle_amount = 0
+enable_particles = false
+radius = 4.0
+intensity = 1.0
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("BoxMesh_torch")
