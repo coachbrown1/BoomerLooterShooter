@@ -48,8 +48,8 @@ func generate(floor_num: int, seed_val: int = 0) -> void:
 	rng = RandomNumberGenerator.new()
 	rng.seed = seed_val if seed_val != 0 else int(Time.get_unix_time_from_system())
 
-	var biomes: PackedStringArray = ["crypt", "fungal", "lava"]
-	_current_biome = biomes[floor_num % biomes.size()]
+	var biomes: PackedStringArray = ["castle", "crypt", "fungal", "lava"]
+	_current_biome = biomes[maxi(0, floor_num - 1) % biomes.size()]
 
 	_normalize_config()
 	sampled_grid_size = rng.randi_range(grid_size_min, grid_size_max)
