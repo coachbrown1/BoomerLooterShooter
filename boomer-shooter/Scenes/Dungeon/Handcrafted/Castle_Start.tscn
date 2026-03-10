@@ -2,6 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://8kv1bp8iue40" path="res://Scenes/Dungeon/fungal_mushroom.tscn" id="1_mushroom"]
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/fungal_crystal.tscn" id="2_crystal"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/chest.tscn" id="3_d7pbr"]
 
 [sub_resource type="StandardMaterial3D" id="1_pad_material"]
 albedo_color = Color(0.07, 0.12, 0.08, 1)
@@ -116,3 +117,6 @@ mesh = SubResource("5_room_bounds_short")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 0.1, 0)
 cast_shadow = 0
 mesh = SubResource("5_room_bounds_short")
+
+[node name="InteractableChest" parent="." unique_id=1481217079 instance=ExtResource("3_d7pbr")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.3077397, 0, 1.5836097)

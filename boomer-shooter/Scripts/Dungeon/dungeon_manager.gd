@@ -320,11 +320,11 @@ func _assign_handcrafted_layouts(biome_data: Resource = null) -> void:
 		if start_scene_variant is PackedScene:
 			start_scene = start_scene_variant
 
-	if biome_id == "fungal" and start_scene != null:
+	if start_scene != null:
 		var start_room := _get_room_by_type(RoomData.RoomType.START)
 		_assign_handcrafted_scene_to_room(start_room, start_scene)
-	elif biome_id == "fungal":
-		push_warning("DungeonManager: fungal biome has no handcrafted_start_room_scene; start room will be procedural.")
+	else:
+		push_warning("DungeonManager: biome '%s' has no handcrafted_start_room_scene; start room will be procedural." % biome_id)
 
 	var chance := 0.25
 	if _resource_has_property(biome_data, "handcrafted_normal_room_chance"):

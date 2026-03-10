@@ -167,6 +167,8 @@ func _try_interact() -> void:
 		var collider = result.collider
 		if collider is DungeonDoor:
 			collider.open()
+		elif collider.has_method("interact"):
+			collider.interact()
 
 func _is_inventory_open() -> bool:
 	return inventory_system != null and inventory_system.is_inventory_open()
