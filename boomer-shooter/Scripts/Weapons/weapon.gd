@@ -265,9 +265,9 @@ func fire() -> void:
 
 func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3) -> void:
 	var proj = projectile_scene.instantiate() as Node3D
-
-	# Start projectile ahead of camera to avoid spawning inside the player collider.
-	proj.global_position = cam_origin + cam_forward * 2.0
+	var spawn_parent = get_tree().current_scene
+	if not spawn_parent:
+		return
 
 	if proj is Projectile:
 		proj.direction = cam_forward
@@ -277,7 +277,10 @@ func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3) -> void:
 			proj.shooter = shooter_node
 
 	# Must add child AFTER setting properties so _ready has correct direction
-	get_tree().current_scene.add_child(proj)
+	spawn_parent.add_child(proj)
+
+	# Start projectile ahead of camera to avoid spawning inside the player collider.
+	proj.global_position = cam_origin + cam_forward * 2.0
 
 	if proj is Projectile:
 		# Look in direction of travel
