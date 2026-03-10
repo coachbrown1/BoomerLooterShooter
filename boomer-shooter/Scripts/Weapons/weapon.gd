@@ -200,6 +200,8 @@ func reload() -> void:
 		)
 
 func _physics_process(delta: float) -> void:
+	if weapon_manager and weapon_manager.has_method("is_input_blocked") and weapon_manager.is_input_blocked():
+		return
 	if is_reloading: return
 
 	if not can_fire:

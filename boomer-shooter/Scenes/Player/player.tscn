@@ -1,7 +1,8 @@
-[gd_scene load_steps=4 format=3 uid="uid://b8q7t4y0a1m2x"]
+[gd_scene load_steps=5 format=3 uid="uid://b8q7t4y0a1m2x"]
 
 [ext_resource type="Script" path="res://Scripts/Player/player.gd" id="1_xxx"]
 [ext_resource type="Script" path="res://Scripts/Weapons/weapon_manager.gd" id="1_manager"]
+[ext_resource type="Script" path="res://Scripts/Inventory/inventory_system.gd" id="1_inventory"]
 [ext_resource type="PackedScene" path="res://Scenes/Weapons/weapon_rifle.tscn" id="2_rifle"]
 [ext_resource type="PackedScene" path="res://Scenes/Weapons/weapon_shotgun.tscn" id="3_shotgun"]
 [ext_resource type="PackedScene" path="res://Scenes/Weapons/weapon_crossbow.tscn" id="4_crossbow"]
@@ -43,3 +44,6 @@ script = ExtResource("1_manager")
 [node name="WeaponCrossbow" parent="Head/WeaponMount" instance=ExtResource("4_crossbow")]
 
 [node name="WeaponFireball" parent="Head/WeaponMount" instance=ExtResource("5_fireball")]
+
+[node name="InventorySystem" type="Node" parent="."]
+script = ExtResource("1_inventory")

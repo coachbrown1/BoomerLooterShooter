@@ -4,8 +4,12 @@ class_name WeaponManager
 @onready var player: CharacterBody3D = owner
 
 var weapons: Array[Weapon] = []
-var current_weapon_index: int = -1
+var current_weapon_index: int = -1 # Inventory weapon slot index (0-3)
 var current_weapon: Weapon = null
+var inventory_system: InventorySystem = null
+
+var _slot_weapons: Array = []
+var _weapon_key_to_weapon: Dictionary = {}
 
 # Inventory of ammo
 # "light" is bullets
@@ -23,6 +27,10 @@ signal ammo_changed(current, reserve, type)
 signal weapon_changed(weapon)
 
 func _ready() -> void:
+	_slot_weapons.resize(4)
+	for i in range(_slot_weapons.size()):
+		_slot_weapons[i] = null
+
 	for child in get_children():
 		if child is Weapon:
 			weapons.append(child)
@@ -34,36 +42,35 @@ func _ready() -> void:
 
 			# Ensure weapon has a reference to the manager
 			child.weapon_manager = self
-
-	if weapons.size() > 0:
-		switch_to_weapon(0)
+			_weapon_key_to_weapon[get_weapon_key_for_weapon(child)] = child
+	_sync_default_slot_weapons()
+	_select_first_available_weapon()
 
 func switch_to_weapon(index: int) -> void:
-	if index < 0 or index >= weapons.size() or index == current_weapon_index:
+	if index < 0 or index >= _slot_weapons.size() or index == current_weapon_index:
+		return
+	var next_weapon: Weapon = _slot_weapons[index]
+	if next_weapon == null:
 		return
 
 	if current_weapon:
 		current_weapon.hide_weapon()
 
 	current_weapon_index = index
-	current_weapon = weapons[current_weapon_index]
+	current_weapon = next_weapon
 	current_weapon.show_weapon()
 	weapon_changed.emit(current_weapon)
 	_update_hud()
 
 func next_weapon() -> void:
-	if weapons.size() <= 1: return
-	var next_idx = (current_weapon_index + 1) % weapons.size()
-	switch_to_weapon(next_idx)
+	_cycle_weapon(1)
 
 func prev_weapon() -> void:
-	if weapons.size() <= 1: return
-	var prev_idx = current_weapon_index - 1
-	if prev_idx < 0:
-		prev_idx = weapons.size() - 1
-	switch_to_weapon(prev_idx)
+	_cycle_weapon(-1)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if is_input_blocked():
+		return
 	if not current_weapon or current_weapon.is_reloading:
 		return
 
@@ -108,3 +115,113 @@ func _update_hud() -> void:
 				get_ammo(current_weapon.ammo_type),
 				current_weapon.ammo_type == "none"
 			)
+
+func set_inventory_system(inventory: InventorySystem) -> void:
+	if inventory_system and inventory_system.weapon_slots_changed.is_connected(_on_weapon_slots_changed):
+		inventory_system.weapon_slots_changed.disconnect(_on_weapon_slots_changed)
+
+	inventory_system = inventory
+	if inventory_system:
+		if not inventory_system.weapon_slots_changed.is_connected(_on_weapon_slots_changed):
+			inventory_system.weapon_slots_changed.connect(_on_weapon_slots_changed)
+		_on_weapon_slots_changed(inventory_system.weapons)
+	else:
+		_sync_default_slot_weapons()
+		_select_first_available_weapon()
+
+func activate_weapon_slot(index: int) -> void:
+	switch_to_weapon(index)
+
+func get_weapons() -> Array[Weapon]:
+	return weapons.duplicate()
+
+func get_weapon_key_for_weapon(weapon: Weapon) -> String:
+	if weapon == null:
+		return ""
+	return _normalize_weapon_name(weapon.weapon_name)
+
+func is_input_blocked() -> bool:
+	return inventory_system != null and inventory_system.is_inventory_open()
+
+func _on_weapon_slots_changed(weapon_items: Array) -> void:
+	_slot_weapons.resize(4)
+	for i in range(_slot_weapons.size()):
+		_slot_weapons[i] = null
+
+	for i in range(min(weapon_items.size(), _slot_weapons.size())):
+		var item = weapon_items[i]
+		if item == null:
+			continue
+		var key: String = String(item.weapon_key)
+		var weapon: Weapon = _weapon_key_to_weapon.get(key)
+		_slot_weapons[i] = weapon
+
+	if current_weapon != null:
+		var mapped_index := _find_slot_index_for_weapon(current_weapon)
+		if mapped_index == -1:
+			current_weapon.hide_weapon()
+			current_weapon = null
+			current_weapon_index = -1
+		elif mapped_index != current_weapon_index:
+			current_weapon.hide_weapon()
+			current_weapon = null
+			current_weapon_index = -1
+			switch_to_weapon(mapped_index)
+			return
+
+	if not _slot_has_weapon(current_weapon_index):
+		if current_weapon:
+			current_weapon.hide_weapon()
+		current_weapon = null
+		current_weapon_index = -1
+
+	_select_first_available_weapon()
+	_update_hud()
+
+func _sync_default_slot_weapons() -> void:
+	_slot_weapons.resize(4)
+	for i in range(_slot_weapons.size()):
+		_slot_weapons[i] = null
+	for i in range(min(weapons.size(), _slot_weapons.size())):
+		_slot_weapons[i] = weapons[i]
+
+func _select_first_available_weapon() -> void:
+	if current_weapon and _slot_has_weapon(current_weapon_index):
+		return
+	for i in range(_slot_weapons.size()):
+		if _slot_weapons[i] != null:
+			switch_to_weapon(i)
+			return
+
+func _cycle_weapon(direction: int) -> void:
+	if _occupied_slot_count() <= 1:
+		return
+
+	var slot_count := _slot_weapons.size()
+	var idx := current_weapon_index
+	if idx < 0:
+		idx = 0
+	for _step in range(slot_count):
+		idx = (idx + direction + slot_count) % slot_count
+		if _slot_weapons[idx] != null:
+			switch_to_weapon(idx)
+			return
+
+func _occupied_slot_count() -> int:
+	var total := 0
+	for slot_weapon in _slot_weapons:
+		if slot_weapon != null:
+			total += 1
+	return total
+
+func _slot_has_weapon(index: int) -> bool:
+	return index >= 0 and index < _slot_weapons.size() and _slot_weapons[index] != null
+
+func _find_slot_index_for_weapon(target_weapon: Weapon) -> int:
+	for i in range(_slot_weapons.size()):
+		if _slot_weapons[i] == target_weapon:
+			return i
+	return -1
+
+func _normalize_weapon_name(raw_name: String) -> String:
+	return raw_name.strip_edges().to_lower().replace(" ", "_")

@@ -22,7 +22,8 @@ var target_recoil: Vector2 = Vector2.ZERO
 @onready var head: Node3D = $Head
 @onready var camera: Camera3D = $Head/Camera3D
 @onready var weapon_mount: Node3D = $Head/WeaponMount
-@onready var weapon_manager: Node = $Head/WeaponMount
+@onready var weapon_manager: WeaponManager = $Head/WeaponMount
+@onready var inventory_system: InventorySystem = $InventorySystem
 
 
 @export var max_health: int = 100
@@ -30,16 +31,25 @@ var current_health: int = max_health
 
 func _ready() -> void:
 	add_to_group("player")
+	_ensure_inventory_input_action()
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	current_health = max_health
 	if camera:
 		camera.fov = base_fov
+
+	if inventory_system:
+		inventory_system.initialize_with_weapon_manager(weapon_manager)
+	if weapon_manager:
+		weapon_manager.set_inventory_system(inventory_system)
+
 	call_deferred("_init_hud")
 
 func _init_hud() -> void:
 	var hud = _get_hud()
 	if hud:
 		hud.update_health(current_health)
+		if hud.has_method("set_inventory_system"):
+			hud.set_inventory_system(inventory_system)
 
 func _get_hud() -> Node:
 	var huds = get_tree().get_nodes_in_group("hud")
@@ -60,7 +70,7 @@ func take_damage(amount: int) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED and not _is_inventory_open():
 		# Apply mouse input minus current recoil, so recoil adds to pitch/yaw
 		rotate_y(-event.relative.x * mouse_sensitivity)
 		head.rotate_x(-event.relative.y * mouse_sensitivity)
@@ -69,28 +79,35 @@ func _input(event: InputEvent) -> void:
 		head.rotation.x = clamp(head.rotation.x, -deg_to_rad(85), deg_to_rad(85))
 
 	if event.is_action_pressed("ui_cancel"):
+		if _is_inventory_open() and inventory_system:
+			inventory_system.set_inventory_open(false)
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+			return
 		if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 		else:
 			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 func _physics_process(delta: float) -> void:
+	if Input.is_action_just_pressed("inventory_toggle"):
+		_toggle_inventory()
+
 	_handle_recoil(delta)
 
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 
-	if Input.is_action_just_pressed("interact"):
+	if Input.is_action_just_pressed("interact") and not _is_inventory_open():
 		_try_interact()
 
-	if Input.is_action_just_pressed("jump") and is_on_floor():
+	if Input.is_action_just_pressed("jump") and is_on_floor() and not _is_inventory_open():
 		velocity.y = jump_velocity
 
-	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var input_dir := Vector2.ZERO if _is_inventory_open() else Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	
 	var current_speed = move_speed
-	if Input.is_action_pressed("sprint"):
+	if Input.is_action_pressed("sprint") and not _is_inventory_open():
 		current_speed *= sprint_multiplier
 		
 	if direction:
@@ -100,7 +117,7 @@ func _physics_process(delta: float) -> void:
 		velocity.x = move_toward(velocity.x, 0, current_speed)
 		velocity.z = move_toward(velocity.z, 0, current_speed)
 
-	_update_fov(delta, input_dir.length() > 0.1 and Input.is_action_pressed("sprint"))
+	_update_fov(delta, input_dir.length() > 0.1 and Input.is_action_pressed("sprint") and not _is_inventory_open())
 	move_and_slide()
 
 func _update_fov(delta: float, is_sprinting: bool) -> void:
@@ -150,3 +167,32 @@ func _try_interact() -> void:
 		var collider = result.collider
 		if collider is DungeonDoor:
 			collider.open()
+
+func _is_inventory_open() -> bool:
+	return inventory_system != null and inventory_system.is_inventory_open()
+
+func _ensure_inventory_input_action() -> void:
+	if not InputMap.has_action("inventory_toggle"):
+		InputMap.add_action("inventory_toggle")
+
+	var has_tab := false
+	for existing_event in InputMap.action_get_events("inventory_toggle"):
+		if existing_event is InputEventKey:
+			var key_event := existing_event as InputEventKey
+			if key_event.keycode == KEY_TAB or key_event.physical_keycode == KEY_TAB:
+				has_tab = true
+				break
+
+	if not has_tab:
+		var tab_event := InputEventKey.new()
+		tab_event.keycode = KEY_TAB
+		InputMap.action_add_event("inventory_toggle", tab_event)
+
+func _toggle_inventory() -> void:
+	if inventory_system == null:
+		return
+	inventory_system.set_inventory_open(not inventory_system.is_inventory_open())
+	if inventory_system.is_inventory_open():
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
