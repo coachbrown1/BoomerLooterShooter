@@ -4,13 +4,14 @@ class_name Projectile
 @export var speed: float = 10.0
 @export var damage: int = 10
 @export var lifetime: float = 5.0
-@export var gravity: float = 0.0
+@export var fall_gravity: float = 0.0
 @export var explode_on_impact: bool = false
 @export var explosion_radius: float = 3.0
 @export var explosion_damage: int = 25
 
 var direction: Vector3 = Vector3.ZERO
 var velocity: Vector3 = Vector3.ZERO
+var shooter: Node3D = null
 
 func _ready() -> void:
 	monitoring = true
@@ -33,8 +34,8 @@ func _ready() -> void:
 	queue_free()
 
 func _physics_process(delta: float) -> void:
-	if gravity > 0.0:
-		velocity.y -= gravity * delta
+	if fall_gravity > 0.0:
+		velocity.y -= fall_gravity * delta
 		# Adjust orientation based on new velocity if it's an arrow
 		var target_pos = global_position + velocity
 		if velocity.normalized().abs().is_equal_approx(Vector3(0, 1, 0)):
@@ -78,6 +79,9 @@ func _explode() -> void:
 				damaged_nodes.append(collider)
 
 func _on_area_entered(area: Area3D) -> void:
+	if shooter and shooter.is_ancestor_of(area):
+		return
+
 	if area is HitboxComponent:
 		if not explode_on_impact:
 			# Direct hit
@@ -86,6 +90,9 @@ func _on_area_entered(area: Area3D) -> void:
 		_trigger_impact()
 
 func _on_body_entered(body: Node3D) -> void:
+	if shooter and body == shooter:
+		return
+
 	if body.is_in_group("player"):
 		if not explode_on_impact:
 			if body.has_method("take_damage"):

@@ -266,12 +266,15 @@ func fire() -> void:
 func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3) -> void:
 	var proj = projectile_scene.instantiate() as Node3D
 
-	# Start projectile slightly ahead of camera
-	proj.global_position = cam_origin + cam_forward * 1.0
+	# Start projectile ahead of camera to avoid spawning inside the player collider.
+	proj.global_position = cam_origin + cam_forward * 2.0
 
 	if proj is Projectile:
 		proj.direction = cam_forward
 		proj.damage = damage
+		var shooter_node = get_tree().get_first_node_in_group("player")
+		if shooter_node is Node3D:
+			proj.shooter = shooter_node
 
 	# Must add child AFTER setting properties so _ready has correct direction
 	get_tree().current_scene.add_child(proj)

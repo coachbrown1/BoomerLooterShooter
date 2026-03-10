@@ -73,7 +73,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			prev_weapon()
 
-	if event.is_action_pressed("reload"):
+	if InputMap.has_action("reload") and event.is_action_pressed("reload"):
 		if current_weapon and current_weapon.can_reload():
 			current_weapon.reload()
 
