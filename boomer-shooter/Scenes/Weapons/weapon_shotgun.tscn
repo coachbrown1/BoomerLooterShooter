@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://Scripts/Weapons/weapon.gd" id="1_xxx"]
 [ext_resource type="Texture2D" uid="uid://c0tq5urk62w0d" path="res://Assets/Weapons/weapon_shotgun_viewmodel.png" id="2_yyy"]
 [ext_resource type="Material" uid="uid://d1g4a3h8j6p2" path="res://Materials/weapon_outline_material.tres" id="3_mat"]
-[ext_resource type="Texture2D" uid="uid://flash_sheet_001" path="res://Assets/Weapons/muzzle_flash_sheet.png" id="4_flash"]
+[ext_resource type="Texture2D" uid="uid_flash_shotgun" path="res://Assets/Effects/vfx_muzzle_shotgun.png" id="4_flash"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_muzzle"]
 radius = 0.04
@@ -35,7 +35,10 @@ damage = 30
 fire_rate = 0.8
 ammo_type = "shells"
 mag_size = 2
-recoil_pitch = 0.15
+pellet_count = 8
+spread_angle = 8.0
+muzzle_2d_offset = Vector2(0, -200)
+muzzle_2d_scale = 0.4
 
 [node name="WeaponSprite" type="Sprite3D" parent="."]
 material_override = ExtResource("3_mat")
@@ -54,10 +57,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25, -0.25, -0.72)
 visible = false
 
 [node name="FlashSprite" type="Sprite3D" parent="MuzzleFlash"]
-transform = Transform3D(0.4, 0, 0, 0, 0.4, 0, 0, 0, 0.4, 0, 0, 0)
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0, 0, 0)
 texture = ExtResource("4_flash")
-hframes = 2
-vframes = 2
 no_depth_test = true
 render_priority = 11
 

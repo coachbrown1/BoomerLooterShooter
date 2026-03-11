@@ -39,6 +39,7 @@ mag_size = 1
 reload_time = 0.5
 is_projectile = true
 projectile_scene = ExtResource("5_arrow")
+ejects_shells = false
 
 [node name="WeaponSprite" type="Sprite3D" parent="."]
 material_override = ExtResource("3_mat")

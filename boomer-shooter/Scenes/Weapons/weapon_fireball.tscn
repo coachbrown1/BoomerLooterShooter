@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://crtfskfmjd234" path="res://Assets/Weapons/weapon_heavy_incinerator_viewmodel.png" id="2_yyy"]
 [ext_resource type="PackedScene" path="res://Scenes/Projectiles/fireball.tscn" id="5_fireball"]
 [ext_resource type="Material" uid="uid://d1g4a3h8j6p2" path="res://Materials/weapon_outline_material.tres" id="3_mat"]
-[ext_resource type="Texture2D" uid="uid://flash_sheet_001" path="res://Assets/Weapons/muzzle_flash_sheet.png" id="4_flash"]
+[ext_resource type="Texture2D" uid="uid_flash_fireball" path="res://Assets/Effects/vfx_muzzle_fireball.png" id="4_flash"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_muzzle"]
 radius = 0.04
@@ -39,6 +39,9 @@ mag_size = 5
 reload_time = 2.0
 is_projectile = true
 projectile_scene = ExtResource("5_fireball")
+ejects_shells = false
+muzzle_2d_offset = Vector2(-30, -220)
+muzzle_2d_scale = 0.5
 
 [node name="WeaponSprite" type="Sprite3D" parent="."]
 material_override = ExtResource("3_mat")
@@ -57,17 +60,15 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25, -0.25, -0.72)
 visible = false
 
 [node name="FlashSprite" type="Sprite3D" parent="MuzzleFlash"]
-transform = Transform3D(0.4, 0, 0, 0, 0.4, 0, 0, 0, 0.4, 0, 0, 0)
+transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, 0, 0, 0)
 texture = ExtResource("4_flash")
-hframes = 2
-vframes = 2
 no_depth_test = true
 render_priority = 11
 
 [node name="FlashLight" type="OmniLight3D" parent="MuzzleFlash"]
-light_color = Color(1, 0.73, 0.2, 1)
-light_energy = 2.0
-omni_range = 5.0
+light_color = Color(1, 0.4, 0.05, 1)
+light_energy = 3.0
+omni_range = 8.0
 
 [node name="BulletTracer" type="MeshInstance3D" parent="."]
 mesh = SubResource("CylinderMesh_tracer")

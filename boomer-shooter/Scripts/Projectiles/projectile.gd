@@ -13,6 +13,8 @@ var direction: Vector3 = Vector3.ZERO
 var velocity: Vector3 = Vector3.ZERO
 var shooter: Node3D = null
 
+const EXPLOSION_SCENE = preload("res://Scenes/Effects/fireball_explosion.tscn")
+
 func _ready() -> void:
 	monitoring = true
 	area_entered.connect(_on_area_entered)
@@ -51,6 +53,11 @@ func _trigger_impact() -> void:
 	queue_free()
 
 func _explode() -> void:
+	# Visual Explosion
+	var expl = EXPLOSION_SCENE.instantiate()
+	get_tree().current_scene.add_child(expl)
+	expl.global_position = global_position
+	
 	# Area damage logic
 	var space_state = get_world_3d().direct_space_state
 	# Create sphere shape for intersection

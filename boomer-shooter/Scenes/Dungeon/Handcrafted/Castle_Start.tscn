@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://8kv1bp8iue40" path="res://Scenes/Dungeon/fungal_mushroom.tscn" id="1_mushroom"]
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/fungal_crystal.tscn" id="2_crystal"]
-[ext_resource type="PackedScene" path="res://Scenes/Props/chest.tscn" id="3_d7pbr"]
+[ext_resource type="PackedScene" uid="uid://y34tho2frjpg" path="res://Scenes/Props/chest.tscn" id="3_d7pbr"]
 
 [sub_resource type="StandardMaterial3D" id="1_pad_material"]
 albedo_color = Color(0.07, 0.12, 0.08, 1)

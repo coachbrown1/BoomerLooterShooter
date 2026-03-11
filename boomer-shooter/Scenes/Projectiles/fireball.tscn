@@ -6,6 +6,16 @@
 [sub_resource type="SphereShape3D" id="SphereShape3D_1"]
 radius = 0.5
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_glow"]
+blend_mode = 1
+shading_mode = 0
+albedo_color = Color(4, 2, 1, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_core"]
+material = SubResource("StandardMaterial3D_glow")
+radius = 0.2
+height = 0.4
+
 [node name="FireballProjectile" type="Area3D"]
 collision_layer = 16
 collision_mask = 3
@@ -13,6 +23,14 @@ script = ExtResource("1_a")
 speed = 18.0
 explode_on_impact = true
 explosion_radius = 4.0
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+light_color = Color(1, 0.5, 0.1, 1)
+light_energy = 3.0
+omni_range = 10.0
+
+[node name="CoreGlow" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_core")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("SphereShape3D_1")

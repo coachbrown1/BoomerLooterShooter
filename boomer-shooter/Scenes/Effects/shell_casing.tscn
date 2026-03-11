@@ -1,15 +1,18 @@
 [gd_scene load_steps=5 format=3]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_casing"]
-top_radius = 0.015
-bottom_radius = 0.02
-height = 0.08
+top_radius = 0.03
+bottom_radius = 0.04
+height = 0.16
 radial_segments = 6
 
 [sub_resource type="StandardMaterial3D" id="Mat_casing"]
-albedo_color = Color(0.8, 0.6, 0.2, 1)
+albedo_color = Color(1, 0.8, 0.2, 1)
 metallic = 1.0
 roughness = 0.3
+emission_enabled = true
+emission = Color(0.8, 0.6, 0.1, 1)
+emission_energy_multiplier = 0.5
 
 [sub_resource type="GDScript" id="GDScript_casing"]
 script/source = "extends RigidBody3D

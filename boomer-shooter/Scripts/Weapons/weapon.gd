@@ -16,12 +16,19 @@ var is_reloading: bool = false
 @export_group("Projectile Settings")
 @export var is_projectile: bool = false
 @export var projectile_scene: PackedScene = null
+@export var pellet_count: int = 1
+@export var spread_angle: float = 0.0
 @export var ray_range: float = 200.0
+@export var ejects_shells: bool = true
 
 @export_group("Recoil")
 @export var fov_kick_amount: float = 2.0
 @export var recoil_pitch: float = 0.05
 @export var recoil_yaw: float = 0.02
+
+@export_group("2D Viewmodel")
+@export var muzzle_2d_offset: Vector2 = Vector2(-20, -110)
+@export var muzzle_2d_scale: float = 1.5
 
 @onready var sprite: Sprite3D = $WeaponSprite
 @onready var muzzle_flash: Node3D = $MuzzleFlash
@@ -97,6 +104,12 @@ func _setup_2d_viewmodel() -> void:
 		_muzzle_2d.vframes = flash_3d.vframes
 		_muzzle_2d.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		_muzzle_2d.visible = false
+		
+		var mat = CanvasItemMaterial.new()
+		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+		mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+		_muzzle_2d.material = mat
+		
 		_canvas_layer.add_child(_muzzle_2d)
 		flash_3d.visible = false
 	
@@ -128,10 +141,8 @@ func _update_viewmodel_position() -> void:
 		_emissive_2d.offset = _viewmodel_2d.offset
 
 	if _muzzle_2d:
-		# Position muzzle flash at the barrel end in 2D
-		# For the 512-wide sheet (256 per frame), the barrel is roughly at the top-center
-		_muzzle_2d.position = _viewmodel_2d.position + (Vector2(-20, -110) * scale_factor)
-		_muzzle_2d.scale = Vector2(scale_factor * 1.5, scale_factor * 1.5)
+		_muzzle_2d.position = _viewmodel_2d.position + (muzzle_2d_offset * scale_factor)
+		_muzzle_2d.scale = Vector2(scale_factor * muzzle_2d_scale, scale_factor * muzzle_2d_scale)
 
 func show_weapon() -> void:
 	visible = true
@@ -241,7 +252,8 @@ func fire() -> void:
 				if _emissive_2d: _emissive_2d.frame = 0
 		)
 
-	_eject_shell()
+	if ejects_shells:
+		_eject_shell()
 	
 	# FOV Kick & Pitch/Yaw Recoil
 	var player = _get_player()
@@ -263,7 +275,26 @@ func fire() -> void:
 		_fire_projectile(cam_origin, cam_forward)
 		_show_muzzle_flash()
 	else:
-		_fire_hitscan(cam_origin, cam_forward)
+		for i in range(pellet_count):
+			var final_dir = cam_forward
+			if spread_angle > 0.0:
+				var spread_rad = deg_to_rad(spread_angle)
+				var right = cam.global_transform.basis.x
+				var up = cam.global_transform.basis.y
+				var dx = randf_range(-1.0, 1.0)
+				var dy = randf_range(-1.0, 1.0)
+				# Normalize circular spread
+				if dx*dx + dy*dy > 1.0:
+					var angle = atan2(dy, dx)
+					var rad = randf()
+					dx = cos(angle) * rad
+					dy = sin(angle) * rad
+				
+				final_dir = (cam_forward + right * dx * spread_rad + up * dy * spread_rad).normalized()
+				
+			_fire_hitscan(cam_origin, final_dir)
+			
+		_show_muzzle_flash()
 
 func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3) -> void:
 	var proj = projectile_scene.instantiate() as Node3D
@@ -321,7 +352,6 @@ func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3) -> void:
 		hit_pos = ray_end
 
 	_show_tracer(muzzle_flash.global_position, hit_pos)
-	_show_muzzle_flash()
 
 func _eject_shell() -> void:
 	var casing = CASING_SCENE.instantiate()
@@ -399,10 +429,35 @@ func _show_muzzle_flash() -> void:
 		_muzzle_2d.visible = false
 
 func _show_tracer(from: Vector3, to: Vector3) -> void:
-	tracer.visible = true
-	tracer.global_position = (from + to) / 2.0
-	tracer.scale = Vector3(0.01, 0.01, from.distance_to(to))
-	tracer.look_at(to, Vector3.UP)
-	tracer.rotate_object_local(Vector3.RIGHT, PI / 2.0)
+	if tracer == null: return
+	
+	var length = from.distance_to(to)
+	var t_mesh := CylinderMesh.new()
+	t_mesh.top_radius = 0.01   # Target side (thin)
+	t_mesh.bottom_radius = 0.04 # Gun side (thick)
+	t_mesh.height = length
+	t_mesh.radial_segments = 4 # Diamond shape looks cool and retro
+	
+	var mat := StandardMaterial3D.new()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = StandardMaterial3D.BLEND_MODE_ADD
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(2.5, 2.5, 1.0, 0.8) # High intensity yellow/white
+	
+	var temp_tracer = MeshInstance3D.new()
+	temp_tracer.mesh = t_mesh
+	temp_tracer.material_override = mat
+	temp_tracer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	
+	get_tree().current_scene.add_child(temp_tracer)
+	
+	temp_tracer.global_position = (from + to) / 2.0
+	
+	if length > 0.01:
+		temp_tracer.look_at(to, Vector3.UP)
+		# Cylinder is along Y. Rotate around X so Y lies along -Z
+		temp_tracer.rotate_object_local(Vector3.RIGHT, -PI / 2.0)
+	
 	await get_tree().create_timer(0.05).timeout
-	tracer.visible = false
+	if is_instance_valid(temp_tracer):
+		temp_tracer.queue_free()
