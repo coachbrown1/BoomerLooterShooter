@@ -200,6 +200,11 @@ func build(
 	var wall_col := CollisionShape3D.new()
 	wall_col.shape = wall_mesh_inst.mesh.create_trimesh_shape()
 	geo_root.add_child(wall_col)
+	
+	# Separate collision for ceilings
+	var ceil_col := CollisionShape3D.new()
+	ceil_col.shape = ceil_mesh_inst.mesh.create_trimesh_shape()
+	geo_root.add_child(ceil_col)
 
 	# Post-processing: Place doorways and lights
 	_place_generated_doorway_assemblies(geo_root, doorways, biome_data)
