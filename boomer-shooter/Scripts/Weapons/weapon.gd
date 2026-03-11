@@ -244,7 +244,7 @@ func fire() -> void:
 	_eject_shell()
 	
 	# FOV Kick & Pitch/Yaw Recoil
-	var player = get_tree().get_first_node_in_group("player")
+	var player = weapon_manager.player if weapon_manager and weapon_manager.player else get_tree().get_first_node_in_group("player")
 	if player:
 		if player.has_method("apply_fov_kick"):
 			player.apply_fov_kick(fov_kick_amount)
@@ -274,7 +274,7 @@ func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3) -> void:
 	if proj is Projectile:
 		proj.direction = cam_forward
 		proj.damage = damage
-		var shooter_node = get_tree().get_first_node_in_group("player")
+		var shooter_node = weapon_manager.player if weapon_manager and weapon_manager.player else get_tree().get_first_node_in_group("player")
 		if shooter_node is Node3D:
 			proj.shooter = shooter_node
 
@@ -299,7 +299,7 @@ func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3) -> void:
 	query.collide_with_areas = true
 	query.collision_mask = 0xFFFFFFFF
 
-	var player_body = get_tree().get_first_node_in_group("player")
+	var player_body = weapon_manager.player if weapon_manager and weapon_manager.player else get_tree().get_first_node_in_group("player")
 	if player_body:
 		query.exclude = [player_body.get_rid()]
 
