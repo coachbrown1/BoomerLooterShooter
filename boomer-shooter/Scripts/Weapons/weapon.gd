@@ -31,7 +31,7 @@ var is_reloading: bool = false
 var can_fire: bool = true
 var fire_timer: float = 0.0
 var sprite_origin_z: float = 0.0
-var weapon_manager: Node = null
+var weapon_manager: WeaponManager = null
 
 # 2D Viewmodel elements
 var _canvas_layer: CanvasLayer
@@ -244,7 +244,7 @@ func fire() -> void:
 	_eject_shell()
 	
 	# FOV Kick & Pitch/Yaw Recoil
-	var player = get_tree().get_first_node_in_group("player")
+	var player = _get_player()
 	if player:
 		if player.has_method("apply_fov_kick"):
 			player.apply_fov_kick(fov_kick_amount)
@@ -274,7 +274,7 @@ func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3) -> void:
 	if proj is Projectile:
 		proj.direction = cam_forward
 		proj.damage = damage
-		var shooter_node = get_tree().get_first_node_in_group("player")
+		var shooter_node = _get_player()
 		if shooter_node is Node3D:
 			proj.shooter = shooter_node
 
@@ -299,7 +299,7 @@ func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3) -> void:
 	query.collide_with_areas = true
 	query.collision_mask = 0xFFFFFFFF
 
-	var player_body = get_tree().get_first_node_in_group("player")
+	var player_body = _get_player()
 	if player_body:
 		query.exclude = [player_body.get_rid()]
 
@@ -370,6 +370,11 @@ func _place_decal(scene: PackedScene, pos: Vector3, normal: Vector3) -> void:
 	var z_axis = x_axis.cross(normal).normalized()
 	decal.global_transform.basis = Basis(x_axis, normal, z_axis)
 	decal.rotate_object_local(Vector3.UP, randf() * TAU)
+
+func _get_player() -> CharacterBody3D:
+	if weapon_manager:
+		return weapon_manager.player
+	return get_tree().get_first_node_in_group("player")
 
 func _find_hitbox(node: Node) -> HitboxComponent:
 	var current = node
