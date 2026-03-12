@@ -17,7 +17,8 @@ func place(base_pos: Vector3, wall_offset: Vector3, rng: RandomNumberGenerator) 
 	position = _resolve_position(base_pos, wall_offset)
 	if random_y_rotation:
 		rotation_degrees.y = rng.randf_range(random_y_rotation_min, random_y_rotation_max)
-	_on_placed(rng)
+	if has_method("_on_placed"):
+		call("_on_placed", rng)
 
 func _resolve_position(base_pos: Vector3, wall_offset: Vector3) -> Vector3:
 	match placement_kind:
@@ -29,6 +30,3 @@ func _resolve_position(base_pos: Vector3, wall_offset: Vector3) -> Vector3:
 			return base_pos + wall_offset
 		_:
 			return base_pos + wall_offset
-
-func _on_placed(_rng: RandomNumberGenerator) -> void:
-	pass
