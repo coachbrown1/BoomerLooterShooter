@@ -271,8 +271,13 @@ func fire() -> void:
 	var cam_origin = cam.global_position
 	var cam_forward = -cam.global_transform.basis.z.normalized()
 
+	var current_player = _get_player()
+	var player_rid = RID()
+	if current_player:
+		player_rid = current_player.get_rid()
+
 	if is_projectile and projectile_scene:
-		_fire_projectile(cam_origin, cam_forward)
+		_fire_projectile(cam_origin, cam_forward, current_player)
 		_show_muzzle_flash()
 	else:
 		for i in range(pellet_count):
@@ -292,11 +297,11 @@ func fire() -> void:
 				
 				final_dir = (cam_forward + right * dx * spread_rad + up * dy * spread_rad).normalized()
 				
-			_fire_hitscan(cam_origin, final_dir)
+			_fire_hitscan(cam_origin, final_dir, player_rid)
 			
 		_show_muzzle_flash()
 
-func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3) -> void:
+func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3, shooter_node: Node) -> void:
 	var proj = projectile_scene.instantiate() as Node3D
 	var spawn_parent = get_tree().current_scene
 	if not spawn_parent:
@@ -305,7 +310,6 @@ func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3) -> void:
 	if proj is Projectile:
 		proj.direction = cam_forward
 		proj.damage = damage
-		var shooter_node = _get_player()
 		if shooter_node is Node3D:
 			proj.shooter = shooter_node
 
@@ -322,7 +326,7 @@ func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3) -> void:
 		else:
 			proj.look_at(proj.global_position + cam_forward, Vector3.UP)
 
-func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3) -> void:
+func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3, player_rid: RID) -> void:
 	var space_state = get_world_3d().direct_space_state
 	var ray_end = cam_origin + cam_forward * ray_range
 
@@ -330,9 +334,8 @@ func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3) -> void:
 	query.collide_with_areas = true
 	query.collision_mask = 0xFFFFFFFF
 
-	var player_body = _get_player()
-	if player_body:
-		query.exclude = [player_body.get_rid()]
+	if player_rid.is_valid():
+		query.exclude = [player_rid]
 
 	var result = space_state.intersect_ray(query)
 

@@ -1,0 +1,115 @@
+Godot Engine v4.3.stable.official.77dcf97d8 - https://godotengine.org
+
+WARNING: res://Scenes/Effects/bullet_hole.tscn:3 - ext_resource, invalid UID: uid://bullet_hole_tex_001 - using text path instead: res://Assets/Effects/bullet_hole_0.png
+     at: load (scene/resources/resource_format_text.cpp:453)
+ERROR: Unable to open file: res://.godot/imported/bullet_hole_0.png-931b8e07765538c1d0d0b7dcfc206126.ctex.
+   at: _load_data (scene/resources/compressed_texture.cpp:41)
+ERROR: Failed loading resource: res://.godot/imported/bullet_hole_0.png-931b8e07765538c1d0d0b7dcfc206126.ctex. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+ERROR: Failed loading resource: res://Assets/Effects/bullet_hole_0.png. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+ERROR: Unable to open file: res://.godot/imported/bullet_hole_1.png-14cac9dad571705f2720a5dd1a0b2755.ctex.
+   at: _load_data (scene/resources/compressed_texture.cpp:41)
+ERROR: Failed loading resource: res://.godot/imported/bullet_hole_1.png-14cac9dad571705f2720a5dd1a0b2755.ctex. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+ERROR: Failed loading resource: res://Assets/Effects/bullet_hole_1.png. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+ERROR: Unable to open file: res://.godot/imported/bullet_hole_2.png-d88b16d1fc797a9b3f04cf3d59487970.ctex.
+   at: _load_data (scene/resources/compressed_texture.cpp:41)
+ERROR: Failed loading resource: res://.godot/imported/bullet_hole_2.png-d88b16d1fc797a9b3f04cf3d59487970.ctex. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+ERROR: Failed loading resource: res://Assets/Effects/bullet_hole_2.png. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+ERROR: Unable to open file: res://.godot/imported/bullet_hole_3.png-907bdda254fc4648f58a294c881defaa.ctex.
+   at: _load_data (scene/resources/compressed_texture.cpp:41)
+ERROR: Failed loading resource: res://.godot/imported/bullet_hole_3.png-907bdda254fc4648f58a294c881defaa.ctex. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+ERROR: Failed loading resource: res://Assets/Effects/bullet_hole_3.png. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+SCRIPT ERROR: Parse Error: Could not preload resource file "res://Assets/Effects/bullet_hole_0.png".
+          at: GDScript::reload (res://Scripts/Effects/bullet_hole.gd:4)
+SCRIPT ERROR: Parse Error: Could not preload resource file "res://Assets/Effects/bullet_hole_1.png".
+          at: GDScript::reload (res://Scripts/Effects/bullet_hole.gd:5)
+SCRIPT ERROR: Parse Error: Could not preload resource file "res://Assets/Effects/bullet_hole_2.png".
+          at: GDScript::reload (res://Scripts/Effects/bullet_hole.gd:6)
+SCRIPT ERROR: Parse Error: Could not preload resource file "res://Assets/Effects/bullet_hole_3.png".
+          at: GDScript::reload (res://Scripts/Effects/bullet_hole.gd:7)
+ERROR: Failed to load script "res://Scripts/Effects/bullet_hole.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript.cpp:2936)
+WARNING: res://Scenes/Effects/blood_splatter.tscn:3 - ext_resource, invalid UID: uid://blood_splatter_tex_001 - using text path instead: res://Assets/Effects/blood_splatter_0.png
+     at: load (scene/resources/resource_format_text.cpp:453)
+ERROR: Unable to open file: res://.godot/imported/blood_splatter_0.png-0992da87597f7ec37f4c5f65f6832810.ctex.
+   at: _load_data (scene/resources/compressed_texture.cpp:41)
+ERROR: Failed loading resource: res://.godot/imported/blood_splatter_0.png-0992da87597f7ec37f4c5f65f6832810.ctex. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+ERROR: Failed loading resource: res://Assets/Effects/blood_splatter_0.png. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+ERROR: Unable to open file: res://.godot/imported/blood_splatter_1.png-9c8f08a3ae3155ea430c73235d5dd703.ctex.
+   at: _load_data (scene/resources/compressed_texture.cpp:41)
+ERROR: Failed loading resource: res://.godot/imported/blood_splatter_1.png-9c8f08a3ae3155ea430c73235d5dd703.ctex. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+ERROR: Failed loading resource: res://Assets/Effects/blood_splatter_1.png. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+ERROR: Unable to open file: res://.godot/imported/blood_splatter_2.png-2f16e67869198dc855e4b49803e34595.ctex.
+   at: _load_data (scene/resources/compressed_texture.cpp:41)
+ERROR: Failed loading resource: res://.godot/imported/blood_splatter_2.png-2f16e67869198dc855e4b49803e34595.ctex. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+ERROR: Failed loading resource: res://Assets/Effects/blood_splatter_2.png. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+ERROR: Unable to open file: res://.godot/imported/blood_splatter_3.png-0c1cd7104147545a36f2e587e30e1aca.ctex.
+   at: _load_data (scene/resources/compressed_texture.cpp:41)
+ERROR: Failed loading resource: res://.godot/imported/blood_splatter_3.png-0c1cd7104147545a36f2e587e30e1aca.ctex. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+ERROR: Failed loading resource: res://Assets/Effects/blood_splatter_3.png. Make sure resources have been imported by opening the project in the editor at least once.
+   at: _load (core/io/resource_loader.cpp:283)
+SCRIPT ERROR: Parse Error: Could not preload resource file "res://Assets/Effects/blood_splatter_0.png".
+          at: GDScript::reload (res://Scripts/Effects/blood_splatter.gd:4)
+SCRIPT ERROR: Parse Error: Could not preload resource file "res://Assets/Effects/blood_splatter_1.png".
+          at: GDScript::reload (res://Scripts/Effects/blood_splatter.gd:5)
+SCRIPT ERROR: Parse Error: Could not preload resource file "res://Assets/Effects/blood_splatter_2.png".
+          at: GDScript::reload (res://Scripts/Effects/blood_splatter.gd:6)
+SCRIPT ERROR: Parse Error: Could not preload resource file "res://Assets/Effects/blood_splatter_3.png".
+          at: GDScript::reload (res://Scripts/Effects/blood_splatter.gd:7)
+ERROR: Failed to load script "res://Scripts/Effects/blood_splatter.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript.cpp:2936)
+SCRIPT ERROR: Parse Error: Could not find type "WeaponManager" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon.gd:41)
+SCRIPT ERROR: Parse Error: Could not find type "HitboxComponent" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon.gd:409)
+SCRIPT ERROR: Parse Error: Could not find type "Projectile" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon.gd:305)
+SCRIPT ERROR: Parse Error: Could not find type "Projectile" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon.gd:318)
+SCRIPT ERROR: Parse Error: Could not find type "HitboxComponent" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon.gd:388)
+SCRIPT ERROR: Parse Error: Could not find type "HitboxComponent" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon.gd:412)
+SCRIPT ERROR: Parse Error: Could not find type "HitboxComponent" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon.gd:414)
+SCRIPT ERROR: Parse Error: Could not find type "Weapon" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon_manager.gd:6)
+SCRIPT ERROR: Parse Error: Could not find type "Weapon" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon_manager.gd:8)
+SCRIPT ERROR: Parse Error: Could not find type "InventorySystem" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon_manager.gd:9)
+SCRIPT ERROR: Parse Error: Could not find type "InventorySystem" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon_manager.gd:119)
+SCRIPT ERROR: Parse Error: Could not find type "Weapon" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon_manager.gd:135)
+SCRIPT ERROR: Parse Error: Could not find type "Weapon" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon_manager.gd:138)
+SCRIPT ERROR: Parse Error: Could not find type "Weapon" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon_manager.gd:220)
+SCRIPT ERROR: Parse Error: Could not find type "Weapon" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon_manager.gd:35)
+SCRIPT ERROR: Parse Error: Could not find type "Weapon" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon_manager.gd:52)
+SCRIPT ERROR: Parse Error: Could not find type "Weapon" in the current scope.
+          at: GDScript::reload (res://Scripts/Weapons/weapon_manager.gd:156)
+SCRIPT ERROR: Compile Error:
+          at: GDScript::reload (res://benchmark.gd:-1)
+ERROR: Failed to load script "res://benchmark.gd" with error "Compilation failed".
+   at: load (modules/gdscript/gdscript.cpp:2936)
+Starting benchmark...
+SCRIPT ERROR: Invalid call. Nonexistent function 'new' in base 'GDScript'.
+          at: _init (res://benchmark.gd:16)
