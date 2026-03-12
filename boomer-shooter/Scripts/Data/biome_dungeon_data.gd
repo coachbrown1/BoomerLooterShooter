@@ -8,6 +8,13 @@ class_name BiomeDungeonData
 @export var wall_textures: Array = []
 @export var ceiling_textures: Array = []
 
+@export_group("Tile Material Settings")
+@export var tile_emission_color: Color = Color(0, 0, 0, 1)
+@export var tile_emission_energy: float = 0.05
+@export var tile_emission_operator: StandardMaterial3D.EmissionOperator = StandardMaterial3D.EMISSION_OP_MULTIPLY
+@export var tile_uv_scale: float = 2.0
+@export var tile_texture_filter: BaseMaterial3D.TextureFilter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+
 @export var door_scene: PackedScene = preload("res://Scenes/World/door.tscn")
 @export var doorway_assembly_scene: PackedScene
 @export var handcrafted_start_room_scene: PackedScene
@@ -24,12 +31,12 @@ class_name BiomeDungeonData
 @export var corridor_light_chance: float = 0.3
 
 @export var use_prop_lights: bool = false
-@export var wall_light_scene: PackedScene = preload("res://Scenes/Dungeon/fungal_crystal.tscn")
+@export var wall_light_scene: PackedScene
 @export var wall_light_color: Color = Color(0.5, 0.4, 1.0, 1.0)
 @export var wall_light_energy: float = 2.5
 @export var wall_light_range: float = 12.0
 @export var wall_light_height: float = 0.8
-@export var floor_light_scene: PackedScene = preload("res://Scenes/Dungeon/fungal_mushroom.tscn")
+@export var floor_light_scene: PackedScene
 @export var floor_light_color: Color = Color(0.3, 1.0, 0.6, 1.0)
 @export var floor_light_energy: float = 1.8
 @export var floor_light_range: float = 9.0

@@ -351,32 +351,47 @@ func _get_materials(biome: String, surface: String, biome_data: Resource = null)
 			var albedo_tex: Texture2D = tex
 			mat.albedo_texture = albedo_tex
 			
-			# Enable emission to make the brightest parts of the tiles 'pop'
+			# Apply standard settings
 			mat.emission_enabled = true
 			mat.emission_texture = albedo_tex
-			mat.emission_operator = StandardMaterial3D.EMISSION_OP_MULTIPLY
 			
-			var emission_energy := 0.05
-			if biome == "fungal":
-				emission_energy = 0.04
-				mat.emission = Color(0.1, 0.2, 0.15) # Much darker, subtle glow
-				mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-				mat.uv1_scale = Vector3(1.0, 1.0, 1.0)
-			elif biome == "lava":
-				emission_energy = 0.4
-				mat.emission = Color(0.8, 0.15, 0.0)
-				mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-				mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
-			elif biome == "crypt":
-				emission_energy = 0.08
-				mat.emission = Color(0.15, 0.25, 0.5)
-				mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-				mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
+			if _has_biome_data(biome_data):
+				mat.emission = biome_data.tile_emission_color
+				mat.emission_energy_multiplier = biome_data.tile_emission_energy
+				mat.emission_operator = biome_data.tile_emission_operator
+				mat.texture_filter = biome_data.tile_texture_filter
+				var s = biome_data.tile_uv_scale
+				mat.uv1_scale = Vector3(s, s, s)
 			else:
-				mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-				mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
-			
-			mat.emission_energy_multiplier = emission_energy
+				# Hardcoded fallbacks if no biome data resource is provided
+				mat.emission_operator = StandardMaterial3D.EMISSION_OP_MULTIPLY
+				var emission_energy := 0.05
+				if biome == "fungal":
+					emission_energy = 0.04
+					mat.emission = Color(0.1, 0.2, 0.15)
+					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+					mat.uv1_scale = Vector3(1.0, 1.0, 1.0)
+				elif biome == "lava":
+					emission_energy = 0.4
+					mat.emission = Color(0.8, 0.15, 0.0)
+					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
+				elif biome == "crypt":
+					emission_energy = 0.08
+					mat.emission = Color(0.15, 0.25, 0.5)
+					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
+				elif biome == "castle":
+					emission_energy = 0.2
+					mat.emission = Color(0.1, 0.1, 0.1)
+					mat.emission_operator = StandardMaterial3D.EMISSION_OP_ADD
+					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
+				else:
+					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
+				
+				mat.emission_energy_multiplier = emission_energy
 		mats.append(mat)
 
 	if mats.is_empty():
@@ -385,7 +400,7 @@ func _get_materials(biome: String, surface: String, biome_data: Resource = null)
 	_mat_cache[key] = mats
 	return mats
 
-func _get_mural_material(biome: String) -> Material:
+func _get_mural_material(biome: String, biome_data: Resource = null) -> Material:
 	var key := "mural_" + biome
 	if _mat_cache.has(key):
 		return _mat_cache[key]
@@ -395,28 +410,33 @@ func _get_mural_material(biome: String) -> Material:
 	var tex = load(tex_path)
 	if tex:
 		mat.albedo_texture = tex
+		mat.emission_enabled = true
+		mat.emission_texture = tex
 		
-		# Mural is special, disable tiling (repeat=false) and add emission
-		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-		
-		# Set UV mapping to clamp to avoid bleeding
-		mat.uv1_scale = Vector3(1, 1, 1)
-		
-		if biome == "fungal":
-			mat.emission_enabled = true
-			mat.emission_texture = tex
-			mat.emission_energy_multiplier = 0.15
-			mat.emission = Color(0.2, 0.4, 0.3)
-		elif biome == "lava":
-			mat.emission_enabled = true
-			mat.emission_texture = tex
-			mat.emission_energy_multiplier = 0.3
-			mat.emission = Color(0.8, 0.2, 0.0)
-		elif biome == "crypt":
-			mat.emission_enabled = true
-			mat.emission_texture = tex
-			mat.emission_energy_multiplier = 0.08
-			mat.emission = Color(0.2, 0.3, 0.6)
+		if _has_biome_data(biome_data):
+			mat.emission = biome_data.tile_emission_color
+			mat.emission_energy_multiplier = biome_data.tile_emission_energy
+			mat.emission_operator = biome_data.tile_emission_operator
+			mat.texture_filter = biome_data.tile_texture_filter
+			mat.uv1_scale = Vector3(1, 1, 1) # Murals don't tile normally
+		else:
+			# Fallback mural lighting
+			mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+			mat.uv1_scale = Vector3(1, 1, 1)
+			
+			if biome == "fungal":
+				mat.emission_energy_multiplier = 0.15
+				mat.emission = Color(0.2, 0.4, 0.3)
+			elif biome == "lava":
+				mat.emission_energy_multiplier = 0.3
+				mat.emission = Color(0.8, 0.2, 0.0)
+			elif biome == "crypt":
+				mat.emission_energy_multiplier = 0.08
+				mat.emission = Color(0.2, 0.3, 0.6)
+			elif biome == "castle":
+				mat.emission_energy_multiplier = 0.2
+				mat.emission = Color(0.1, 0.1, 0.1)
+				mat.emission_operator = StandardMaterial3D.EMISSION_OP_ADD
 			
 	_mat_cache[key] = mat
 	return mat
@@ -582,6 +602,12 @@ func _place_lights(
 		floor_light_energy = biome_data.floor_light_energy
 		floor_light_range = biome_data.floor_light_range
 		floor_light_height = biome_data.floor_light_height
+		# Safety guard: fungal default resources should never leak into other biomes.
+		if biome != "fungal":
+			if floor_light_scene != null and floor_light_scene.resource_path == "res://Scenes/Dungeon/fungal_mushroom.tscn":
+				floor_light_scene = null
+			if wall_light_scene != null and wall_light_scene.resource_path == "res://Scenes/Dungeon/fungal_crystal.tscn":
+				wall_light_scene = null
 	elif biome == "fungal":
 		wall_light_scene = preload("res://Scenes/Dungeon/fungal_crystal.tscn")
 		floor_light_scene = preload("res://Scenes/Dungeon/fungal_mushroom.tscn")
