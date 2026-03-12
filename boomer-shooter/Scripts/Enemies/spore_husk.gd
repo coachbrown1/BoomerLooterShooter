@@ -57,8 +57,8 @@ func _execute_attack() -> void:
 
 	# AoE Damage
 	if player:
-		var dist = global_position.distance_to(player.global_position)
-		if dist <= aoe_radius:
+		var dist_squared = global_position.distance_squared_to(player.global_position)
+		if dist_squared <= aoe_radius * aoe_radius:
 			if player.has_method("take_damage"):
 				player.take_damage(attack_damage)
 
