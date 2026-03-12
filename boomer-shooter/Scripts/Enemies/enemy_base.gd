@@ -151,11 +151,13 @@ func _process_state(delta: float) -> void:
 				current_state = State.CHASE if player_in_same_room else State.IDLE
 
 func _is_player_in_same_room() -> bool:
-	if player == null:
+	if not is_instance_valid(player):
 		return false
-	if _dungeon_manager == null:
+
+	if not is_instance_valid(_dungeon_manager):
 		_dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
-	if _dungeon_manager == null:
+
+	if not is_instance_valid(_dungeon_manager):
 		return true
 	if not _dungeon_manager.has_method("get_room_id_for_world_position"):
 		return true

@@ -9,6 +9,8 @@ var _stored_items: Array = []
 var _lid_tween: Tween = null
 @onready var lid_hinge: Node3D = $LidHinge
 
+var _cached_inventory_system: InventorySystem = null
+
 func _ready() -> void:
 	# Add to interactable group if not already, useful for raycasts
 	add_to_group("interactable")
@@ -50,13 +52,13 @@ func close_chest() -> void:
 	_lid_tween.tween_property(lid_hinge, "rotation_degrees:x", 0.0, 0.5)
 
 func _get_player_inventory_system() -> InventorySystem:
-	var players := get_tree().get_nodes_in_group("player")
-	if players.is_empty():
-		return null
-	var player = players[0]
-	if player == null:
-		return null
-	return player.get("inventory_system") as InventorySystem
+	if not is_instance_valid(_cached_inventory_system):
+		var players := get_tree().get_nodes_in_group("player")
+		if not players.is_empty():
+			var player = players[0]
+			if is_instance_valid(player):
+				_cached_inventory_system = player.get("inventory_system") as InventorySystem
+	return _cached_inventory_system
 
 func _kill_lid_tween_if_active() -> void:
 	if _lid_tween != null and _lid_tween.is_valid():

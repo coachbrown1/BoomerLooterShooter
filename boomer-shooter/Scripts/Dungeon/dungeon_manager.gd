@@ -25,6 +25,8 @@ var _room_lookup := {}
 var _spawned_enemy_rooms := {}
 var _last_player_room_id: int = -1
 
+var _cached_player: Node3D = null
+
 func _ready() -> void:
 	add_to_group("dungeon_manager")
 	if Engine.is_editor_hint():
@@ -36,11 +38,14 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if _encounter == null or _rooms.is_empty():
 		return
-	var player := get_tree().get_first_node_in_group("player")
-	if player == null or not (player is Node3D):
+
+	if not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player") as Node3D
+
+	if not is_instance_valid(_cached_player):
 		return
 
-	var room_id := _find_room_id_for_world_position(player.global_position)
+	var room_id := _find_room_id_for_world_position(_cached_player.global_position)
 	if room_id < 0 or room_id == _last_player_room_id:
 		return
 
@@ -230,15 +235,17 @@ func _update_environment(biome_data: Resource = null) -> void:
 		env.fog_light_color = Color(0.08, 0.02, 0.01)
 
 func _place_player() -> void:
-	var player = get_tree().get_first_node_in_group("player")
-	if not player:
+	if not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player") as Node3D
+
+	if not is_instance_valid(_cached_player):
 		return
 	var start_room := _get_room_by_type(RoomData.RoomType.START)
 	if start_room == null:
 		return
 	var pos = start_room.get_world_center(DungeonBuilder.TILE_SIZE)
 	pos.y = 1.0
-	player.global_position = pos
+	_cached_player.global_position = pos
 
 func _place_exit(biome_data: Resource = null) -> void:
 	var exit_room := _get_room_by_type(RoomData.RoomType.EXIT)

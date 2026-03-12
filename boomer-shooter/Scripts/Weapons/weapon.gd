@@ -40,6 +40,8 @@ var fire_timer: float = 0.0
 var sprite_origin_z: float = 0.0
 var weapon_manager: WeaponManager = null
 
+var _cached_player: CharacterBody3D = null
+
 # 2D Viewmodel elements
 var _canvas_layer: CanvasLayer
 var _viewmodel_2d: Sprite2D
@@ -405,9 +407,13 @@ func _place_decal(scene: PackedScene, pos: Vector3, normal: Vector3) -> void:
 	decal.rotate_object_local(Vector3.UP, randf() * TAU)
 
 func _get_player() -> CharacterBody3D:
-	if weapon_manager:
+	if weapon_manager and is_instance_valid(weapon_manager.player):
 		return weapon_manager.player
-	return get_tree().get_first_node_in_group("player")
+
+	if not is_instance_valid(_cached_player):
+		_cached_player = get_tree().get_first_node_in_group("player") as CharacterBody3D
+
+	return _cached_player
 
 func _find_hitbox(node: Node) -> HitboxComponent:
 	var current = node
