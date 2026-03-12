@@ -13,6 +13,8 @@ extends CharacterBody3D
 var _target_fov: float = base_fov
 var _fov_kick: float = 0.0
 
+var _cached_hud: Node = null
+
 @export_group("Recoil Settings")
 var current_recoil: Vector2 = Vector2.ZERO
 var target_recoil: Vector2 = Vector2.ZERO
@@ -52,10 +54,11 @@ func _init_hud() -> void:
 			hud.set_inventory_system(inventory_system)
 
 func _get_hud() -> Node:
-	var huds = get_tree().get_nodes_in_group("hud")
-	if huds.size() > 0:
-		return huds[0]
-	return null
+	if not is_instance_valid(_cached_hud):
+		var huds = get_tree().get_nodes_in_group("hud")
+		if huds.size() > 0:
+			_cached_hud = huds[0]
+	return _cached_hud
 
 func take_damage(amount: int) -> void:
 	if current_health <= 0:
