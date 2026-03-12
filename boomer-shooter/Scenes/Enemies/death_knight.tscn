@@ -19,6 +19,8 @@ height = 2.85
 collision_layer = 4
 collision_mask = 7
 script = ExtResource("1_a")
+spawn_cost = 3.0
+spawn_min_floor = 3
 move_speed = 3.5
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
@@ -42,6 +44,7 @@ shape = SubResource("2")
 material_override = ExtResource("6_mat")
 texture = ExtResource("5_e")
 hframes = 8
+vframes = 2
 script = ExtResource("4_d")
 bounce_walk_mode = true
 

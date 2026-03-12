@@ -41,7 +41,8 @@ shape = SubResource("2")
 [node name="Sprite3D" type="Sprite3D" parent="."]
 material_override = ExtResource("6_mat")
 texture = ExtResource("5_e")
-hframes = 8
+hframes = 4
+vframes = 2
 script = ExtResource("4_d")
 bounce_walk_mode = true
 

@@ -1,45 +1,43 @@
 [gd_resource type="Resource" script_class="BiomeDungeonData" format=3 uid="uid://c0ak5nyjvredp"]
 
 [ext_resource type="Script" uid="uid://w367lbpicfnt" path="res://Scripts/Data/biome_dungeon_data.gd" id="1_biome_data"]
+[ext_resource type="Texture2D" uid="uid://cymay2dmkj0wq" path="res://Assets/Environment/Lava/lava_floor_v1.png" id="2_floor1"]
+[ext_resource type="Texture2D" uid="uid://8ldt5tmowg8n" path="res://Assets/Environment/Lava/lava_floor_v2.png" id="3_floor2"]
+[ext_resource type="Texture2D" uid="uid://7eycy2n5nkgu" path="res://Assets/Environment/Lava/lava_floor_v3.png" id="4_floor3"]
+[ext_resource type="Texture2D" uid="uid://cmt0xkkpdhmd4" path="res://Assets/Environment/Lava/lava_wall_v1.png" id="5_wall1"]
+[ext_resource type="Texture2D" uid="uid://dw6b38cdvhmg5" path="res://Assets/Environment/Lava/lava_wall_v2.png" id="6_wall2"]
+[ext_resource type="Texture2D" uid="uid://blujwv57ikwer" path="res://Assets/Environment/Lava/lava_wall_v3.png" id="7_wall3"]
+[ext_resource type="Texture2D" uid="uid://bdea780xg2k0" path="res://Assets/Environment/Lava/lava_ceiling_v1.png" id="8_ceil1"]
+[ext_resource type="Texture2D" uid="uid://cvkeayheb34px" path="res://Assets/Environment/Lava/lava_ceiling_v2.png" id="9_ceil2"]
+[ext_resource type="PackedScene" uid="uid://cxhwb12mhiynr" path="res://Scenes/World/door.tscn" id="10_0y7qn"]
+[ext_resource type="Texture2D" uid="uid://5r0slgpmyhqy" path="res://Assets/Environment/Lava/lava_ceiling_v3.png" id="10_ceil3"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_barrel.tscn" id="11_uprop1"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_crate.tscn" id="12_uprop2"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/propskullpile.tscn" id="13_uprop3"]
+[ext_resource type="Texture2D" uid="uid://sbfcrpaqlvac" path="res://Assets/Environment/exit_portal.png" id="14_mmxep"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/propbrokenpillar.tscn" id="14_uprop4"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Lava/proplavacrack.tscn" id="15_bprop1"]
+[ext_resource type="PackedScene" uid="uid://8kv1bp8iue40" path="res://Scenes/Dungeon/fungal_mushroom.tscn" id="15_hdji1"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Lava/proplavaspike.tscn" id="16_bprop2"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Lava/proplavabrazier.tscn" id="17_bprop3"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Lava/proplavacharredbones.tscn" id="18_bprop4"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Lava/proplavamagmarock.tscn" id="19_bprop5"]
+[ext_resource type="Texture2D" uid="uid://d4fxnoh7rr26c" path="res://Assets/Effects/cookie_grate.png" id="19_dufjv"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Lava/proplavasulfurvent.tscn" id="20_bprop6"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/kobold.tscn" id="21_enemy1"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/flaming_skull.tscn" id="22_enemy2"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/gargoyle.tscn" id="23_enemy3"]
+[ext_resource type="PackedScene" path="res://Scenes/Dungeon/fungal_crystal.tscn" id="25_s81vs"]
 
 [resource]
 script = ExtResource("1_biome_data")
 biome_id = "lava"
-floor_textures = ["res://Assets/Environment/Lava/lava_floor_v1.png", "res://Assets/Environment/Lava/lava_floor_v2.png", "res://Assets/Environment/Lava/lava_floor_v3.png"]
-wall_textures = ["res://Assets/Environment/Lava/lava_wall_v1.png", "res://Assets/Environment/Lava/lava_wall_v2.png", "res://Assets/Environment/Lava/lava_wall_v3.png"]
-ceiling_textures = ["res://Assets/Environment/Lava/lava_ceiling_v1.png", "res://Assets/Environment/Lava/lava_ceiling_v2.png", "res://Assets/Environment/Lava/lava_ceiling_v3.png"]
-door_scene = "res://Scenes/World/door.tscn"
-room_light_cookie_texture = "res://Assets/Effects/cookie_grate.png"
-exit_portal_texture = "res://Assets/Environment/exit_portal.png"
+floor_textures = Array[Texture2D]([ExtResource("2_floor1"), ExtResource("3_floor2"), ExtResource("4_floor3")])
+wall_textures = Array[Texture2D]([ExtResource("5_wall1"), ExtResource("6_wall2"), ExtResource("7_wall3")])
+ceiling_textures = Array[Texture2D]([ExtResource("8_ceil1"), ExtResource("9_ceil2"), ExtResource("10_ceil3")])
 room_light_color = Color(1, 0.4, 0.15, 1)
 corridor_light_color = Color(1, 0.35, 0.1, 1)
 fog_light_color = Color(0.08, 0.02, 0.01, 1)
-universal_prop_textures = ["res://Assets/Environment/prop_barrel_side.png", "res://Assets/Environment/prop_crate.png", "res://Assets/Environment/prop_skull_pile.png", "res://Assets/Environment/prop_broken_pillar.png"]
-biome_prop_textures = ["res://Assets/Environment/Lava/prop_lava_crack.png", "res://Assets/Environment/Lava/prop_lava_spike.png", "res://Assets/Environment/Lava/prop_lava_brazier.png", "res://Assets/Environment/Lava/prop_lava_charred_bones.png", "res://Assets/Environment/Lava/prop_lava_magma_rock.png", "res://Assets/Environment/Lava/prop_lava_sulfur_vent.png"]
-universal_prop_scenes = ["res://Scenes/Props/Common/prop_barrel.tscn", "res://Scenes/Props/Common/prop_crate.tscn", "res://Scenes/Props/Common/propskullpile.tscn", "res://Scenes/Props/Common/propbrokenpillar.tscn"]
-biome_prop_scenes = ["res://Scenes/Props/Lava/proplavacrack.tscn", "res://Scenes/Props/Lava/proplavaspike.tscn", "res://Scenes/Props/Lava/proplavabrazier.tscn", "res://Scenes/Props/Lava/proplavacharredbones.tscn", "res://Scenes/Props/Lava/proplavamagmarock.tscn", "res://Scenes/Props/Lava/proplavasulfurvent.tscn"]
-crate_texture = "res://Assets/Environment/prop_crate.png"
-barrel_side_texture = "res://Assets/Environment/prop_barrel_side.png"
-barrel_top_texture = "res://Assets/Environment/prop_barrel_top.png"
-enemy_roster = Array[Dictionary]([{
-"cost": 1.0,
-"min_floor": 1,
-"name": "Kobold",
-"scale": 1.1,
-"scene": "res://Scenes/Enemies/kobold.tscn",
-"sprite": "res://Assets/Enemies/Kobold/kobold_spritesheet.png"
-}, {
-"cost": 2.0,
-"min_floor": 2,
-"name": "FlamingSkull",
-"scale": 1.0,
-"scene": "res://Scenes/Enemies/flaming_skull.tscn",
-"sprite": "res://Assets/Enemies/FlamingSkull/flaming_skull_spritesheet.png"
-}, {
-"cost": 3.0,
-"min_floor": 3,
-"name": "Gargoyle",
-"scale": 1.5,
-"scene": "res://Scenes/Enemies/gargoyle.tscn",
-"sprite": "res://Assets/Enemies/Gargoyle/gargoyle_spritesheet.png"
-}])
+universal_prop_scenes = Array[PackedScene]([ExtResource("11_uprop1"), ExtResource("12_uprop2"), ExtResource("13_uprop3"), ExtResource("14_uprop4")])
+biome_prop_scenes = Array[PackedScene]([ExtResource("15_bprop1"), ExtResource("16_bprop2"), ExtResource("17_bprop3"), ExtResource("18_bprop4"), ExtResource("19_bprop5"), ExtResource("20_bprop6")])
+enemy_scenes = Array[PackedScene]([ExtResource("21_enemy1"), ExtResource("22_enemy2"), ExtResource("23_enemy3")])

@@ -2,68 +2,54 @@
 
 [ext_resource type="Script" uid="uid://w367lbpicfnt" path="res://Scripts/Data/biome_dungeon_data.gd" id="1_biome_data"]
 [ext_resource type="PackedScene" uid="uid://c82820u086h5v" path="res://Scenes/Dungeon/Handcrafted/Fungal_Start.tscn" id="2_fungal_start"]
+[ext_resource type="Texture2D" uid="uid://yl2xav3wo77y" path="res://Assets/Environment/Fungal/fungal_floor_v4.png" id="3_floor1"]
+[ext_resource type="Texture2D" uid="uid://cfekh7ghr33y" path="res://Assets/Environment/Fungal/fungal_wall_v1.png" id="4_wall1"]
+[ext_resource type="Texture2D" uid="uid://nxfsd3o6smut" path="res://Assets/Environment/Fungal/fungal_wall_v2.png" id="5_wall2"]
+[ext_resource type="Texture2D" uid="uid://blvxpj17lbutr" path="res://Assets/Environment/Fungal/fungal_wall_v3.png" id="6_wall3"]
+[ext_resource type="Texture2D" uid="uid://m31speq2o4px" path="res://Assets/Environment/Fungal/fungal_ceiling_v1.png" id="7_ceil1"]
+[ext_resource type="PackedScene" uid="uid://cxhwb12mhiynr" path="res://Scenes/World/door.tscn" id="8_37ix7"]
+[ext_resource type="Texture2D" uid="uid://yfcqcye70nbh" path="res://Assets/Environment/Fungal/fungal_ceiling_v2.png" id="8_ceil2"]
+[ext_resource type="Texture2D" uid="uid://ddt11sm3rurga" path="res://Assets/Environment/Fungal/fungal_ceiling_v3.png" id="9_ceil3"]
+[ext_resource type="PackedScene" uid="uid://bu6s2o7mr0val" path="res://Scenes/Dungeon/doorway_assembly.tscn" id="10_doorway"]
+[ext_resource type="PackedScene" uid="uid://8kv1bp8iue40" path="res://Scenes/Dungeon/fungal_mushroom.tscn" id="11_floor_light"]
+[ext_resource type="PackedScene" path="res://Scenes/Dungeon/fungal_crystal.tscn" id="12_wall_light"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_barrel.tscn" id="13_uprop1"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_crate.tscn" id="14_uprop2"]
+[ext_resource type="Texture2D" uid="uid://sbfcrpaqlvac" path="res://Assets/Environment/exit_portal.png" id="15_d6p21"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/propskullpile.tscn" id="15_uprop3"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/propbrokenpillar.tscn" id="16_uprop4"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Fungal/propfungalslimepool.tscn" id="17_bprop1"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Fungal/propfungalvines.tscn" id="18_bprop2"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Fungal/propfungalpods.tscn" id="19_bprop3"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Fungal/propfungalmossrock.tscn" id="20_bprop4"]
+[ext_resource type="PackedScene" uid="uid://c1m2e3l4e5e6" path="res://Scenes/Enemies/goblin_melee.tscn" id="21_enemy1"]
+[ext_resource type="PackedScene" uid="uid://r1a2n3g4e5d6" path="res://Scenes/Enemies/goblin_archer.tscn" id="22_enemy2"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/orc.tscn" id="23_enemy3"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/fungal_cube.tscn" id="24_enemy4"]
+[ext_resource type="PackedScene" uid="uid://c1m2e3l4e5e6" path="res://Scenes/Enemies/spore_husk.tscn" id="25_enemy5"]
 
 [resource]
 script = ExtResource("1_biome_data")
 biome_id = "fungal"
-floor_textures = Array[String](["uid://yl2xav3wo77y", "uid://bbhw437wynmac", "uid://cteppjo0wffpo"])
-wall_textures = Array[String](["res://Assets/Environment/Fungal/fungal_wall_v1.png", "res://Assets/Environment/Fungal/fungal_wall_v2.png", "res://Assets/Environment/Fungal/fungal_wall_v3.png"])
-ceiling_textures = Array[String](["res://Assets/Environment/Fungal/fungal_ceiling_v1.png", "res://Assets/Environment/Fungal/fungal_ceiling_v2.png", "res://Assets/Environment/Fungal/fungal_ceiling_v3.png"])
-doorway_assembly_scene = "res://Scenes/Dungeon/doorway_assembly.tscn"
+floor_textures = Array[Texture2D]([ExtResource("3_floor1")])
+wall_textures = Array[Texture2D]([ExtResource("4_wall1"), ExtResource("5_wall2"), ExtResource("6_wall3")])
+ceiling_textures = Array[Texture2D]([ExtResource("7_ceil1"), ExtResource("8_ceil2"), ExtResource("9_ceil3")])
+doorway_assembly_scene = ExtResource("10_doorway")
 handcrafted_start_room_scene = ExtResource("2_fungal_start")
 room_light_color = Color(0.4, 0.9, 0.5, 1)
-room_light_cookie_texture = ""
 corridor_light_color = Color(0.2, 1, 0.5, 1)
 corridor_light_energy = 0.6
 corridor_light_range = 5.0
 corridor_light_height = 0.9
 corridor_light_step = 5
-use_custom_prop_lights = null
-custom_light_sources = null
-floor_light_scene = null
-wall_light_scene = null
+use_prop_lights = true
+wall_light_color = Color(0.4, 0.3, 0.9, 1)
+wall_light_energy = 0.9
+wall_light_range = 7.0
+floor_light_color = Color(0.2, 1, 0.5, 1)
+floor_light_energy = 0.6
+floor_light_range = 5.0
 fog_light_color = Color(0, 0, 0, 1)
-universal_prop_textures = Array[String](["res://Assets/Environment/prop_barrel_side.png", "res://Assets/Environment/prop_crate.png", "res://Assets/Environment/prop_skull_pile.png", "res://Assets/Environment/prop_broken_pillar.png"])
-biome_prop_textures = Array[String](["res://Assets/Environment/Fungal/prop_fungal_slime_pool.png", "res://Assets/Environment/Fungal/prop_fungal_vines.png", "res://Assets/Environment/Fungal/prop_fungal_pods.png", "res://Assets/Environment/Fungal/prop_fungal_moss_rock.png"])
-universal_prop_scenes = Array[String](["res://Scenes/Props/Common/prop_barrel.tscn", "res://Scenes/Props/Common/prop_crate.tscn", "res://Scenes/Props/Common/propskullpile.tscn", "res://Scenes/Props/Common/propbrokenpillar.tscn"])
-biome_prop_scenes = Array[String](["res://Scenes/Props/Fungal/propfungalslimepool.tscn", "res://Scenes/Props/Fungal/propfungalvines.tscn", "res://Scenes/Props/Fungal/propfungalpods.tscn", "res://Scenes/Props/Fungal/propfungalmossrock.tscn"])
-enemy_roster = Array[Dictionary]([{
-"cost": 1.0,
-"hframes": 8,
-"min_floor": 1,
-"name": "Goblin",
-"scale": 1.15,
-"scene": "res://Scenes/Enemies/goblin_melee.tscn",
-"sprite": "res://Assets/Enemies/GoblinForward/goblin_forward_spritesheet.png"
-}, {
-"cost": 1.5,
-"hframes": 8,
-"min_floor": 1,
-"name": "GoblinArcher",
-"scale": 1.15,
-"scene": "res://Scenes/Enemies/goblin_archer.tscn",
-"sprite": "res://Assets/Enemies/GoblinArcherForward/goblin_archer_forward_spritesheet.png"
-}, {
-"cost": 2.0,
-"min_floor": 2,
-"name": "Orc",
-"scale": 1.7,
-"scene": "res://Scenes/Enemies/orc.tscn",
-"sprite": "res://Assets/Enemies/Orc/orc_spritesheet.png"
-}, {
-"cost": 3.0,
-"hframes": 8,
-"min_floor": 3,
-"name": "FungalCube",
-"scale": 2.2,
-"scene": "res://Scenes/Enemies/fungal_cube.tscn",
-"sprite": "res://Assets/Enemies/FungalCube/fungalcube_spritesheet.png"
-}, {
-"cost": 1.5,
-"hframes": 8,
-"min_floor": 1,
-"name": "SporeHusk",
-"scale": 1.5,
-"scene": "res://Scenes/Enemies/spore_husk.tscn",
-"sprite": "res://Assets/Enemies/SporeHusk/sporehusk_spritesheet.png"
-}])
+universal_prop_scenes = Array[PackedScene]([ExtResource("13_uprop1"), ExtResource("14_uprop2"), ExtResource("15_uprop3"), ExtResource("16_uprop4")])
+biome_prop_scenes = Array[PackedScene]([ExtResource("17_bprop1"), ExtResource("18_bprop2"), ExtResource("19_bprop3"), ExtResource("20_bprop4")])
+enemy_scenes = Array[PackedScene]([ExtResource("21_enemy1"), ExtResource("22_enemy2"), ExtResource("23_enemy3"), ExtResource("24_enemy4"), ExtResource("25_enemy5")])

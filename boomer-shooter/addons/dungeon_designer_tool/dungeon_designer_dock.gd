@@ -10,7 +10,8 @@ var plugin: EditorPlugin = null
 var _status_label: Label
 var _biome_selector: OptionButton
 var _manager_inspector: EditorInspector
-var _biome_inspector: EditorInspector
+var _biome_editor_scroll: ScrollContainer
+var _biome_editor_root: VBoxContainer
 var _preview_room_selector: OptionButton
 var _grid_min_spin: SpinBox
 var _grid_max_spin: SpinBox
@@ -23,6 +24,13 @@ var _biome_db: Resource = null
 var _biomes: Array = []
 var _selected_biome: Resource = null
 var _preview_targets: Array = []
+var _texture_options: Array[String] = []
+var _scene_options: Array[String] = []
+var _enemy_scene_options: Array[String] = []
+var _prop_scene_options: Array[String] = []
+var _handcrafted_scene_options: Array[String] = []
+var _door_scene_options: Array[String] = []
+var _light_scene_options: Array[String] = []
 
 func _ready() -> void:
 	if not Engine.is_editor_hint():
@@ -139,13 +147,17 @@ func _build_ui() -> void:
 	biome_tab.add_child(biome_row)
 
 	var biome_header := Label.new()
-	biome_header.text = "Biome Inspector (All Fields)"
+	biome_header.text = "Biome Editor"
 	biome_tab.add_child(biome_header)
 
-	_biome_inspector = EditorInspector.new()
-	_biome_inspector.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_biome_inspector.custom_minimum_size = Vector2(0, 300)
-	biome_tab.add_child(_biome_inspector)
+	_biome_editor_scroll = ScrollContainer.new()
+	_biome_editor_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_biome_editor_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	biome_tab.add_child(_biome_editor_scroll)
+
+	_biome_editor_root = VBoxContainer.new()
+	_biome_editor_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_biome_editor_scroll.add_child(_biome_editor_root)
 
 func _make_button(text: String, callable: Callable) -> Button:
 	var button := Button.new()
@@ -188,7 +200,8 @@ func _refresh_biome_section() -> void:
 	_biome_selector.clear()
 	_biomes = []
 	_selected_biome = null
-	_biome_inspector.edit(null)
+	_rebuild_biome_editor()
+	_refresh_biome_option_lists()
 
 	_biome_db = load(BIOME_DB_PATH)
 	if _biome_db == null:
@@ -243,10 +256,10 @@ func _find_node_by_script(node: Node, script_path: String) -> Node:
 func _set_selected_biome(index: int) -> void:
 	if index < 0 or index >= _biomes.size():
 		_selected_biome = null
-		_biome_inspector.edit(null)
+		_rebuild_biome_editor()
 		return
 	_selected_biome = _biomes[index]
-	_biome_inspector.edit(_selected_biome)
+	_rebuild_biome_editor()
 
 func _on_open_dungeon_scene_pressed() -> void:
 	if plugin == null:
@@ -406,6 +419,395 @@ func _on_open_start_scene_pressed() -> void:
 		return
 	plugin.get_editor_interface().open_scene_from_path(path)
 	_set_status("Opened start scene: %s" % path)
+
+func _refresh_biome_option_lists() -> void:
+	_texture_options = _collect_files_recursive("res://Assets", ["png", "jpg", "jpeg", "webp", "tga", "bmp", "exr", "hdr"])
+	_scene_options = _collect_files_recursive("res://Scenes", ["tscn"])
+	_enemy_scene_options = []
+	_prop_scene_options = []
+	_handcrafted_scene_options = []
+	_door_scene_options = []
+	_light_scene_options = []
+	for path in _scene_options:
+		if path.begins_with("res://Scenes/Enemies/"):
+			var name := path.get_file()
+			if name != "enemy_chaser.tscn" and name != "enemy_melee.tscn" and name != "enemy_ranged.tscn":
+				_enemy_scene_options.append(path)
+		if path.begins_with("res://Scenes/Props/"):
+			_prop_scene_options.append(path)
+		if path.begins_with("res://Scenes/Dungeon/Handcrafted/"):
+			_handcrafted_scene_options.append(path)
+		if path.find("door") != -1:
+			_door_scene_options.append(path)
+		if path.begins_with("res://Scenes/Dungeon/") or path.begins_with("res://Scenes/Props/"):
+			_light_scene_options.append(path)
+
+func _collect_files_recursive(root: String, extensions: Array[String]) -> Array[String]:
+	var out: Array[String] = []
+	_collect_files_recursive_inner(root, extensions, out)
+	out.sort()
+	return out
+
+func _collect_files_recursive_inner(root: String, extensions: Array[String], out: Array[String]) -> void:
+	var dir := DirAccess.open(root)
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var name := dir.get_next()
+	while name != "":
+		if name != "." and name != "..":
+			var full_path := root.path_join(name)
+			if dir.current_is_dir():
+				_collect_files_recursive_inner(full_path, extensions, out)
+			else:
+				var ext := name.get_extension().to_lower()
+				if extensions.has(ext):
+					out.append(full_path)
+		name = dir.get_next()
+	dir.list_dir_end()
+
+func _rebuild_biome_editor() -> void:
+	if _biome_editor_root == null:
+		return
+	for child in _biome_editor_root.get_children():
+		child.queue_free()
+	if _selected_biome == null:
+		var empty := Label.new()
+		empty.text = "Select a biome to edit."
+		_biome_editor_root.add_child(empty)
+		return
+
+	var surfaces := _make_biome_section("Surface Textures")
+	_add_resource_array_editor(surfaces, "Floor Textures", "floor_textures", _texture_options, "texture")
+	_add_resource_array_editor(surfaces, "Wall Textures", "wall_textures", _texture_options, "texture")
+	_add_resource_array_editor(surfaces, "Ceiling Textures", "ceiling_textures", _texture_options, "texture")
+
+	var doors := _make_biome_section("Doors And Handcrafted Rooms")
+	_add_resource_picker_row(doors, "Door Scene", "door_scene", _door_scene_options, "scene")
+	_add_resource_picker_row(doors, "Doorway Assembly Scene", "doorway_assembly_scene", _door_scene_options, "scene")
+	_add_resource_picker_row(doors, "Start Room Scene", "handcrafted_start_room_scene", _handcrafted_scene_options, "scene")
+	_add_resource_array_editor(doors, "Normal Room Scenes", "handcrafted_normal_room_scenes", _handcrafted_scene_options, "scene")
+	_add_float_row(doors, "Normal Room Chance", "handcrafted_normal_room_chance", 0.0, 1.0, 0.01)
+
+	var lighting := _make_biome_section("Lighting")
+	_add_color_row(lighting, "Room Light Color", "room_light_color")
+	_add_resource_picker_row(lighting, "Room Cookie Texture", "room_light_cookie_texture", _texture_options, "texture")
+	_add_color_row(lighting, "Corridor Light Color", "corridor_light_color")
+	_add_float_row(lighting, "Corridor Light Energy", "corridor_light_energy", 0.0, 20.0, 0.05)
+	_add_float_row(lighting, "Corridor Light Range", "corridor_light_range", 0.0, 60.0, 0.1)
+	_add_float_row(lighting, "Corridor Light Height", "corridor_light_height", 0.0, 2.0, 0.01)
+	_add_float_row(lighting, "Corridor Light Step", "corridor_light_step", 1.0, 30.0, 1.0, true)
+	_add_float_row(lighting, "Corridor Light Chance", "corridor_light_chance", 0.0, 1.0, 0.01)
+	_add_bool_row(lighting, "Use Prop Lights", "use_prop_lights")
+	_add_resource_picker_row(lighting, "Wall Light Scene", "wall_light_scene", _light_scene_options, "scene")
+	_add_color_row(lighting, "Wall Light Color", "wall_light_color")
+	_add_float_row(lighting, "Wall Light Energy", "wall_light_energy", 0.0, 20.0, 0.05)
+	_add_float_row(lighting, "Wall Light Range", "wall_light_range", 0.0, 60.0, 0.1)
+	_add_float_row(lighting, "Wall Light Height", "wall_light_height", 0.0, 5.0, 0.01)
+	_add_resource_picker_row(lighting, "Floor Light Scene", "floor_light_scene", _light_scene_options, "scene")
+	_add_color_row(lighting, "Floor Light Color", "floor_light_color")
+	_add_float_row(lighting, "Floor Light Energy", "floor_light_energy", 0.0, 20.0, 0.05)
+	_add_float_row(lighting, "Floor Light Range", "floor_light_range", 0.0, 60.0, 0.1)
+	_add_float_row(lighting, "Floor Light Height", "floor_light_height", 0.0, 5.0, 0.01)
+	_add_color_row(lighting, "Fog Light Color", "fog_light_color")
+	_add_resource_picker_row(lighting, "Exit Portal Texture", "exit_portal_texture", _texture_options, "texture")
+
+	var props := _make_biome_section("Props")
+	_add_resource_array_editor(props, "Universal Prop Scenes", "universal_prop_scenes", _prop_scene_options, "scene")
+	_add_resource_array_editor(props, "Biome Prop Scenes", "biome_prop_scenes", _prop_scene_options, "scene")
+
+	var enemies := _make_biome_section("Enemies")
+	_add_resource_array_editor(enemies, "Enemy Scenes", "enemy_scenes", _enemy_scene_options, "scene")
+
+	var validation := _make_biome_section("Validation")
+	validation.add_child(_make_button("Validate Selected Biome", _validate_selected_biome))
+
+func _make_biome_section(title: String) -> VBoxContainer:
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var root := VBoxContainer.new()
+	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_child(root)
+	var label := Label.new()
+	label.text = title
+	label.add_theme_font_size_override("font_size", 14)
+	root.add_child(label)
+	_biome_editor_root.add_child(panel)
+	return root
+
+func _add_bool_row(container: VBoxContainer, label_text: String, property_name: String) -> void:
+	var row := HBoxContainer.new()
+	var checkbox := CheckBox.new()
+	checkbox.text = label_text
+	checkbox.button_pressed = bool(_selected_biome.get(property_name))
+	checkbox.toggled.connect(func(pressed: bool) -> void:
+		_set_biome_property(property_name, pressed)
+	)
+	row.add_child(checkbox)
+	container.add_child(row)
+
+func _add_float_row(container: VBoxContainer, label_text: String, property_name: String, min_value: float, max_value: float, step: float, integer_only: bool = false) -> void:
+	var row := HBoxContainer.new()
+	var label := Label.new()
+	label.text = label_text
+	label.custom_minimum_size = Vector2(230, 0)
+	row.add_child(label)
+	var spin := SpinBox.new()
+	spin.min_value = min_value
+	spin.max_value = max_value
+	spin.step = step
+	spin.value = float(_selected_biome.get(property_name))
+	spin.rounded = integer_only
+	spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spin.value_changed.connect(func(value: float) -> void:
+		if integer_only:
+			_set_biome_property(property_name, int(value))
+		else:
+			_set_biome_property(property_name, value)
+	)
+	row.add_child(spin)
+	container.add_child(row)
+
+func _add_color_row(container: VBoxContainer, label_text: String, property_name: String) -> void:
+	var row := HBoxContainer.new()
+	var label := Label.new()
+	label.text = label_text
+	label.custom_minimum_size = Vector2(230, 0)
+	row.add_child(label)
+	var picker := ColorPickerButton.new()
+	var current: Variant = _selected_biome.get(property_name)
+	if current is Color:
+		picker.color = current
+	picker.color_changed.connect(func(color: Color) -> void:
+		_set_biome_property(property_name, color)
+	)
+	row.add_child(picker)
+	container.add_child(row)
+
+func _add_resource_picker_row(container: VBoxContainer, label_text: String, property_name: String, options: Array[String], kind: String) -> void:
+	var row := HBoxContainer.new()
+	var label := Label.new()
+	label.text = label_text
+	label.custom_minimum_size = Vector2(230, 0)
+	row.add_child(label)
+
+	var picker := OptionButton.new()
+	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	picker.add_item("(None)")
+	picker.set_item_metadata(0, "")
+	var current_path := _resource_path_from_variant(_selected_biome.get(property_name))
+	var selected := 0
+	for path in options:
+		var index := picker.get_item_count()
+		picker.add_item(path.get_file())
+		picker.set_item_metadata(index, path)
+		if path == current_path:
+			selected = index
+	picker.select(selected)
+	picker.item_selected.connect(func(index: int) -> void:
+		var path: String = str(picker.get_item_metadata(index))
+		if path == "":
+			_set_biome_property(property_name, null)
+			return
+		var loaded := load(path)
+		_set_biome_property(property_name, loaded)
+	)
+	row.add_child(picker)
+
+	var open_button := Button.new()
+	open_button.text = "Open"
+	open_button.pressed.connect(func() -> void:
+		if plugin == null:
+			return
+		var value: Variant = _selected_biome.get(property_name)
+		if kind == "scene" and value is PackedScene:
+			var packed: PackedScene = value
+			if packed.resource_path != "":
+				plugin.get_editor_interface().open_scene_from_path(packed.resource_path)
+		elif value is Resource:
+			plugin.get_editor_interface().edit_resource(value)
+	)
+	row.add_child(open_button)
+	container.add_child(row)
+
+func _add_resource_array_editor(container: VBoxContainer, title: String, property_name: String, options: Array[String], kind: String) -> void:
+	var title_label := Label.new()
+	title_label.text = title
+	container.add_child(title_label)
+
+	var list := ItemList.new()
+	list.select_mode = ItemList.SELECT_SINGLE
+	list.custom_minimum_size = Vector2(0, 100)
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	container.add_child(list)
+
+	var refresh := func() -> void:
+		list.clear()
+		var values := _get_resource_array(property_name)
+		for value in values:
+			if value is Resource:
+				var resource: Resource = value
+				var path := resource.resource_path
+				list.add_item(path if path != "" else str(resource))
+		if list.get_item_count() > 0:
+			list.select(0)
+	refresh.call()
+
+	var controls := HBoxContainer.new()
+	container.add_child(controls)
+
+	var picker := OptionButton.new()
+	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for path in options:
+		var index := picker.get_item_count()
+		picker.add_item(path.get_file())
+		picker.set_item_metadata(index, path)
+	controls.add_child(picker)
+
+	var add_button := Button.new()
+	add_button.text = "Add"
+	add_button.pressed.connect(func() -> void:
+		if picker.get_item_count() == 0:
+			return
+		var path := str(picker.get_item_metadata(picker.selected))
+		var loaded := load(path)
+		if not (loaded is Resource):
+			return
+		var values := _get_resource_array(property_name)
+		values.append(loaded)
+		_set_biome_property(property_name, values)
+		refresh.call()
+	)
+	controls.add_child(add_button)
+
+	var remove_button := Button.new()
+	remove_button.text = "Remove"
+	remove_button.pressed.connect(func() -> void:
+		var selected := list.get_selected_items()
+		if selected.is_empty():
+			return
+		var values := _get_resource_array(property_name)
+		values.remove_at(int(selected[0]))
+		_set_biome_property(property_name, values)
+		refresh.call()
+	)
+	controls.add_child(remove_button)
+
+	var up_button := Button.new()
+	up_button.text = "Up"
+	up_button.pressed.connect(func() -> void:
+		var selected := list.get_selected_items()
+		if selected.is_empty():
+			return
+		var idx := int(selected[0])
+		if idx <= 0:
+			return
+		var values := _get_resource_array(property_name)
+		var tmp_up := values[idx - 1]
+		values[idx - 1] = values[idx]
+		values[idx] = tmp_up
+		_set_biome_property(property_name, values)
+		refresh.call()
+		list.select(idx - 1)
+	)
+	controls.add_child(up_button)
+
+	var down_button := Button.new()
+	down_button.text = "Down"
+	down_button.pressed.connect(func() -> void:
+		var selected := list.get_selected_items()
+		if selected.is_empty():
+			return
+		var idx := int(selected[0])
+		var values := _get_resource_array(property_name)
+		if idx >= values.size() - 1:
+			return
+		var tmp_down := values[idx + 1]
+		values[idx + 1] = values[idx]
+		values[idx] = tmp_down
+		_set_biome_property(property_name, values)
+		refresh.call()
+		list.select(idx + 1)
+	)
+	controls.add_child(down_button)
+
+	var open_button := Button.new()
+	open_button.text = "Open"
+	open_button.pressed.connect(func() -> void:
+		if plugin == null:
+			return
+		var selected := list.get_selected_items()
+		if selected.is_empty():
+			return
+		var values := _get_resource_array(property_name)
+		var idx := int(selected[0])
+		if idx < 0 or idx >= values.size():
+			return
+		var value: Variant = values[idx]
+		if kind == "scene" and value is PackedScene:
+			var packed: PackedScene = value
+			if packed.resource_path != "":
+				plugin.get_editor_interface().open_scene_from_path(packed.resource_path)
+		elif value is Resource:
+			plugin.get_editor_interface().edit_resource(value)
+	)
+	controls.add_child(open_button)
+
+func _set_biome_property(property_name: String, value: Variant) -> void:
+	if _selected_biome == null:
+		return
+	_selected_biome.set(property_name, value)
+	_selected_biome.emit_changed()
+
+func _get_resource_array(property_name: String) -> Array:
+	if _selected_biome == null:
+		return []
+	var raw: Variant = _selected_biome.get(property_name)
+	if typeof(raw) != TYPE_ARRAY:
+		return []
+	var values: Array = raw
+	var out: Array = []
+	for value in values:
+		if value is Resource:
+			out.append(value)
+		elif value is String:
+			var loaded := load(str(value))
+			if loaded is Resource:
+				out.append(loaded)
+	return out
+
+func _resource_path_from_variant(value: Variant) -> String:
+	if value is Resource:
+		var resource: Resource = value
+		return resource.resource_path
+	if value is String:
+		return str(value)
+	return ""
+
+func _validate_selected_biome() -> void:
+	if _selected_biome == null:
+		_set_status("No biome selected.", true)
+		return
+	var issues: Array[String] = []
+	if _get_resource_array("floor_textures").is_empty():
+		issues.append("floor_textures is empty")
+	if _get_resource_array("wall_textures").is_empty():
+		issues.append("wall_textures is empty")
+	if _get_resource_array("ceiling_textures").is_empty():
+		issues.append("ceiling_textures is empty")
+	if _get_resource_array("universal_prop_scenes").is_empty():
+		issues.append("universal_prop_scenes is empty")
+	if _get_resource_array("enemy_scenes").is_empty():
+		issues.append("enemy_scenes is empty")
+	if bool(_selected_biome.get("use_prop_lights")):
+		if _selected_biome.get("wall_light_scene") == null:
+			issues.append("use_prop_lights is true but wall_light_scene is missing")
+		if _selected_biome.get("wall_light_scene") == null and _selected_biome.get("floor_light_scene") == null:
+			issues.append("use_prop_lights is true but no wall/floor light scene is configured")
+	if issues.is_empty():
+		_set_status("Biome validation passed.")
+	else:
+		_set_status("Biome validation issues: %s" % "; ".join(issues), true)
 
 func _set_status(message: String, is_error: bool = false) -> void:
 	if _status_label == null:

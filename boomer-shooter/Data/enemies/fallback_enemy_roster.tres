@@ -1,99 +1,18 @@
-[gd_resource type="Resource" script_class="EnemyRosterData" format=3]
+[gd_resource type="Resource" script_class="EnemyRosterData" format=3 uid="uid://c41fqlny3hplv"]
 
-[ext_resource type="Script" path="res://Scripts/Data/enemy_roster_data.gd" id="1_enemy_roster_data"]
+[ext_resource type="Script" uid="uid://cq6447502rd7b" path="res://Scripts/Data/enemy_roster_data.gd" id="1_enemy_roster_data"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/skeleton.tscn" id="2_skeleton"]
+[ext_resource type="PackedScene" uid="uid://c1m2e3l4e5e6" path="res://Scenes/Enemies/goblin_melee.tscn" id="3_goblin"]
+[ext_resource type="PackedScene" uid="uid://r1a2n3g4e5d6" path="res://Scenes/Enemies/goblin_archer.tscn" id="4_goblin_archer"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/kobold.tscn" id="5_kobold"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/orc.tscn" id="6_orc"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/cultist.tscn" id="7_cultist"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/flaming_skull.tscn" id="8_flaming_skull"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/death_knight.tscn" id="9_death_knight"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/gargoyle.tscn" id="10_gargoyle"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/fungal_cube.tscn" id="11_fungal_cube"]
+[ext_resource type="PackedScene" uid="uid://c1m2e3l4e5e6" path="res://Scenes/Enemies/spore_husk.tscn" id="12_spore_husk"]
 
 [resource]
 script = ExtResource("1_enemy_roster_data")
-enemy_roster = Array[Dictionary]([{
-"scene": "res://Scenes/Enemies/skeleton.tscn",
-"sprite": "res://Assets/Enemies/Skeleton/skeleton_spritesheet.png",
-"cost": 1.0,
-"biomes": PackedStringArray("crypt"),
-"min_floor": 1,
-"name": "Skeleton",
-"scale": 1.4
-}, {
-"scene": "res://Scenes/Enemies/goblin_melee.tscn",
-"sprite": "res://Assets/Enemies/GoblinForward/goblin_forward_spritesheet.png",
-"cost": 1.0,
-"biomes": PackedStringArray("fungal", "crypt"),
-"min_floor": 1,
-"name": "Goblin",
-"scale": 1.15,
-"hframes": 8
-}, {
-"scene": "res://Scenes/Enemies/goblin_archer.tscn",
-"sprite": "res://Assets/Enemies/GoblinArcherForward/goblin_archer_forward_spritesheet.png",
-"cost": 1.5,
-"biomes": PackedStringArray("fungal", "crypt"),
-"min_floor": 1,
-"name": "GoblinArcher",
-"scale": 1.15,
-"hframes": 8
-}, {
-"scene": "res://Scenes/Enemies/kobold.tscn",
-"sprite": "res://Assets/Enemies/Kobold/kobold_spritesheet.png",
-"cost": 1.0,
-"biomes": PackedStringArray("lava", "crypt"),
-"min_floor": 1,
-"name": "Kobold",
-"scale": 1.1
-}, {
-"scene": "res://Scenes/Enemies/orc.tscn",
-"sprite": "res://Assets/Enemies/Orc/orc_spritesheet.png",
-"cost": 2.0,
-"biomes": PackedStringArray("fungal", "crypt"),
-"min_floor": 2,
-"name": "Orc",
-"scale": 1.7
-}, {
-"scene": "res://Scenes/Enemies/cultist.tscn",
-"sprite": "res://Assets/Enemies/Cultist/cultist_spritesheet.png",
-"cost": 2.0,
-"biomes": PackedStringArray("crypt"),
-"min_floor": 2,
-"name": "Cultist",
-"scale": 1.4
-}, {
-"scene": "res://Scenes/Enemies/flaming_skull.tscn",
-"sprite": "res://Assets/Enemies/FlamingSkull/flaming_skull_spritesheet.png",
-"cost": 2.0,
-"biomes": PackedStringArray("lava"),
-"min_floor": 2,
-"name": "FlamingSkull",
-"scale": 1.0
-}, {
-"scene": "res://Scenes/Enemies/death_knight.tscn",
-"sprite": "res://Assets/Enemies/DeathKnight/death_knight_spritesheet.png",
-"cost": 3.0,
-"biomes": PackedStringArray("crypt"),
-"min_floor": 3,
-"name": "DeathKnight",
-"scale": 1.8
-}, {
-"scene": "res://Scenes/Enemies/gargoyle.tscn",
-"sprite": "res://Assets/Enemies/Gargoyle/gargoyle_spritesheet.png",
-"cost": 3.0,
-"biomes": PackedStringArray("crypt", "lava"),
-"min_floor": 3,
-"name": "Gargoyle",
-"scale": 1.5
-}, {
-"scene": "res://Scenes/Enemies/fungal_cube.tscn",
-"sprite": "res://Assets/Enemies/FungalCube/fungalcube_spritesheet.png",
-"cost": 3.0,
-"biomes": PackedStringArray("fungal"),
-"min_floor": 3,
-"name": "FungalCube",
-"scale": 2.2,
-"hframes": 8
-}, {
-"scene": "res://Scenes/Enemies/spore_husk.tscn",
-"sprite": "res://Assets/Enemies/SporeHusk/sporehusk_spritesheet.png",
-"cost": 1.5,
-"biomes": PackedStringArray("fungal"),
-"min_floor": 1,
-"name": "SporeHusk",
-"scale": 1.5,
-"hframes": 8
-}])
+enemy_scenes = Array[PackedScene]([ExtResource("2_skeleton"), ExtResource("3_goblin"), ExtResource("4_goblin_archer"), ExtResource("5_kobold"), ExtResource("6_orc"), ExtResource("7_cultist"), ExtResource("8_flaming_skull"), ExtResource("9_death_knight"), ExtResource("10_gargoyle"), ExtResource("11_fungal_cube"), ExtResource("12_spore_husk")])

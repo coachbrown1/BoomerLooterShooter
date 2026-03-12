@@ -6,7 +6,7 @@ const THREAT_BASE: float = 3.0
 const THREAT_DEPTH_SCALE: float = 2.0
 const THREAT_SIZE_SCALE: float = 0.05
 
-const FALLBACK_ROSTER_DATA: Resource = preload("res://Data/enemies/fallback_enemy_roster.tres")
+const FALLBACK_ROSTER_DATA: EnemyRosterData = preload("res://Data/enemies/fallback_enemy_roster.tres")
 
 var rng: RandomNumberGenerator
 
@@ -27,70 +27,53 @@ func populate_room(room: RoomData, floor_num: int, parent: Node3D, biome_data: R
 	if room.room_type == RoomData.RoomType.EXIT:
 		budget = ceil(budget * 0.5)
 
-	# Filter valid enemies for this biome + floor
-	var roster: Array = []
-	if _has_biome_data(biome_data) and not biome_data.enemy_roster.is_empty():
-		roster = biome_data.enemy_roster
-	else:
-		push_error("EncounterSystem: Missing or empty enemy_roster for biome '%s' on floor %d. Using fallback roster data table." % [room.biome, floor_num])
-		if FALLBACK_ROSTER_DATA != null and not FALLBACK_ROSTER_DATA.enemy_roster.is_empty():
-			roster = FALLBACK_ROSTER_DATA.enemy_roster
-
-	if roster.is_empty():
-		push_error("EncounterSystem: Fallback enemy roster is also empty. No enemies will spawn.")
+	var roster_scenes := _get_roster_scenes(biome_data)
+	if roster_scenes.is_empty():
+		push_error("EncounterSystem: No enemy_scenes resolved for biome '%s' on floor %d." % [room.biome, floor_num])
 		return
 
 	var valid: Array = []
-	for entry in roster:
-		if _entry_matches_room(entry, room.biome, floor_num):
-			valid.append(entry)
+	for packed_variant in roster_scenes:
+		if not (packed_variant is PackedScene):
+			continue
+		var packed: PackedScene = packed_variant
+		var spawn_def := _build_spawn_definition(packed)
+		if spawn_def.is_empty():
+			continue
+		if floor_num >= int(spawn_def.get("min_floor", 1)):
+			valid.append(spawn_def)
 
-	# Fallback: if no biome match, use anything available for this floor
 	if valid.is_empty():
-		for entry in roster:
-			if floor_num >= int(entry.get("min_floor", 1)):
-				valid.append(entry)
-
-	if valid.is_empty():
+		push_warning("EncounterSystem: no eligible enemy scenes for floor %d in biome '%s'." % [floor_num, room.biome])
 		return
 
 	# Spend budget
-	var scene_cache: Dictionary = {}
 	while budget > 0.5:
 		var affordable: Array = []
-		for entry in valid:
-			if entry["cost"] <= budget:
-				affordable.append(entry)
+		for def_variant in valid:
+			if typeof(def_variant) != TYPE_DICTIONARY:
+				continue
+			var spawn_def: Dictionary = def_variant
+			if float(spawn_def.get("cost", 1.0)) <= budget:
+				affordable.append(spawn_def)
 		if affordable.is_empty():
 			break
 
 		var pick: Dictionary = affordable[rng.randi() % affordable.size()]
-		budget -= pick["cost"]
+		budget -= float(pick.get("cost", 1.0))
 
-		# Load and instance the scene
-		var scene_path: String = pick["scene"]
-		if not scene_cache.has(scene_path):
-			scene_cache[scene_path] = load(scene_path)
-		var packed: PackedScene = scene_cache[scene_path]
-		if not packed:
+		var packed_variant: Variant = pick.get("scene", null)
+		if not (packed_variant is PackedScene):
 			continue
+		var packed: PackedScene = packed_variant
 
-		var enemy: Node3D = packed.instantiate()
-
-		# Swap the sprite texture and scale BEFORE adding to tree
-		var sprite_node := enemy.get_node_or_null("Sprite3D")
-		if sprite_node:
-			var tex = load(pick["sprite"])
-			if tex:
-				sprite_node.texture = tex
-				if sprite_node.material_override:
-					sprite_node.material_override.set_shader_parameter("texture_albedo", tex)
-				sprite_node.hframes = pick.get("hframes", 5)
-				sprite_node.vframes = 1
-				sprite_node.frame = 0
-				
-				var s = pick.get("scale", 1.0)
-				sprite_node.scale = Vector3(s, s, s)
+		var enemy_variant: Variant = packed.instantiate()
+		if not (enemy_variant is Node3D):
+			if enemy_variant is Node:
+				var cleanup_node: Node = enemy_variant
+				cleanup_node.free()
+			continue
+		var enemy: Node3D = enemy_variant
 
 		parent.add_child(enemy)
 
@@ -98,19 +81,54 @@ func populate_room(room: RoomData, floor_num: int, parent: Node3D, biome_data: R
 		var spawn_pos := _random_room_pos(room)
 		enemy.global_position = spawn_pos
 
-func _entry_matches_room(entry: Dictionary, room_biome: String, floor_num: int) -> bool:
-	if floor_num < int(entry.get("min_floor", 1)):
-		return false
-	var biomes: Variant = entry.get("biomes", [])
-	if typeof(biomes) == TYPE_ARRAY and biomes.size() > 0:
-		return room_biome in biomes
-	return true
+func _get_roster_scenes(biome_data: Resource) -> Array:
+	if _has_biome_data(biome_data):
+		var from_biome: Variant = biome_data.get("enemy_scenes")
+		var from_biome_scenes := _to_packed_scene_array(from_biome)
+		if not from_biome_scenes.is_empty():
+			return from_biome_scenes
+
+	if FALLBACK_ROSTER_DATA != null:
+		return _to_packed_scene_array(FALLBACK_ROSTER_DATA.enemy_scenes)
+	return []
+
+func _to_packed_scene_array(value: Variant) -> Array:
+	if typeof(value) != TYPE_ARRAY:
+		return []
+	var scenes: Array = []
+	for entry in value:
+		if entry is PackedScene:
+			scenes.append(entry)
+		elif entry is String:
+			var loaded := load(str(entry))
+			if loaded is PackedScene:
+				scenes.append(loaded)
+	return scenes
+
+func _build_spawn_definition(scene: PackedScene) -> Dictionary:
+	if scene == null:
+		return {}
+	var cost := 1.0
+	var min_floor := 1
+	var preview_variant: Variant = scene.instantiate()
+	if preview_variant is EnemyBase:
+		var enemy_preview: EnemyBase = preview_variant
+		cost = maxf(0.1, enemy_preview.spawn_cost)
+		min_floor = maxi(1, enemy_preview.spawn_min_floor)
+	if preview_variant is Node:
+		var preview_node: Node = preview_variant
+		preview_node.free()
+	return {
+		"scene": scene,
+		"cost": cost,
+		"min_floor": min_floor,
+	}
 
 func _has_biome_data(biome_data: Resource) -> bool:
 	if biome_data == null:
 		return false
 	for p in biome_data.get_property_list():
-		if typeof(p) == TYPE_DICTIONARY and str(p.get("name", "")) == "enemy_roster":
+		if typeof(p) == TYPE_DICTIONARY and str(p.get("name", "")) == "enemy_scenes":
 			return true
 	return false
 

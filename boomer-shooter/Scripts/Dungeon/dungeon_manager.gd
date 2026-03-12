@@ -246,13 +246,12 @@ func _place_exit(biome_data: Resource = null) -> void:
 		return
 
 	# Load and instance the exit portal scene
-	var portal_tex_path := "res://Assets/Environment/exit_portal.png"
+	var portal_tex: Texture2D = preload("res://Assets/Environment/exit_portal.png")
 	if biome_data and biome_data.has_method("get"):
-		var candidate: String = str(biome_data.get("exit_portal_texture"))
-		if candidate != "":
-			portal_tex_path = candidate
-	var portal_tex = load(portal_tex_path)
-	if not portal_tex:
+		var candidate: Variant = biome_data.get("exit_portal_texture")
+		if candidate is Texture2D:
+			portal_tex = candidate
+	if portal_tex == null:
 		return
 
 	var portal_body := Area3D.new()

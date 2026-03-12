@@ -17,8 +17,14 @@ Editor dock for dungeon-focused tuning.
    - Corridor Width/Length (tiles)
 4. Click `Apply + Save Layout`.
 5. Switch to the `Biome Data` tab and pick a biome.
-6. Edit biome fields (textures, props, lights, handcrafted scene pools, enemy roster).
-7. Click `Save Selected Biome`.
+6. Use the custom sections to edit:
+   - Surface textures
+   - Doors + handcrafted room scenes
+   - Lighting (ambient + wall/floor prop lights)
+   - Prop scene pools
+   - Enemy scene roster
+7. Click `Validate Selected Biome` to catch missing required fields.
+8. Click `Save Selected Biome`.
 
 ## Preview workflow
 

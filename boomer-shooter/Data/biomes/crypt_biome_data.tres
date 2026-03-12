@@ -1,80 +1,44 @@
 [gd_resource type="Resource" script_class="BiomeDungeonData" format=3 uid="uid://o1cny6gl2uga"]
 
 [ext_resource type="Script" uid="uid://w367lbpicfnt" path="res://Scripts/Data/biome_dungeon_data.gd" id="1_biome_data"]
+[ext_resource type="Texture2D" uid="uid://dm8xmpqhm6w1j" path="res://Assets/Environment/Crypt/crypt_floor_v1.png" id="2_floor1"]
+[ext_resource type="Texture2D" uid="uid://c7m5gjm0i7nv5" path="res://Assets/Environment/Crypt/crypt_floor_v2.png" id="3_floor2"]
+[ext_resource type="Texture2D" uid="uid://c7d76p3gbpsn2" path="res://Assets/Environment/Crypt/crypt_floor_v3.png" id="4_floor3"]
+[ext_resource type="Texture2D" uid="uid://dqd5hsnb0331p" path="res://Assets/Environment/Crypt/crypt_wall_v1.png" id="5_wall1"]
+[ext_resource type="Texture2D" uid="uid://b3m6efv0h0we7" path="res://Assets/Environment/Crypt/crypt_wall_v2.png" id="6_wall2"]
+[ext_resource type="Texture2D" uid="uid://bnlaxgtvefg74" path="res://Assets/Environment/Crypt/crypt_wall_v3.png" id="7_wall3"]
+[ext_resource type="Texture2D" uid="uid://bxufakjduwdit" path="res://Assets/Environment/Crypt/crypt_ceiling_v1.png" id="8_ceil1"]
+[ext_resource type="Texture2D" uid="uid://cv867mbde1qgt" path="res://Assets/Environment/Crypt/crypt_ceiling_v2.png" id="9_ceil2"]
+[ext_resource type="Texture2D" uid="uid://cco2q3obti6gx" path="res://Assets/Environment/Crypt/crypt_ceiling_v3.png" id="10_ceil3"]
+[ext_resource type="PackedScene" uid="uid://cxhwb12mhiynr" path="res://Scenes/World/door.tscn" id="10_tgln3"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_barrel.tscn" id="11_uprop1"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_crate.tscn" id="12_uprop2"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/propskullpile.tscn" id="13_uprop3"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/propbrokenpillar.tscn" id="14_uprop4"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Crypt/propcryptcoffin.tscn" id="15_bprop1"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Crypt/propcrypttombstone.tscn" id="16_bprop2"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Crypt/propcryptironmaiden.tscn" id="17_bprop3"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Crypt/propcryptcandelabra.tscn" id="18_bprop4"]
+[ext_resource type="Texture2D" uid="uid://sbfcrpaqlvac" path="res://Assets/Environment/exit_portal.png" id="19_02qk5"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Crypt/propcryptbanner.tscn" id="19_bprop5"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Crypt/propcryptbonepile.tscn" id="20_bprop6"]
+[ext_resource type="PackedScene" uid="uid://8kv1bp8iue40" path="res://Scenes/Dungeon/fungal_mushroom.tscn" id="20_jqpud"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/skeleton.tscn" id="21_enemy1"]
+[ext_resource type="PackedScene" uid="uid://c1m2e3l4e5e6" path="res://Scenes/Enemies/goblin_melee.tscn" id="22_enemy2"]
+[ext_resource type="PackedScene" uid="uid://r1a2n3g4e5d6" path="res://Scenes/Enemies/goblin_archer.tscn" id="23_enemy3"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/kobold.tscn" id="24_enemy4"]
+[ext_resource type="Texture2D" uid="uid://d4fxnoh7rr26c" path="res://Assets/Effects/cookie_grate.png" id="24_vjew2"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/orc.tscn" id="25_enemy5"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/cultist.tscn" id="26_enemy6"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/death_knight.tscn" id="27_enemy7"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/gargoyle.tscn" id="28_enemy8"]
+[ext_resource type="PackedScene" path="res://Scenes/Dungeon/fungal_crystal.tscn" id="30_o1aeu"]
 
 [resource]
 script = ExtResource("1_biome_data")
-floor_textures = Array[String](["uid://dm8xmpqhm6w1j", "res://Assets/Environment/Crypt/crypt_floor_v2.png", "res://Assets/Environment/Crypt/crypt_floor_v3.png"])
-wall_textures = Array[String](["res://Assets/Environment/Crypt/crypt_wall_v1.png", "res://Assets/Environment/Crypt/crypt_wall_v2.png", "res://Assets/Environment/Crypt/crypt_wall_v3.png"])
-ceiling_textures = Array[String](["res://Assets/Environment/Crypt/crypt_ceiling_v1.png", "res://Assets/Environment/Crypt/crypt_ceiling_v2.png", "res://Assets/Environment/Crypt/crypt_ceiling_v3.png"])
-universal_prop_textures = Array[String](["res://Assets/Environment/prop_barrel_side.png", "res://Assets/Environment/prop_crate.png", "res://Assets/Environment/prop_skull_pile.png", "res://Assets/Environment/prop_broken_pillar.png"])
-biome_prop_textures = Array[String](["res://Assets/Environment/Crypt/prop_crypt_coffin.png", "res://Assets/Environment/Crypt/prop_crypt_tombstone.png", "res://Assets/Environment/Crypt/prop_crypt_iron_maiden.png", "res://Assets/Environment/Crypt/prop_crypt_candelabra.png", "res://Assets/Environment/Crypt/prop_crypt_banner.png", "res://Assets/Environment/Crypt/prop_crypt_bone_pile.png"])
-universal_prop_scenes = Array[String](["res://Scenes/Props/Common/prop_barrel.tscn", "res://Scenes/Props/Common/prop_crate.tscn", "res://Scenes/Props/Common/propskullpile.tscn", "res://Scenes/Props/Common/propbrokenpillar.tscn"])
-biome_prop_scenes = Array[String](["res://Scenes/Props/Crypt/propcryptcoffin.tscn", "res://Scenes/Props/Crypt/propcrypttombstone.tscn", "res://Scenes/Props/Crypt/propcryptironmaiden.tscn", "res://Scenes/Props/Crypt/propcryptcandelabra.tscn", "res://Scenes/Props/Crypt/propcryptbanner.tscn", "res://Scenes/Props/Crypt/propcryptbonepile.tscn"])
-enemy_roster = Array[Dictionary]([{
-"biomes": PackedStringArray("crypt"),
-"cost": 1.0,
-"min_floor": 1,
-"name": "Skeleton",
-"scale": 1.4,
-"scene": "res://Scenes/Enemies/skeleton.tscn",
-"sprite": "res://Assets/Enemies/Skeleton/skeleton_spritesheet.png"
-}, {
-"biomes": PackedStringArray("fungal", "crypt"),
-"cost": 1.0,
-"hframes": 8,
-"min_floor": 1,
-"name": "Goblin",
-"scale": 1.15,
-"scene": "res://Scenes/Enemies/goblin_melee.tscn",
-"sprite": "res://Assets/Enemies/GoblinForward/goblin_forward_spritesheet.png"
-}, {
-"biomes": PackedStringArray("fungal", "crypt"),
-"cost": 1.5,
-"hframes": 8,
-"min_floor": 1,
-"name": "GoblinArcher",
-"scale": 1.15,
-"scene": "res://Scenes/Enemies/goblin_archer.tscn",
-"sprite": "res://Assets/Enemies/GoblinArcherForward/goblin_archer_forward_spritesheet.png"
-}, {
-"biomes": PackedStringArray("lava", "crypt"),
-"cost": 1.0,
-"min_floor": 1,
-"name": "Kobold",
-"scale": 1.1,
-"scene": "res://Scenes/Enemies/kobold.tscn",
-"sprite": "res://Assets/Enemies/Kobold/kobold_spritesheet.png"
-}, {
-"biomes": PackedStringArray("fungal", "crypt"),
-"cost": 2.0,
-"min_floor": 2,
-"name": "Orc",
-"scale": 1.7,
-"scene": "res://Scenes/Enemies/orc.tscn",
-"sprite": "res://Assets/Enemies/Orc/orc_spritesheet.png"
-}, {
-"biomes": PackedStringArray("crypt"),
-"cost": 2.0,
-"min_floor": 2,
-"name": "Cultist",
-"scale": 1.4,
-"scene": "res://Scenes/Enemies/cultist.tscn",
-"sprite": "res://Assets/Enemies/Cultist/cultist_spritesheet.png"
-}, {
-"biomes": PackedStringArray("crypt"),
-"cost": 3.0,
-"min_floor": 3,
-"name": "DeathKnight",
-"scale": 1.8,
-"scene": "res://Scenes/Enemies/death_knight.tscn",
-"sprite": "res://Assets/Enemies/DeathKnight/death_knight_spritesheet.png"
-}, {
-"biomes": PackedStringArray("crypt", "lava"),
-"cost": 3.0,
-"min_floor": 3,
-"name": "Gargoyle",
-"scale": 1.5,
-"scene": "res://Scenes/Enemies/gargoyle.tscn",
-"sprite": "res://Assets/Enemies/Gargoyle/gargoyle_spritesheet.png"
-}])
+floor_textures = Array[Texture2D]([ExtResource("2_floor1"), ExtResource("3_floor2"), ExtResource("4_floor3")])
+wall_textures = Array[Texture2D]([ExtResource("5_wall1"), ExtResource("6_wall2"), ExtResource("7_wall3")])
+ceiling_textures = Array[Texture2D]([ExtResource("8_ceil1"), ExtResource("9_ceil2"), ExtResource("10_ceil3")])
+universal_prop_scenes = Array[PackedScene]([ExtResource("11_uprop1"), ExtResource("12_uprop2"), ExtResource("13_uprop3"), ExtResource("14_uprop4")])
+biome_prop_scenes = Array[PackedScene]([ExtResource("15_bprop1"), ExtResource("16_bprop2"), ExtResource("17_bprop3"), ExtResource("18_bprop4"), ExtResource("19_bprop5"), ExtResource("20_bprop6")])
+enemy_scenes = Array[PackedScene]([ExtResource("21_enemy1"), ExtResource("22_enemy2"), ExtResource("23_enemy3"), ExtResource("24_enemy4"), ExtResource("25_enemy5"), ExtResource("26_enemy6"), ExtResource("27_enemy7"), ExtResource("28_enemy8")])

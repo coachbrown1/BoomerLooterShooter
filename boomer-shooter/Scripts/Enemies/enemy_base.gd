@@ -13,6 +13,8 @@ var current_state: State = State.IDLE
 @export var cooldown_time: float = 1.0
 @export var base_max_health: int = 100
 @export var base_start_health: int = -1
+@export var spawn_cost: float = 1.0
+@export var spawn_min_floor: int = 1
 
 @onready var health_component: HealthComponent = $HealthComponent
 @onready var hitbox_component: HitboxComponent = $HitboxComponent

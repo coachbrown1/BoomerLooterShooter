@@ -42,6 +42,7 @@ material_override = ExtResource("6_mat")
 transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0.9, 0)
 texture = ExtResource("5_vvv")
 hframes = 4
+vframes = 4
 script = ExtResource("4_www")
 
 [node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]

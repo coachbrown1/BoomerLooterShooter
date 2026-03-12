@@ -339,45 +339,44 @@ func _get_randomized_uvs(rand_val: int) -> Array:
 # Material cache
 # -------------------------------------------------------
 func _get_materials(biome: String, surface: String, biome_data: Resource = null) -> Array:
-	var tex_paths: Array = _get_surface_texture_paths(biome, surface, biome_data)
-	var key := biome + "_" + surface + "_" + "|".join(tex_paths)
+	var textures: Array = _get_surface_textures(biome, surface, biome_data)
+	var key := biome + "_" + surface + "_" + _surface_texture_cache_key(textures)
 	if _mat_cache.has(key):
 		return _mat_cache[key]
 
 	var mats = []
-	for tex_path in tex_paths:
+	for tex in textures:
 		var mat := StandardMaterial3D.new()
-		if tex_path != "":
-			var tex = load(tex_path)
-			if tex:
-				mat.albedo_texture = tex
-				
-				# Enable emission to make the brightest parts of the tiles 'pop'
-				mat.emission_enabled = true
-				mat.emission_texture = tex
-				mat.emission_operator = StandardMaterial3D.EMISSION_OP_MULTIPLY
-				
-				var emission_energy := 0.05
-				if biome == "fungal":
-					emission_energy = 0.04
-					mat.emission = Color(0.1, 0.2, 0.15) # Much darker, subtle glow
-					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-					mat.uv1_scale = Vector3(1.0, 1.0, 1.0)
-				elif biome == "lava":
-					emission_energy = 0.4
-					mat.emission = Color(0.8, 0.15, 0.0)
-					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
-				elif biome == "crypt":
-					emission_energy = 0.08
-					mat.emission = Color(0.15, 0.25, 0.5)
-					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
-				else:
-					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
-				
-				mat.emission_energy_multiplier = emission_energy
+		if tex is Texture2D:
+			var albedo_tex: Texture2D = tex
+			mat.albedo_texture = albedo_tex
+			
+			# Enable emission to make the brightest parts of the tiles 'pop'
+			mat.emission_enabled = true
+			mat.emission_texture = albedo_tex
+			mat.emission_operator = StandardMaterial3D.EMISSION_OP_MULTIPLY
+			
+			var emission_energy := 0.05
+			if biome == "fungal":
+				emission_energy = 0.04
+				mat.emission = Color(0.1, 0.2, 0.15) # Much darker, subtle glow
+				mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+				mat.uv1_scale = Vector3(1.0, 1.0, 1.0)
+			elif biome == "lava":
+				emission_energy = 0.4
+				mat.emission = Color(0.8, 0.15, 0.0)
+				mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+				mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
+			elif biome == "crypt":
+				emission_energy = 0.08
+				mat.emission = Color(0.15, 0.25, 0.5)
+				mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+				mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
+			else:
+				mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+				mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
+			
+			mat.emission_energy_multiplier = emission_energy
 		mats.append(mat)
 
 	if mats.is_empty():
@@ -422,20 +421,47 @@ func _get_mural_material(biome: String) -> Material:
 	_mat_cache[key] = mat
 	return mat
 
-func _get_surface_texture_paths(biome: String, surface: String, biome_data: Resource = null) -> Array:
+func _get_surface_textures(biome: String, surface: String, biome_data: Resource = null) -> Array:
 	if _has_biome_data(biome_data):
 		match surface:
 			"floor":
 				if biome_data.floor_textures.size() > 0:
-					return biome_data.floor_textures
+					return _to_texture_array(biome_data.floor_textures)
 			"wall":
 				if biome_data.wall_textures.size() > 0:
-					return biome_data.wall_textures
+					return _to_texture_array(biome_data.wall_textures)
 			"ceiling":
 				if biome_data.ceiling_textures.size() > 0:
-					return biome_data.ceiling_textures
+					return _to_texture_array(biome_data.ceiling_textures)
 	var paths: Dictionary = DEFAULT_BIOME_TEXTURES.get(biome, DEFAULT_BIOME_TEXTURES["crypt"])
-	return paths.get(surface, [])
+	var textures: Array = []
+	for path_variant in paths.get(surface, []):
+		var tex = load(str(path_variant))
+		if tex is Texture2D:
+			textures.append(tex)
+	return textures
+
+func _to_texture_array(source: Array) -> Array:
+	var textures: Array = []
+	for value in source:
+		if value is Texture2D:
+			textures.append(value)
+		elif value is String:
+			var loaded := load(str(value))
+			if loaded is Texture2D:
+				textures.append(loaded)
+	return textures
+
+func _surface_texture_cache_key(textures: Array) -> String:
+	var parts: Array[String] = []
+	for value in textures:
+		if value is Resource:
+			var resource: Resource = value
+			var path := resource.resource_path
+			parts.append(path if path != "" else str(resource.get_instance_id()))
+		else:
+			parts.append(str(value))
+	return "|".join(parts)
 
 func _build_room_tile_owner(rooms: Array) -> Dictionary:
 	var owner := {}
@@ -515,48 +541,52 @@ func _place_lights(
 	biome_data: Resource = null
 ) -> void:
 	var room_color: Color = Color(0.9, 0.75, 0.5)
-	var room_cookie_path := "res://Assets/Effects/cookie_grate.png"
-	var use_custom_prop_lights := biome == "fungal"
+	var room_cookie: Texture2D = preload("res://Assets/Effects/cookie_grate.png")
+	var use_prop_lights := biome == "fungal"
 	var corridor_color := Color(1.0, 0.6, 0.2) if biome == "crypt" else Color(1.0, 0.35, 0.1)
 	var corridor_energy := 0.5
 	var corridor_range := 6.0
 	var corridor_height_ratio := 0.6
 	var corridor_step := 4
 	var corridor_chance := 0.3
-	var custom_light_sources: Array = []
+	var wall_light_scene: PackedScene = null
+	var floor_light_scene: PackedScene = null
+	var wall_light_color := Color(0.5, 0.4, 1.0)
+	var wall_light_energy := 2.5
+	var wall_light_range := 12.0
+	var wall_light_height := 0.8
+	var floor_light_color := Color(0.3, 1.0, 0.6)
+	var floor_light_energy := 1.8
+	var floor_light_range := 9.0
+	var floor_light_height := 0.9
 
 	if _has_biome_data(biome_data):
 		room_color = biome_data.room_light_color
-		room_cookie_path = biome_data.room_light_cookie_texture
-		use_custom_prop_lights = biome_data.use_custom_prop_lights
+		room_cookie = biome_data.room_light_cookie_texture
+		use_prop_lights = biome_data.use_prop_lights
 		corridor_color = biome_data.corridor_light_color
 		corridor_energy = biome_data.corridor_light_energy
 		corridor_range = biome_data.corridor_light_range
 		corridor_height_ratio = biome_data.corridor_light_height
 		corridor_step = maxi(1, biome_data.corridor_light_step)
 		corridor_chance = clampf(biome_data.corridor_light_chance, 0.0, 1.0)
-		custom_light_sources = biome_data.custom_light_sources.duplicate()
-	if custom_light_sources.is_empty():
-		custom_light_sources = [
-			{
-				"tex": "res://Assets/Environment/Fungal/prop_fungal_crystal.png",
-				"color": Color(0.5, 0.4, 1.0),
-				"energy": 2.5,
-				"range": 12.0,
-				"height": 0.8,
-				"pixel_size": 0.004,
-				"requires_wall": true,
-			},
-			{
-				"tex": "res://Assets/Environment/Fungal/prop_fungal_mushroom.png",
-				"color": Color(0.3, 1.0, 0.6),
-				"energy": 1.8,
-				"range": 9.0,
-				"height": 0.9,
-				"pixel_size": 0.0035,
-				"requires_wall": false,
-			},
-		]
+		if biome_data.wall_light_scene != null:
+			wall_light_scene = biome_data.wall_light_scene
+		if biome_data.floor_light_scene != null:
+			floor_light_scene = biome_data.floor_light_scene
+		wall_light_color = biome_data.wall_light_color
+		wall_light_energy = biome_data.wall_light_energy
+		wall_light_range = biome_data.wall_light_range
+		wall_light_height = biome_data.wall_light_height
+		floor_light_color = biome_data.floor_light_color
+		floor_light_energy = biome_data.floor_light_energy
+		floor_light_range = biome_data.floor_light_range
+		floor_light_height = biome_data.floor_light_height
+	elif biome == "fungal":
+		wall_light_scene = preload("res://Scenes/Dungeon/fungal_crystal.tscn")
+		floor_light_scene = preload("res://Scenes/Dungeon/fungal_mushroom.tscn")
+	var has_wall_light_scene := wall_light_scene != null
+	var has_floor_light_scene := floor_light_scene != null
 		
 	# Room center lights
 	for r in rooms:
@@ -564,7 +594,7 @@ func _place_lights(
 			continue
 		var pos = r.get_world_center(TILE_SIZE)
 
-		if use_custom_prop_lights:
+		if use_prop_lights:
 			# Try to place a wall crystal, otherwise use a center mushroom
 			var rect: Rect2i = r.grid_rect
 			var candidates := []
@@ -584,8 +614,10 @@ func _place_lights(
 			var wx: float
 			var wz: float
 			var ry: float = 0.0
-			var use_wall_light := not candidates.is_empty()
+			var use_wall_light := has_wall_light_scene and (not candidates.is_empty() or not has_floor_light_scene)
 			if not use_wall_light:
+				if not has_floor_light_scene:
+					continue
 				wx = pos.x
 				wz = pos.z
 			else:
@@ -609,18 +641,16 @@ func _place_lights(
 						ry = 0.0
 			var holder := Node3D.new()
 			holder.position = Vector3(wx, 0.0, wz)
-			var wall_light_src: Dictionary = _pick_light_source(custom_light_sources, true)
-			var floor_light_src: Dictionary = _pick_light_source(custom_light_sources, false)
-			var active_src: Dictionary = wall_light_src if use_wall_light else floor_light_src
-			var tex_path := str(active_src.get("tex", ""))
-			if load(tex_path):
-				_add_3d_prop_light(holder, ry if use_wall_light else 0.0, use_wall_light, biome_data)
+			var active_scene: PackedScene = wall_light_scene if use_wall_light else floor_light_scene
+			if active_scene == null:
+				continue
+			_add_3d_prop_light(holder, active_scene, ry if use_wall_light else 0.0, use_wall_light)
 			var light := OmniLight3D.new()
-			light.light_color = _as_color(active_src.get("color", Color(0.2, 0.6, 1.0) if use_wall_light else Color(0.3, 1.0, 0.3)))
-			light.light_energy = float(active_src.get("energy", 1.2))
-			light.omni_range = float(active_src.get("range", 15.0))
+			light.light_color = wall_light_color if use_wall_light else floor_light_color
+			light.light_energy = wall_light_energy if use_wall_light else floor_light_energy
+			light.omni_range = wall_light_range if use_wall_light else floor_light_range
 			light.shadow_enabled = true
-			light.position.y = float(active_src.get("height", 1.2)) + 0.2
+			light.position.y = (wall_light_height if use_wall_light else floor_light_height) + 0.2
 			holder.add_child(light)
 			
 			# Add pulsing effect for crystals
@@ -641,9 +671,8 @@ func _place_lights(
 				spot.spot_range = 25.0
 				spot.spot_angle = 75.0
 				
-				var cookie = load(room_cookie_path) if room_cookie_path != "" else null
-				if cookie:
-					spot.light_projector = cookie
+				if room_cookie != null:
+					spot.light_projector = room_cookie
 				
 				# Point straight down from the ceiling
 				spot.rotation_degrees.x = -90 
@@ -674,82 +703,68 @@ func _place_lights(
 	var grid_w = tile_grid.size()
 	var grid_h = tile_grid[0].size()
 	
-	# Use custom prop sprites as the light source
-	if use_custom_prop_lights:
+	# Use explicit prop lights as the light source
+	if use_prop_lights:
 		for x in range(2, grid_w - 2, corridor_step):
 			for z in range(2, grid_h - 2, corridor_step):
 				var tile_room: RoomData = room_tile_owner.get(_tile_key(x, z), null)
 				if tile_room != null and (tile_room.has_handcrafted_layout or tile_room.handcrafted_scene != null or tile_room.handcrafted_scene_path != ""):
 					continue
 				if tile_grid[x][z] == TILE_FLOOR and randf() < corridor_chance:
-					var src: Dictionary = custom_light_sources[randi() % custom_light_sources.size()]
-					
 					# Container node so the sprite and light share a transform
 					var holder := Node3D.new()
 					var wx = x * TILE_SIZE + TILE_SIZE / 2.0
 					var wz = z * TILE_SIZE + TILE_SIZE / 2.0
-					# If wall light, shift to wall
+					# Try wall placement first; if not possible, use floor light.
 					var wall_light_ry: float = 0.0
 					var found_flat_wall: bool = false
-					var requires_wall: bool = bool(src.get("requires_wall", false))
-					if requires_wall:
+					var prefer_wall := (not has_floor_light_scene and has_wall_light_scene) or randf() < 0.5
+					if prefer_wall:
 						var key := _tile_key(x, z)
 						if not doorway_owner.has(key):
 							# Check neighbors for a flat wall segment
-							if x > 0 and tile_grid[x-1][z] == TILE_WALL and tile_grid[x-1][z-1] == TILE_WALL and tile_grid[x-1][z+1] == TILE_WALL:
+							if x > 0 and tile_grid[x - 1][z] == TILE_WALL and tile_grid[x - 1][z - 1] == TILE_WALL and tile_grid[x - 1][z + 1] == TILE_WALL:
 								wx = x * TILE_SIZE + 0.05
 								wall_light_ry = -90.0
 								found_flat_wall = true
-							elif x < grid_w - 1 and tile_grid[x+1][z] == TILE_WALL and tile_grid[x+1][z-1] == TILE_WALL and tile_grid[x+1][z+1] == TILE_WALL:
+							elif x < grid_w - 1 and tile_grid[x + 1][z] == TILE_WALL and tile_grid[x + 1][z - 1] == TILE_WALL and tile_grid[x + 1][z + 1] == TILE_WALL:
 								wx = (x + 1) * TILE_SIZE - 0.05
 								wall_light_ry = 90.0
 								found_flat_wall = true
-							elif z > 0 and tile_grid[x][z-1] == TILE_WALL and tile_grid[x-1][z-1] == TILE_WALL and tile_grid[x+1][z-1] == TILE_WALL:
+							elif z > 0 and tile_grid[x][z - 1] == TILE_WALL and tile_grid[x - 1][z - 1] == TILE_WALL and tile_grid[x + 1][z - 1] == TILE_WALL:
 								wz = z * TILE_SIZE + 0.05
 								wall_light_ry = 180.0
 								found_flat_wall = true
-							elif z < grid_h - 1 and tile_grid[x][z+1] == TILE_WALL and tile_grid[x-1][z+1] == TILE_WALL and tile_grid[x+1][z+1] == TILE_WALL:
+							elif z < grid_h - 1 and tile_grid[x][z + 1] == TILE_WALL and tile_grid[x - 1][z + 1] == TILE_WALL and tile_grid[x + 1][z + 1] == TILE_WALL:
 								wz = (z + 1) * TILE_SIZE - 0.05
 								wall_light_ry = 0.0
 								found_flat_wall = true
 					holder.position = Vector3(wx, 0.0, wz)
 					
-					# Sprite / Mesh
-					var sprite: Sprite3D = null
-					if requires_wall:
-						if not found_flat_wall:
-							holder.queue_free()
-							continue
-						sprite = Sprite3D.new()
-						sprite.texture = load(str(src.get("tex", "")))
-						sprite.billboard = BaseMaterial3D.BILLBOARD_DISABLED
-						sprite.rotation_degrees.y = wall_light_ry
-						sprite.pixel_size = float(src.get("pixel_size", 0.004))
-						sprite.position.y = float(src.get("height", 0.8))
-						sprite.modulate = _as_color(src.get("color", Color(0.4, 0.3, 0.9))).lightened(0.3)
-						holder.add_child(sprite)
-					else:
-						# It's a floor prop light, use the 3D mesh
-						_add_3d_prop_light(holder, 0.0, false, biome_data)
+					var use_wall_light := has_wall_light_scene and prefer_wall and found_flat_wall
+					if not use_wall_light and not has_floor_light_scene:
+						continue
+					var active_scene: PackedScene = wall_light_scene if use_wall_light else floor_light_scene
+					if active_scene == null:
+						continue
+					_add_3d_prop_light(holder, active_scene, wall_light_ry if use_wall_light else 0.0, use_wall_light)
 					
 					# Light
 					var light := OmniLight3D.new()
-					light.light_color = _as_color(src.get("color", corridor_color))
-					light.light_energy = float(src.get("energy", corridor_energy))
-					light.omni_range = float(src.get("range", corridor_range))
+					light.light_color = wall_light_color if use_wall_light else floor_light_color
+					light.light_energy = wall_light_energy if use_wall_light else floor_light_energy
+					light.omni_range = wall_light_range if use_wall_light else floor_light_range
 					light.shadow_enabled = false
-					light.position.y = float(src.get("height", 0.8)) + 0.2
+					light.position.y = (wall_light_height if use_wall_light else floor_light_height) + 0.2
 					holder.add_child(light)
 
 					# Give bio-lights a nice pulsing effect
 					var flicker := FlickerLight.new()
 					flicker.mode = FlickerLight.Mode.PULSE
-					flicker.base_energy = float(src.get("energy", corridor_energy))
+					flicker.base_energy = wall_light_energy if use_wall_light else floor_light_energy
 					flicker.max_variation = 0.5 # Substantial pulse
 					flicker.speed = 1.0 + randf() * 1.5
 					flicker.light_node = light
-					if sprite:
-						flicker.sprite_node = sprite
 					holder.add_child(flicker)
 					
 					parent.add_child(holder)
@@ -784,13 +799,12 @@ func _place_lights(
 
 
 func _place_generated_doors(parent: Node3D, doorways: Array, biome_data: Resource = null) -> void:
-	var door_scene_path := "res://Scenes/World/door.tscn"
+	var door_scene: PackedScene = preload("res://Scenes/World/door.tscn")
 	if biome_data != null:
-		var candidate: String = str(biome_data.get("door_scene"))
-		if candidate != "":
-			door_scene_path = candidate
-	var door_scene = load(door_scene_path)
-	if not door_scene:
+		var candidate: Variant = biome_data.get("door_scene")
+		if candidate is PackedScene:
+			door_scene = candidate
+	if door_scene == null:
 		return
 
 	for doorway in doorways:
@@ -819,17 +833,11 @@ func _place_generated_doors(parent: Node3D, doorways: Array, biome_data: Resourc
 		parent.add_child(door)
 
 func _place_generated_doorway_assemblies(parent: Node3D, doorways: Array, biome_data: Resource = null) -> void:
-	var assembly_path := ""
-	var door_scene_path := "res://Scenes/World/door.tscn"
+	var assembly_scene: PackedScene = null
 	if biome_data != null:
-		var assembly_candidate: String = str(biome_data.get("doorway_assembly_scene"))
-		if assembly_candidate != "":
-			assembly_path = assembly_candidate
-		var door_candidate: String = str(biome_data.get("door_scene"))
-		if door_candidate != "":
-			door_scene_path = door_candidate
-
-	var assembly_scene = load(assembly_path) if assembly_path != "" else null
+		var assembly_candidate: Variant = biome_data.get("doorway_assembly_scene")
+		if assembly_candidate is PackedScene:
+			assembly_scene = assembly_candidate
 	if assembly_scene == null:
 		# Fallback to legacy door placement if assembly scene is unavailable.
 		_place_generated_doors(parent, doorways, biome_data)
@@ -859,30 +867,16 @@ func _place_generated_doorway_assemblies(parent: Node3D, doorways: Array, biome_
 			doorway_assembly.rotation_degrees.y = 90.0
 		parent.add_child(doorway_assembly)
 
-func _add_3d_prop_light(parent: Node3D, ry: float, is_wall_light: bool, biome_data: Resource = null) -> void:
-	var scene_path := "res://Scenes/Dungeon/fungal_crystal.tscn" if is_wall_light else "res://Scenes/Dungeon/fungal_mushroom.tscn"
-	if _has_biome_data(biome_data):
-		if is_wall_light and biome_data.wall_light_scene != "":
-			scene_path = biome_data.wall_light_scene
-		elif not is_wall_light and biome_data.floor_light_scene != "":
-			scene_path = biome_data.floor_light_scene
-	var scene = load(scene_path)
-	if scene:
-		var inst = scene.instantiate()
-		parent.add_child(inst)
-		if is_wall_light:
-			inst.rotation_degrees.y = ry
-
-func _pick_light_source(sources: Array, requires_wall: bool) -> Dictionary:
-	for src_variant in sources:
-		if typeof(src_variant) != TYPE_DICTIONARY:
-			continue
-		var src: Dictionary = src_variant
-		if bool(src.get("requires_wall", false)) == requires_wall:
-			return src
-	if not sources.is_empty() and typeof(sources[0]) == TYPE_DICTIONARY:
-		return sources[0]
-	return {}
+func _add_3d_prop_light(parent: Node3D, scene: PackedScene, ry: float, is_wall_light: bool) -> void:
+	if scene == null:
+		return
+	var inst := scene.instantiate()
+	if inst == null:
+		return
+	parent.add_child(inst)
+	if is_wall_light and inst is Node3D:
+		var light_node: Node3D = inst
+		light_node.rotation_degrees.y = ry
 
 func _has_biome_data(biome_data: Resource) -> bool:
 	if biome_data == null:
@@ -891,11 +885,6 @@ func _has_biome_data(biome_data: Resource) -> bool:
 		if typeof(p) == TYPE_DICTIONARY and str(p.get("name", "")) == "biome_id":
 			return true
 	return false
-
-func _as_color(value: Variant) -> Color:
-	if typeof(value) == TYPE_COLOR:
-		return value
-	return Color(1, 1, 1, 1)
 
 func _get_doorway_orientation(doorway: Dictionary) -> String:
 	if doorway.has("orientation"):

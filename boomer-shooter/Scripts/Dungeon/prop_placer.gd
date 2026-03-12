@@ -10,11 +10,10 @@ func populate(
 	rng: RandomNumberGenerator,
 	biome_data: Resource = null
 ) -> void:
-	var scene_cache: Dictionary = {}
 	var has_universal_scenes := false
 	if _has_property(biome_data, "universal_prop_scenes"):
 		var universal_variant: Variant = biome_data.get("universal_prop_scenes")
-		has_universal_scenes = (typeof(universal_variant) == TYPE_ARRAY and universal_variant.size() > 0) or (typeof(universal_variant) == TYPE_PACKED_STRING_ARRAY and universal_variant.size() > 0)
+		has_universal_scenes = typeof(universal_variant) == TYPE_ARRAY and universal_variant.size() > 0
 	if not has_universal_scenes:
 		push_error("PropPlacer: biome data must define non-empty universal_prop_scenes.")
 		return
@@ -56,11 +55,7 @@ func populate(
 
 			var world_x = rx * TILE_SIZE + TILE_SIZE / 2.0
 			var world_z = rz * TILE_SIZE + TILE_SIZE / 2.0
-			var scene_path: String = pool[rng.randi() % pool.size()]
-
-			if not scene_cache.has(scene_path):
-				scene_cache[scene_path] = load(scene_path)
-			var packed: PackedScene = scene_cache.get(scene_path, null)
+			var packed: PackedScene = pool[rng.randi() % pool.size()]
 			if packed == null:
 				continue
 
@@ -78,18 +73,30 @@ func _get_universal_prop_scenes(biome_data: Resource = null) -> Array:
 	if _has_property(biome_data, "universal_prop_scenes"):
 		var from_data: Variant = biome_data.get("universal_prop_scenes")
 		if typeof(from_data) == TYPE_ARRAY and from_data.size() > 0:
-			return from_data.duplicate()
-		if typeof(from_data) == TYPE_PACKED_STRING_ARRAY and from_data.size() > 0:
-			return Array(from_data)
+			var scenes: Array = []
+			for value in from_data:
+				if value is PackedScene:
+					scenes.append(value)
+				elif value is String:
+					var loaded := load(str(value))
+					if loaded is PackedScene:
+						scenes.append(loaded)
+			return scenes
 	return []
 
 func _get_biome_prop_scenes(biome_data: Resource = null) -> Array:
 	if _has_property(biome_data, "biome_prop_scenes"):
 		var from_data: Variant = biome_data.get("biome_prop_scenes")
 		if typeof(from_data) == TYPE_ARRAY and from_data.size() > 0:
-			return from_data.duplicate()
-		if typeof(from_data) == TYPE_PACKED_STRING_ARRAY and from_data.size() > 0:
-			return Array(from_data)
+			var scenes: Array = []
+			for value in from_data:
+				if value is PackedScene:
+					scenes.append(value)
+				elif value is String:
+					var loaded := load(str(value))
+					if loaded is PackedScene:
+						scenes.append(loaded)
+			return scenes
 	return []
 
 func _has_property(resource: Resource, property_name: String) -> bool:

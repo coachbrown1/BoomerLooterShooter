@@ -2,37 +2,50 @@
 
 [ext_resource type="Script" uid="uid://w367lbpicfnt" path="res://Scripts/Data/biome_dungeon_data.gd" id="1_biome_data"]
 [ext_resource type="PackedScene" uid="uid://cf4cx855qa51f" path="res://Scenes/Dungeon/Handcrafted/Castle_Start.tscn" id="2_castle_start"]
+[ext_resource type="PackedScene" uid="uid://cxhwb12mhiynr" path="res://Scenes/World/door.tscn" id="3_f6bkv"]
+[ext_resource type="Texture2D" uid="uid://dlbtwdyatlw7a" path="res://Assets/Environment/Castle/castle_floor_v1.png" id="3_floor1"]
+[ext_resource type="Texture2D" uid="uid://wx0bgblb0n6d" path="res://Assets/Environment/Castle/castle_floor_v2.png" id="4_floor2"]
+[ext_resource type="Texture2D" uid="uid://biymt3uulxjb4" path="res://Assets/Environment/Castle/castle_floor_v3.png" id="5_floor3"]
+[ext_resource type="Texture2D" uid="uid://sbfcrpaqlvac" path="res://Assets/Environment/exit_portal.png" id="6_nd585"]
+[ext_resource type="Texture2D" uid="uid://0kace7w8fmmd" path="res://Assets/Environment/Castle/castle_wall_v1.png" id="6_wall1"]
+[ext_resource type="Texture2D" uid="uid://woal05aua40s" path="res://Assets/Environment/Castle/castle_wall_v2.png" id="7_wall2"]
+[ext_resource type="Texture2D" uid="uid://bu8fu100sems" path="res://Assets/Environment/Castle/castle_wall_v3.png" id="8_wall3"]
+[ext_resource type="Texture2D" uid="uid://cclufjw2yr6ga" path="res://Assets/Environment/Castle/castle_ceiling_v1.png" id="9_ceil1"]
+[ext_resource type="Texture2D" uid="uid://dxjug5myneuu3" path="res://Assets/Environment/Castle/castle_ceiling_v2.png" id="10_ceil2"]
+[ext_resource type="PackedScene" uid="uid://bamyeedre1p87" path="res://Scenes/Dungeon/castle_doorway_assembly.tscn" id="11_castle_doorway"]
+[ext_resource type="PackedScene" uid="uid://da6yle0euhfqj" path="res://Scenes/Props/Castle/propcastletorch.tscn" id="12_torch"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_barrel.tscn" id="13_uprop1"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_crate.tscn" id="14_uprop2"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/propskullpile.tscn" id="15_uprop3"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/propbrokenpillar.tscn" id="16_uprop4"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/skeleton.tscn" id="17_enemy1"]
 
 [resource]
 script = ExtResource("1_biome_data")
 biome_id = "castle"
-floor_textures = Array[String](["res://Assets/Environment/Castle/castle_floor_v1.png", "res://Assets/Environment/Castle/castle_floor_v2.png", "res://Assets/Environment/Castle/castle_floor_v3.png"])
-wall_textures = Array[String](["res://Assets/Environment/Castle/castle_wall_v1.png", "res://Assets/Environment/Castle/castle_wall_v2.png", "res://Assets/Environment/Castle/castle_wall_v3.png"])
-ceiling_textures = Array[String](["res://Assets/Environment/Castle/castle_ceiling_v1.png", "res://Assets/Environment/Castle/castle_ceiling_v2.png"])
-doorway_assembly_scene = "uid://bamyeedre1p87"
+floor_textures = [ExtResource("3_floor1"), ExtResource("4_floor2"), ExtResource("5_floor3")]
+wall_textures = [ExtResource("6_wall1"), ExtResource("7_wall2"), ExtResource("8_wall3")]
+ceiling_textures = [ExtResource("9_ceil1"), ExtResource("10_ceil2")]
+doorway_assembly_scene = ExtResource("11_castle_doorway")
 handcrafted_start_room_scene = ExtResource("2_castle_start")
 room_light_color = Color(1, 0.8, 0.4, 1)
-room_light_cookie_texture = ""
 corridor_light_color = Color(0.9, 0.6, 0.2, 1)
 corridor_light_energy = 1.0
 corridor_light_range = 50.0
 corridor_light_height = 1.0
 corridor_light_step = 6
 corridor_light_chance = 1.0
-use_custom_prop_lights = null
-custom_light_sources = Array[Dictionary]([{}])
-floor_light_scene = "<null>"
-wall_light_scene = "res://Scenes/Props/Castle/propcastletorch.tscn"
+use_prop_lights = true
+wall_light_scene = ExtResource("12_torch")
+wall_light_color = Color(1, 0.6, 0.2, 1)
+wall_light_energy = 1.5
+wall_light_range = 10.0
+wall_light_height = 1.2
+floor_light_scene = null
+floor_light_color = Color(1, 0.6, 0.2, 1)
+floor_light_energy = 1.5
+floor_light_range = 10.0
+floor_light_height = 1.2
 fog_light_color = Color(0.09985284, 0.09985284, 0.15170373, 0.27100003)
-universal_prop_textures = Array[String](["res://Assets/Environment/prop_barrel_side.png", "res://Assets/Environment/prop_crate.png", "res://Assets/Environment/prop_skull_pile.png", "res://Assets/Environment/prop_broken_pillar.png"])
-universal_prop_scenes = Array[String](["res://Scenes/Props/Common/prop_barrel.tscn", "res://Scenes/Props/Common/prop_crate.tscn", "res://Scenes/Props/Common/propskullpile.tscn", "res://Scenes/Props/Common/propbrokenpillar.tscn"])
-biome_prop_scenes = Array[String](["res://Scenes/Props/Castle/propcastletorch.tscn"])
-enemy_roster = Array[Dictionary]([{
-"cost": 1.5,
-"hframes": 8,
-"min_floor": 1,
-"name": "Skeleton",
-"scale": 1.15,
-"scene": "res://Scenes/Enemies/skeleton.tscn",
-"sprite": "res://Assets/Enemies/Skeleton/skeleton_armor_spritesheet.png"
-}])
+universal_prop_scenes = [ExtResource("13_uprop1"), ExtResource("14_uprop2"), ExtResource("15_uprop3"), ExtResource("16_uprop4")]
+enemy_scenes = [ExtResource("17_enemy1")]
