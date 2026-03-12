@@ -132,6 +132,7 @@ func _build_inventory_ui() -> void:
 	var close_button := Button.new()
 	close_button.text = "X"
 	close_button.custom_minimum_size = Vector2(36, 28)
+	close_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	close_button.tooltip_text = "Close Inventory"
 	close_button.pressed.connect(_close_inventory_panel)
 	title_row.add_child(close_button)
@@ -260,7 +261,7 @@ func _on_slot_button_pressed(slot_ref: SlotRef) -> void:
 	var has_item := _get_slot_item_snapshot(slot_ref) != null
 	if _selected_slot == null:
 		if not has_item:
-			_set_feedback("Slot is empty.")
+			_set_feedback("Slot is empty.", true)
 			return
 		_selected_slot = slot_ref
 		_set_feedback("Selected %s." % _slot_label(slot_ref))
@@ -275,7 +276,7 @@ func _on_slot_button_pressed(slot_ref: SlotRef) -> void:
 
 	var moved := _inventory_system.try_move_item(_selected_slot, slot_ref)
 	if not moved:
-		_set_feedback("Invalid move for slot rules.")
+		_set_feedback("Invalid move for slot rules.", true)
 	else:
 		_selected_slot = null
 		_set_feedback("")
@@ -292,14 +293,14 @@ func _on_slot_button_double_clicked(slot_ref: SlotRef) -> void:
 		_selected_slot = null
 		_set_feedback("")
 	else:
-		_set_feedback("No valid inventory slot available.")
+		_set_feedback("No valid inventory slot available.", true)
 
 func _on_slot_drop_requested(from_slot: SlotRef, to_slot: SlotRef) -> void:
 	if _inventory_system == null:
 		return
 	var moved := _inventory_system.try_move_item(from_slot, to_slot)
 	if not moved:
-		_set_feedback("Invalid move for slot rules.")
+		_set_feedback("Invalid move for slot rules.", true)
 	else:
 		_selected_slot = null
 		_set_feedback("")
@@ -370,9 +371,12 @@ func _get_slot_item_snapshot(slot_ref: SlotRef) -> Variant:
 		_:
 			return null
 
-func _set_feedback(text: String) -> void:
+func _set_feedback(text: String, is_error: bool = false) -> void:
 	if _feedback_label:
 		_feedback_label.text = text
+		if text == "":
+			return
+		_feedback_label.modulate = Color(1, 0.4, 0.4, 1) if is_error else Color(0.8, 0.9, 1.0, 1)
 
 func _recenter_inventory_panel() -> void:
 	if _inventory_panel == null:
