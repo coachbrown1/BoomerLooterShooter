@@ -12,6 +12,7 @@ class_name Projectile
 var direction: Vector3 = Vector3.ZERO
 var velocity: Vector3 = Vector3.ZERO
 var shooter: Node3D = null
+var _did_impact: bool = false
 
 const EXPLOSION_SCENE = preload("res://Scenes/Effects/fireball_explosion.tscn")
 
@@ -48,6 +49,9 @@ func _physics_process(delta: float) -> void:
 	global_translate(velocity * delta)
 
 func _trigger_impact() -> void:
+	if _did_impact: return
+	_did_impact = true
+	
 	if explode_on_impact:
 		_explode()
 	queue_free()
@@ -60,50 +64,73 @@ func _explode() -> void:
 	
 	# Area damage logic
 	var space_state = get_world_3d().direct_space_state
-	# Create sphere shape for intersection
+	if not space_state:
+		return
+		
 	var shape = SphereShape3D.new()
 	shape.radius = explosion_radius
 
-	var params = PhysicsShapeQueryParameters3D.new()
-	params.shape = shape
-	params.transform = Transform3D(Basis(), global_position)
-	params.collide_with_areas = true
-	params.collision_mask = 0xFFFFFFFF
+	var query = PhysicsShapeQueryParameters3D.new()
+	query.shape = shape
+	query.transform = Transform3D(Basis(), global_position)
+	query.collide_with_areas = true
+	query.collide_with_bodies = true
+	query.collision_mask = 0xFFFFFFFF # Match everything, filtered below
+	
+	var results = space_state.intersect_shape(query)
 
-	var results = space_state.intersect_shape(params)
-
-	# We want to damage hitboxes and player
-	var damaged_nodes = []
+	# Track damaged entities (not just colliders) to avoid double-hits
+	var damaged_entities = []
+	
 	for result in results:
 		var collider = result.collider
-		if collider is HitboxComponent and collider not in damaged_nodes:
-			if collider.health_component:
-				collider.health_component.take_damage(explosion_damage)
-			damaged_nodes.append(collider)
-		elif collider.is_in_group("player") and collider not in damaged_nodes:
-			if collider.has_method("take_damage"):
-				collider.take_damage(explosion_damage)
-				damaged_nodes.append(collider)
+		if not is_instance_valid(collider):
+			continue
+			
+		# Find the actual entity to damage
+		var target_entity: Node = null
+		if collider is HitboxComponent:
+			target_entity = collider # Can take damage directly
+		elif collider.has_method("take_damage"):
+			target_entity = collider
+		elif collider.get_parent() and collider.get_parent().has_method("take_damage"):
+			target_entity = collider.get_parent()
+			
+		if target_entity and target_entity not in damaged_entities:
+			# Skip damaging the shooter
+			if shooter and (target_entity == shooter or shooter.is_ancestor_of(target_entity)):
+				continue
+				
+			target_entity.take_damage(explosion_damage)
+			damaged_entities.append(target_entity)
 
 func _on_area_entered(area: Area3D) -> void:
-	if shooter and shooter.is_ancestor_of(area):
+	if _did_impact: return
+	if shooter and (area == shooter or shooter.is_ancestor_of(area)):
 		return
 
-	if area is HitboxComponent:
-		if not explode_on_impact:
-			# Direct hit
-			if area.health_component:
-				area.health_component.take_damage(damage)
+	if area is HitboxComponent or area.has_method("take_damage"):
+		# Apply direct hit damage
+		if area.has_method("take_damage"):
+			area.take_damage(damage)
+		elif area is HitboxComponent and area.health_component:
+			area.health_component.take_damage(damage)
+			
 		_trigger_impact()
 
 func _on_body_entered(body: Node3D) -> void:
+	if _did_impact: return
 	if shooter and body == shooter:
 		return
 
 	if body.is_in_group("player"):
-		if not explode_on_impact:
-			if body.has_method("take_damage"):
-				body.take_damage(damage)
+		if body.has_method("take_damage"):
+			body.take_damage(damage)
 		_trigger_impact()
-	elif body is StaticBody3D or body is CSGBox3D: # Walls/floor
+	elif body is CharacterBody3D:
+		# Direct hit on enemy body
+		if body.has_method("take_damage"):
+			body.take_damage(damage)
+		_trigger_impact()
+	elif body is StaticBody3D or body is CSGBox3D or body is GridMap: # Walls/floor
 		_trigger_impact()

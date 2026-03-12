@@ -32,7 +32,7 @@ albedo_color = Color(1, 0.9, 0.5, 0.8)
 [node name="Weapon" type="Node3D"]
 script = ExtResource("1_xxx")
 weapon_name = "Fireball"
-damage = 0
+damage = 100
 fire_rate = 1.2
 ammo_type = "energy"
 mag_size = 5

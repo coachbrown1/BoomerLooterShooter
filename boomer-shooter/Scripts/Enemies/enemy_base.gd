@@ -75,6 +75,10 @@ func _ready() -> void:
 				hb_col.shape.radius = min(0.75, actual_h * 0.5)
 				hb_col.position.y = actual_h / 2.0
 
+func take_damage(amount: int) -> void:
+	if health_component:
+		health_component.take_damage(amount)
+
 func _physics_process(delta: float) -> void:
 	if current_state == State.DEAD or _hitstop_active:
 		return
@@ -253,9 +257,9 @@ const ENEMY_GIB_SCENE = preload("res://Scenes/Effects/enemy_gib.tscn")
 
 func _on_died() -> void:
 	current_state = State.DEAD
-	hitbox_component.monitoring = false
-	hitbox_component.monitorable = false
-	collision_layer = 0
+	hitbox_component.set_deferred("monitoring", false)
+	hitbox_component.set_deferred("monitorable", false)
+	set_deferred("collision_layer", 0)
 	
 	# Spawn messy debris
 	_spawn_death_effects()
