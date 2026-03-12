@@ -165,6 +165,7 @@ func _build_section_label(text: String) -> Label:
 func _make_slot_button(slot_ref: SlotRef) -> Button:
 	var button := Button.new()
 	button.custom_minimum_size = Vector2(0, 32)
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	button.text = "..."
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	if slot_ref.section == &"storage":
@@ -208,6 +209,13 @@ func _refresh_inventory_ui() -> void:
 		var button: Button = _slot_buttons[key]
 		var slot_ref: SlotRef = _slot_button_refs.get(key)
 		button.text = _slot_button_text(slot_ref)
+
+		var item_snapshot = _get_slot_item_snapshot(slot_ref)
+		if item_snapshot != null:
+			button.tooltip_text = String(item_snapshot.get("display_name", "Item"))
+		else:
+			button.tooltip_text = "Empty slot"
+
 		button.modulate = Color(1, 0.95, 0.55, 1) if _selected_slot != null and _selected_slot.is_equal(slot_ref) else Color(1, 1, 1, 1)
 
 func _slot_button_text(slot_ref: SlotRef) -> String:
