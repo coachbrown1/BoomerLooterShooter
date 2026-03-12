@@ -1,6 +1,8 @@
 extends CanvasLayer
 
 @onready var screen_fx = $ScreenFX
+@onready var _bottom_margin: MarginContainer = $MarginContainer
+@onready var _bottom_row: BoxContainer = $MarginContainer/HBoxContainer
 @onready var health_label = $MarginContainer/HBoxContainer/HealthLabel
 @onready var ammo_label = $MarginContainer/HBoxContainer/AmmoLabel
 const SLOT_BUTTON_SCRIPT = preload("res://Scripts/UI/inventory_slot_button.gd")
@@ -31,6 +33,9 @@ var _latest_snapshot: Dictionary = {}
 func _ready() -> void:
 	# Print out a message so the user knows about the debug key
 	print("Debug: Press 'G' to toggle Screen Effects (Saturation/Vignette)")
+	_configure_bottom_hud_layout()
+	if not get_viewport().size_changed.is_connected(_configure_bottom_hud_layout):
+		get_viewport().size_changed.connect(_configure_bottom_hud_layout)
 	_build_inventory_ui()
 
 func _input(event: InputEvent) -> void:
@@ -59,6 +64,7 @@ func update_ammo_display(current_mag: int, mag_size: int, reserve: int, is_infin
 			ammo_label.text = "Ammo: \u221E / \u221E" # Infinity symbol
 		else:
 			ammo_label.text = "Ammo: " + str(current_mag) + " / " + str(reserve)
+	_configure_bottom_hud_layout()
 
 func set_inventory_system(system: InventorySystem) -> void:
 	if _inventory_system:
@@ -443,3 +449,18 @@ func _make_tinted_panel_style(tint: Color) -> StyleBoxFlat:
 	style.border_width_bottom = 1
 	style.border_color = tint.lerp(Color.WHITE, 0.35)
 	return style
+
+func _configure_bottom_hud_layout() -> void:
+	if _bottom_margin == null or _bottom_row == null:
+		return
+	# Keep bottom HUD text anchored inside frame at any viewport size/font scale.
+	var content_height := _bottom_row.get_combined_minimum_size().y
+	var bar_height := maxi(int(ceil(content_height)) + 24, 88)
+	_bottom_margin.anchor_left = 0.0
+	_bottom_margin.anchor_top = 1.0
+	_bottom_margin.anchor_right = 1.0
+	_bottom_margin.anchor_bottom = 1.0
+	_bottom_margin.offset_left = 0.0
+	_bottom_margin.offset_right = 0.0
+	_bottom_margin.offset_bottom = -42.0
+	_bottom_margin.offset_top = _bottom_margin.offset_bottom - float(bar_height)
