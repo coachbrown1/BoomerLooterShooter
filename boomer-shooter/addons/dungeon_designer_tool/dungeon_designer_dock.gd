@@ -535,6 +535,14 @@ func _make_biome_section(title: String) -> VBoxContainer:
 	_biome_editor_root.add_child(panel)
 	return root
 
+func _make_form_label(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	return label
+
 func _add_bool_row(container: VBoxContainer, label_text: String, property_name: String) -> void:
 	var row := HBoxContainer.new()
 	var checkbox := CheckBox.new()
@@ -548,9 +556,7 @@ func _add_bool_row(container: VBoxContainer, label_text: String, property_name: 
 
 func _add_float_row(container: VBoxContainer, label_text: String, property_name: String, min_value: float, max_value: float, step: float, integer_only: bool = false) -> void:
 	var row := HBoxContainer.new()
-	var label := Label.new()
-	label.text = label_text
-	label.custom_minimum_size = Vector2(230, 0)
+	var label := _make_form_label(label_text)
 	row.add_child(label)
 	var spin := SpinBox.new()
 	spin.min_value = min_value
@@ -570,9 +576,7 @@ func _add_float_row(container: VBoxContainer, label_text: String, property_name:
 
 func _add_color_row(container: VBoxContainer, label_text: String, property_name: String) -> void:
 	var row := HBoxContainer.new()
-	var label := Label.new()
-	label.text = label_text
-	label.custom_minimum_size = Vector2(230, 0)
+	var label := _make_form_label(label_text)
 	row.add_child(label)
 	var picker := ColorPickerButton.new()
 	var current: Variant = _selected_biome.get(property_name)
@@ -586,9 +590,7 @@ func _add_color_row(container: VBoxContainer, label_text: String, property_name:
 
 func _add_resource_picker_row(container: VBoxContainer, label_text: String, property_name: String, options: Array[String], kind: String) -> void:
 	var row := HBoxContainer.new()
-	var label := Label.new()
-	label.text = label_text
-	label.custom_minimum_size = Vector2(230, 0)
+	var label := _make_form_label(label_text)
 	row.add_child(label)
 
 	var picker := OptionButton.new()
@@ -703,7 +705,7 @@ func _add_resource_array_editor(container: VBoxContainer, title: String, propert
 		if idx <= 0:
 			return
 		var values := _get_resource_array(property_name)
-		var tmp_up := values[idx - 1]
+		var tmp_up: Variant = values[idx - 1]
 		values[idx - 1] = values[idx]
 		values[idx] = tmp_up
 		_set_biome_property(property_name, values)
@@ -722,7 +724,7 @@ func _add_resource_array_editor(container: VBoxContainer, title: String, propert
 		var values := _get_resource_array(property_name)
 		if idx >= values.size() - 1:
 			return
-		var tmp_down := values[idx + 1]
+		var tmp_down: Variant = values[idx + 1]
 		values[idx + 1] = values[idx]
 		values[idx] = tmp_down
 		_set_biome_property(property_name, values)
