@@ -1,16 +1,33 @@
-[gd_scene load_steps=5 format=3 uid="uid://b8q7t4y0a1m2x"]
+[gd_scene load_steps=8 format=3 uid="uid://b8q7t4y0a1m2x"]
 
 [ext_resource type="Script" path="res://Scripts/Player/player.gd" id="1_xxx"]
 [ext_resource type="Script" path="res://Scripts/Weapons/weapon_manager.gd" id="1_manager"]
 [ext_resource type="Script" path="res://Scripts/Inventory/inventory_system.gd" id="1_inventory"]
-[ext_resource type="PackedScene" path="res://Scenes/Weapons/weapon_rifle.tscn" id="2_rifle"]
-[ext_resource type="PackedScene" path="res://Scenes/Weapons/weapon_shotgun.tscn" id="3_shotgun"]
-[ext_resource type="PackedScene" path="res://Scenes/Weapons/weapon_crossbow.tscn" id="4_crossbow"]
-[ext_resource type="PackedScene" path="res://Scenes/Weapons/weapon_fireball.tscn" id="5_fireball"]
+[ext_resource type="PackedScene" uid="uid://c7t4y0a1m2x" path="res://Scenes/Weapons/weapon_rifle.tscn" id="2_rifle"]
+[ext_resource type="PackedScene" uid="uid://d7t4y0a1m2x" path="res://Scenes/Weapons/weapon_shotgun.tscn" id="3_shotgun"]
+[ext_resource type="PackedScene" uid="uid://e7t4y0a1m2x" path="res://Scenes/Weapons/weapon_crossbow.tscn" id="4_crossbow"]
+[ext_resource type="PackedScene" uid="uid://f7t4y0a1m2x" path="res://Scenes/Weapons/weapon_fireball.tscn" id="5_fireball"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_xx"]
 radius = 0.4
 height = 1.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_player"]
+albedo_color = Color(0.2, 0.4, 0.8, 1)
+roughness = 0.5
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
+material = SubResource("StandardMaterial3D_player")
+radius = 0.4
+height = 1.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_visor"]
+size = Vector3(0.5, 0.2, 0.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_visor"]
+albedo_color = Color(0.1, 0.1, 0.1, 1)
+metallic = 1.0
+roughness = 0.2
 
 [node name="Player" type="CharacterBody3D" groups=["player"]]
 collision_layer = 2
@@ -21,10 +38,24 @@ script = ExtResource("1_xxx")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("CapsuleShape3D_xx")
 
+[node name="Visuals" type="Node3D" parent="."]
+
+[node name="Body" type="MeshInstance3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+layers = 2
+mesh = SubResource("CapsuleMesh_body")
+
+[node name="Visor" type="MeshInstance3D" parent="Visuals/Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, -0.35)
+layers = 2
+mesh = SubResource("BoxMesh_visor")
+surface_material_override/0 = SubResource("StandardMaterial3D_visor")
+
 [node name="Head" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
 
 [node name="Camera3D" type="Camera3D" parent="Head"]
+cull_mask = 1048573
 
 [node name="FillLight" type="OmniLight3D" parent="Head"]
 light_color = Color(0.8, 0.85, 0.9, 1)

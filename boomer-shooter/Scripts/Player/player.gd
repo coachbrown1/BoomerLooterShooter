@@ -26,6 +26,7 @@ var target_recoil: Vector2 = Vector2.ZERO
 @onready var weapon_mount: Node3D = $Head/WeaponMount
 @onready var weapon_manager: WeaponManager = $Head/WeaponMount
 @onready var inventory_system: InventorySystem = $InventorySystem
+@onready var visuals: Node3D = $Visuals
 
 
 @export var max_health: int = 100
@@ -121,7 +122,23 @@ func _physics_process(delta: float) -> void:
 		velocity.z = move_toward(velocity.z, 0, current_speed)
 
 	_update_fov(delta, input_dir.length() > 0.1 and Input.is_action_pressed("sprint") and not _is_inventory_open())
+	_update_visuals(delta, input_dir, current_speed)
 	move_and_slide()
+
+func _update_visuals(delta: float, input_dir: Vector2, speed: float) -> void:
+	if not visuals: return
+	
+	# Idle breathing/pulse
+	var time = Time.get_ticks_msec() / 1000.0
+	var breathe = sin(time * 1.5) * 0.02
+	visuals.scale = Vector3(1.0 + breathe, 1.0 - breathe, 1.0 + breathe)
+	
+	# Tilt towards movement
+	var target_rotation_z = -input_dir.x * 0.05
+	var target_rotation_x = input_dir.y * 0.05
+	
+	visuals.rotation.z = lerp_angle(visuals.rotation.z, target_rotation_z, delta * 5.0)
+	visuals.rotation.x = lerp_angle(visuals.rotation.x, target_rotation_x, delta * 5.0)
 
 func _update_fov(delta: float, is_sprinting: bool) -> void:
 	# Calculate target base FOV
