@@ -42,6 +42,9 @@ This file is the canonical instruction set for any AI agent working in this repo
 
 - Surface blockers early: risky Git state, missing assets, unclear intent, failing tests, or inability to validate.
 - State assumptions when they affect implementation decisions.
+- When a task is complete, ask the user whether they want the completed changes committed and pushed.
+- If you prepare a commit, include only files changed by the work you performed.
+- If `git status` includes files you did not modify, do not include those files in the commit. Leave them in the changelist untouched and mention them in the handoff when relevant.
 - In the final handoff, report:
   - what changed
   - how it was validated
