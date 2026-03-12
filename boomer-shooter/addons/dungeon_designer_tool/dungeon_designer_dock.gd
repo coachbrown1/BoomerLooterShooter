@@ -126,7 +126,6 @@ func _build_ui() -> void:
 
 	_manager_inspector = EditorInspector.new()
 	_manager_inspector.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_manager_inspector.custom_minimum_size = Vector2(0, 250)
 	layout_tab.add_child(_manager_inspector)
 
 	var biome_tab := VBoxContainer.new()
@@ -648,7 +647,7 @@ func _add_resource_array_editor(container: VBoxContainer, title: String, propert
 
 	var list := ItemList.new()
 	list.select_mode = ItemList.SELECT_SINGLE
-	list.custom_minimum_size = Vector2(0, 100)
+	list.custom_minimum_size = Vector2(0, 48)
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	container.add_child(list)
 

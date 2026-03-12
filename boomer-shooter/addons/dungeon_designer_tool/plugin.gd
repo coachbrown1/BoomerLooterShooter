@@ -14,7 +14,7 @@ func _enter_tree() -> void:
 	_dock = dock_script.new()
 	_dock.name = "Dungeon Designer"
 	_dock.plugin = self
-	add_control_to_dock(DOCK_SLOT_RIGHT_UL, _dock)
+	add_control_to_dock(DOCK_SLOT_LEFT_BL, _dock)
 
 func _exit_tree() -> void:
 	if _dock == null:
