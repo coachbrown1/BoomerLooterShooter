@@ -10,6 +10,7 @@ const EQUIPMENT_SLOT_NAMES: Array[StringName] = [
 ]
 const WEAPON_SLOT_COUNT: int = 4
 const STORAGE_SLOT_COUNT: int = 10
+const DEFAULT_CHEST_SLOT_COUNT: int = 16
 
 signal inventory_changed(snapshot: Dictionary)
 signal weapon_slots_changed(weapon_items: Array)
@@ -18,7 +19,9 @@ signal inventory_opened_changed(is_open: bool)
 var equipment: Dictionary = {}
 var weapons: Array = []
 var storage: Array = []
+var chest_storage: Array = []
 var is_open: bool = false
+var _active_chest: InteractableChest = null
 
 var _weapon_manager: WeaponManager
 
@@ -72,11 +75,17 @@ func get_slot_snapshot() -> Dictionary:
 	var storage_snapshot: Array = []
 	for item in storage:
 		storage_snapshot.append(_item_to_snapshot(item))
+	var chest_snapshot: Array = []
+	for item in chest_storage:
+		chest_snapshot.append(_item_to_snapshot(item))
 
 	return {
 		"equipment": equipment_snapshot,
 		"weapons": weapon_snapshot,
-		"storage": storage_snapshot
+		"storage": storage_snapshot,
+		"chest": chest_snapshot,
+		"is_chest_open": _active_chest != null,
+		"chest_name": get_active_chest_name()
 	}
 
 func try_move_item(from_slot: SlotRef, to_slot: SlotRef) -> bool:
@@ -112,6 +121,10 @@ func set_weapon_slot_active(index: int) -> void:
 		_weapon_manager.activate_weapon_slot(index)
 
 func set_inventory_open(value: bool) -> void:
+	if not value and _active_chest != null:
+		_commit_and_clear_active_chest()
+		_emit_inventory_changed()
+
 	if is_open == value:
 		return
 	is_open = value
@@ -119,6 +132,26 @@ func set_inventory_open(value: bool) -> void:
 
 func is_inventory_open() -> bool:
 	return is_open
+
+func open_chest(chest: InteractableChest) -> void:
+	if chest == null:
+		return
+	if _active_chest != null and _active_chest != chest:
+		_commit_and_clear_active_chest()
+
+	_active_chest = chest
+	chest_storage = chest.get_storage_copy()
+	if chest_storage.is_empty():
+		chest_storage.resize(DEFAULT_CHEST_SLOT_COUNT)
+		for i in range(chest_storage.size()):
+			chest_storage[i] = null
+	set_inventory_open(true)
+	_emit_inventory_changed()
+
+func get_active_chest_name() -> String:
+	if _active_chest == null:
+		return ""
+	return _active_chest.chest_name
 
 func _is_valid_slot(slot_ref: SlotRef) -> bool:
 	if slot_ref == null:
@@ -130,6 +163,8 @@ func _is_valid_slot(slot_ref: SlotRef) -> bool:
 			return slot_ref.index >= 0 and slot_ref.index < WEAPON_SLOT_COUNT
 		&"storage":
 			return slot_ref.index >= 0 and slot_ref.index < STORAGE_SLOT_COUNT
+		&"chest":
+			return _active_chest != null and slot_ref.index >= 0 and slot_ref.index < chest_storage.size()
 		_:
 			return false
 
@@ -140,6 +175,8 @@ func _can_place_item_in_slot(item: InventoryItemData, slot_ref: SlotRef) -> bool
 		&"weapons":
 			return item.category == &"weapon"
 		&"storage":
+			return true
+		&"chest":
 			return true
 		_:
 			return false
@@ -152,6 +189,8 @@ func _get_item(slot_ref: SlotRef) -> InventoryItemData:
 			return weapons[slot_ref.index]
 		&"storage":
 			return storage[slot_ref.index]
+		&"chest":
+			return chest_storage[slot_ref.index]
 		_:
 			return null
 
@@ -163,6 +202,16 @@ func _set_item(slot_ref: SlotRef, item: InventoryItemData) -> void:
 			weapons[slot_ref.index] = item
 		&"storage":
 			storage[slot_ref.index] = item
+		&"chest":
+			chest_storage[slot_ref.index] = item
+
+func _commit_and_clear_active_chest() -> void:
+	if _active_chest == null:
+		return
+	_active_chest.set_storage_items(chest_storage)
+	_active_chest.close_chest()
+	_active_chest = null
+	chest_storage.clear()
 
 func _emit_inventory_changed() -> void:
 	inventory_changed.emit(get_slot_snapshot())

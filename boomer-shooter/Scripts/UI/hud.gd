@@ -3,6 +3,7 @@ extends CanvasLayer
 @onready var screen_fx = $ScreenFX
 @onready var health_label = $MarginContainer/HBoxContainer/HealthLabel
 @onready var ammo_label = $MarginContainer/HBoxContainer/AmmoLabel
+const SLOT_BUTTON_SCRIPT = preload("res://Scripts/UI/inventory_slot_button.gd")
 
 const EQUIPMENT_LABELS: Dictionary = {
 	&"helmet": "Helmet",
@@ -11,11 +12,17 @@ const EQUIPMENT_LABELS: Dictionary = {
 	&"legs": "Legs",
 	&"feet": "Feet"
 }
-const PANEL_DESIRED_SIZE := Vector2(700, 430)
+const PANEL_DESIRED_SIZE := Vector2(980, 560)
+const WEAPON_SLOT_UI_COUNT := 4
+const STORAGE_SLOT_UI_COUNT := 10
+const CHEST_SLOT_UI_COUNT := 16
 
 var _inventory_system: InventorySystem = null
 var _inventory_panel: PanelContainer = null
 var _feedback_label: Label = null
+var _chest_panel: PanelContainer = null
+var _chest_section_label: Label = null
+var _chest_grid: GridContainer = null
 var _slot_buttons: Dictionary = {}
 var _slot_button_refs: Dictionary = {}
 var _selected_slot: SlotRef = null
@@ -93,7 +100,7 @@ func _build_inventory_ui() -> void:
 	_inventory_panel.anchor_top = 0.0
 	_inventory_panel.anchor_right = 0.0
 	_inventory_panel.anchor_bottom = 0.0
-	_inventory_panel.custom_minimum_size = Vector2(320, 280)
+	_inventory_panel.custom_minimum_size = Vector2(760, 420)
 	_inventory_panel.size = PANEL_DESIRED_SIZE
 	add_child(_inventory_panel)
 	_recenter_inventory_panel()
@@ -111,50 +118,116 @@ func _build_inventory_ui() -> void:
 	root.add_theme_constant_override("separation", 6)
 	margin.add_child(root)
 
+	var title_row := HBoxContainer.new()
+	title_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	root.add_child(title_row)
+
 	var title := Label.new()
 	title.text = "Inventory"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 20)
-	root.add_child(title)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title_row.add_child(title)
+
+	var close_button := Button.new()
+	close_button.text = "X"
+	close_button.custom_minimum_size = Vector2(36, 28)
+	close_button.tooltip_text = "Close Inventory"
+	close_button.pressed.connect(_close_inventory_panel)
+	title_row.add_child(close_button)
 
 	_feedback_label = Label.new()
 	_feedback_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_feedback_label.modulate = Color(1, 0.4, 0.4, 1)
 	root.add_child(_feedback_label)
 
-	root.add_child(_build_section_label("Equipment"))
+	var content_row := HBoxContainer.new()
+	content_row.add_theme_constant_override("separation", 10)
+	content_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(content_row)
+
+	var player_panel := PanelContainer.new()
+	player_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	player_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	player_panel.add_theme_stylebox_override("panel", _make_tinted_panel_style(Color(0.13, 0.17, 0.22, 0.9)))
+	content_row.add_child(player_panel)
+
+	var player_margin := MarginContainer.new()
+	player_margin.add_theme_constant_override("margin_left", 10)
+	player_margin.add_theme_constant_override("margin_top", 10)
+	player_margin.add_theme_constant_override("margin_right", 10)
+	player_margin.add_theme_constant_override("margin_bottom", 10)
+	player_panel.add_child(player_margin)
+
+	var player_root := VBoxContainer.new()
+	player_root.add_theme_constant_override("separation", 6)
+	player_margin.add_child(player_root)
+
+	player_root.add_child(_build_section_label("Equipment"))
 	var equipment_grid := GridContainer.new()
 	equipment_grid.columns = 2
 	equipment_grid.add_theme_constant_override("h_separation", 6)
 	equipment_grid.add_theme_constant_override("v_separation", 6)
-	root.add_child(equipment_grid)
+	player_root.add_child(equipment_grid)
 
 	for slot_name in [&"helmet", &"chest", &"arms", &"legs", &"feet"]:
 		var slot_ref := SlotRef.equipment(slot_name)
 		var button := _make_slot_button(slot_ref)
 		equipment_grid.add_child(button)
 
-	root.add_child(_build_section_label("Weapons (1-4)"))
+	player_root.add_child(_build_section_label("Weapons (1-4)"))
 	var weapons_grid := GridContainer.new()
 	weapons_grid.columns = 4
 	weapons_grid.add_theme_constant_override("h_separation", 6)
 	weapons_grid.add_theme_constant_override("v_separation", 6)
-	root.add_child(weapons_grid)
-	for i in range(4):
+	player_root.add_child(weapons_grid)
+	for i in range(WEAPON_SLOT_UI_COUNT):
 		var weapon_ref := SlotRef.weapon(i)
 		var weapon_button := _make_slot_button(weapon_ref)
 		weapons_grid.add_child(weapon_button)
 
-	root.add_child(_build_section_label("Storage (10)"))
+	player_root.add_child(_build_section_label("Storage (10)"))
 	var storage_grid := GridContainer.new()
 	storage_grid.columns = 5
 	storage_grid.add_theme_constant_override("h_separation", 6)
 	storage_grid.add_theme_constant_override("v_separation", 6)
-	root.add_child(storage_grid)
-	for i in range(10):
+	player_root.add_child(storage_grid)
+	for i in range(STORAGE_SLOT_UI_COUNT):
 		var storage_ref := SlotRef.storage(i)
 		var storage_button := _make_slot_button(storage_ref)
 		storage_grid.add_child(storage_button)
+
+	_chest_panel = PanelContainer.new()
+	_chest_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_chest_panel.custom_minimum_size = Vector2(300, 0)
+	_chest_panel.add_theme_stylebox_override("panel", _make_tinted_panel_style(Color(0.28, 0.20, 0.11, 0.9)))
+	content_row.add_child(_chest_panel)
+
+	var chest_margin := MarginContainer.new()
+	chest_margin.add_theme_constant_override("margin_left", 10)
+	chest_margin.add_theme_constant_override("margin_top", 10)
+	chest_margin.add_theme_constant_override("margin_right", 10)
+	chest_margin.add_theme_constant_override("margin_bottom", 10)
+	_chest_panel.add_child(chest_margin)
+
+	var chest_root := VBoxContainer.new()
+	chest_root.add_theme_constant_override("separation", 6)
+	chest_margin.add_child(chest_root)
+
+	_chest_section_label = _build_section_label("Chest")
+	chest_root.add_child(_chest_section_label)
+	_chest_grid = GridContainer.new()
+	_chest_grid.columns = 4
+	_chest_grid.add_theme_constant_override("h_separation", 6)
+	_chest_grid.add_theme_constant_override("v_separation", 6)
+	chest_root.add_child(_chest_grid)
+	for i in range(CHEST_SLOT_UI_COUNT):
+		var chest_ref := SlotRef.chest(i)
+		var chest_button := _make_slot_button(chest_ref)
+		_chest_grid.add_child(chest_button)
+	_chest_panel.visible = false
+	_chest_section_label.visible = false
+	_chest_grid.visible = false
 
 func _build_section_label(text: String) -> Label:
 	var label := Label.new()
@@ -162,17 +235,20 @@ func _build_section_label(text: String) -> Label:
 	label.add_theme_font_size_override("font_size", 16)
 	return label
 
-func _make_slot_button(slot_ref: SlotRef) -> Button:
-	var button := Button.new()
+func _make_slot_button(slot_ref: SlotRef) -> InventorySlotButton:
+	var button: InventorySlotButton = SLOT_BUTTON_SCRIPT.new()
 	button.custom_minimum_size = Vector2(0, 32)
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	button.text = "..."
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	if slot_ref.section == &"storage":
+	button.set_slot_ref(slot_ref)
+	if slot_ref.section == &"storage" or slot_ref.section == &"chest":
 		button.custom_minimum_size = Vector2(60, 60)
 		button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	button.pressed.connect(_on_slot_button_pressed.bind(slot_ref))
+	button.slot_pressed.connect(_on_slot_button_pressed)
+	button.slot_double_clicked.connect(_on_slot_button_double_clicked)
+	button.slot_drop_requested.connect(_on_slot_drop_requested)
 	_slot_buttons[slot_ref.to_key()] = button
 	_slot_button_refs[slot_ref.to_key()] = slot_ref
 	return button
@@ -204,13 +280,40 @@ func _on_slot_button_pressed(slot_ref: SlotRef) -> void:
 		_selected_slot = null
 		_set_feedback("")
 
+func _on_slot_button_double_clicked(slot_ref: SlotRef) -> void:
+	if _inventory_system == null:
+		return
+	if slot_ref == null or slot_ref.section != &"chest":
+		return
+	var item_snapshot = _get_slot_item_snapshot(slot_ref)
+	if item_snapshot == null:
+		return
+	if _try_quick_transfer_to_player_inventory(slot_ref, item_snapshot):
+		_selected_slot = null
+		_set_feedback("")
+	else:
+		_set_feedback("No valid inventory slot available.")
+
+func _on_slot_drop_requested(from_slot: SlotRef, to_slot: SlotRef) -> void:
+	if _inventory_system == null:
+		return
+	var moved := _inventory_system.try_move_item(from_slot, to_slot)
+	if not moved:
+		_set_feedback("Invalid move for slot rules.")
+	else:
+		_selected_slot = null
+		_set_feedback("")
+
 func _refresh_inventory_ui() -> void:
+	_update_chest_section_visibility()
+
 	for key in _slot_buttons.keys():
-		var button: Button = _slot_buttons[key]
+		var button: InventorySlotButton = _slot_buttons[key]
 		var slot_ref: SlotRef = _slot_button_refs.get(key)
 		button.text = _slot_button_text(slot_ref)
 
 		var item_snapshot = _get_slot_item_snapshot(slot_ref)
+		button.set_has_item(item_snapshot != null)
 		if item_snapshot != null:
 			button.tooltip_text = String(item_snapshot.get("display_name", "Item"))
 		else:
@@ -223,7 +326,7 @@ func _slot_button_text(slot_ref: SlotRef) -> String:
 	var item_text := "[Empty]"
 	if item_snapshot != null:
 		item_text = String(item_snapshot.get("display_name", "Item"))
-	if slot_ref.section == &"storage":
+	if slot_ref.section == &"storage" or slot_ref.section == &"chest":
 		if item_snapshot == null:
 			return "%s\n-" % _slot_label(slot_ref)
 		return "%s\n%s" % [_slot_label(slot_ref), item_text]
@@ -237,6 +340,8 @@ func _slot_label(slot_ref: SlotRef) -> String:
 			return "Weapon %d" % (slot_ref.index + 1)
 		&"storage":
 			return str(slot_ref.index + 1)
+		&"chest":
+			return "C%d" % (slot_ref.index + 1)
 		_:
 			return "Unknown"
 
@@ -257,6 +362,11 @@ func _get_slot_item_snapshot(slot_ref: SlotRef) -> Variant:
 			if slot_ref.index < 0 or slot_ref.index >= storage_snapshot.size():
 				return null
 			return storage_snapshot[slot_ref.index]
+		&"chest":
+			var chest_snapshot: Array = _latest_snapshot.get("chest", [])
+			if slot_ref.index < 0 or slot_ref.index >= chest_snapshot.size():
+				return null
+			return chest_snapshot[slot_ref.index]
 		_:
 			return null
 
@@ -276,3 +386,56 @@ func _recenter_inventory_panel() -> void:
 		maxf((viewport_size.x - panel_size.x) * 0.5, 0.0),
 		maxf((viewport_size.y - panel_size.y) * 0.5, 0.0)
 	)
+
+func _update_chest_section_visibility() -> void:
+	if _chest_panel == null or _chest_section_label == null or _chest_grid == null:
+		return
+	var chest_open := bool(_latest_snapshot.get("is_chest_open", false))
+	_chest_panel.visible = chest_open
+	_chest_section_label.visible = chest_open
+	_chest_grid.visible = chest_open
+	if chest_open:
+		var chest_name := String(_latest_snapshot.get("chest_name", "Chest"))
+		_chest_section_label.text = "Chest: %s" % chest_name
+
+func _close_inventory_panel() -> void:
+	if _inventory_system == null:
+		return
+	_inventory_system.set_inventory_open(false)
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
+func _try_quick_transfer_to_player_inventory(from_slot: SlotRef, item_snapshot: Dictionary) -> bool:
+	var category := StringName(item_snapshot.get("category", "misc"))
+	var destinations: Array[SlotRef] = []
+
+	if category == &"armor":
+		var equipment_slot := StringName(item_snapshot.get("equipment_slot", ""))
+		if equipment_slot != StringName(""):
+			destinations.append(SlotRef.equipment(equipment_slot))
+	elif category == &"weapon":
+		for i in range(WEAPON_SLOT_UI_COUNT):
+			destinations.append(SlotRef.weapon(i))
+
+	for i in range(STORAGE_SLOT_UI_COUNT):
+		destinations.append(SlotRef.storage(i))
+
+	for slot_ref in destinations:
+		if _get_slot_item_snapshot(slot_ref) != null:
+			continue
+		if _inventory_system.try_move_item(from_slot, slot_ref):
+			return true
+	return false
+
+func _make_tinted_panel_style(tint: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = tint
+	style.corner_radius_top_left = 6
+	style.corner_radius_top_right = 6
+	style.corner_radius_bottom_right = 6
+	style.corner_radius_bottom_left = 6
+	style.border_width_left = 1
+	style.border_width_top = 1
+	style.border_width_right = 1
+	style.border_width_bottom = 1
+	style.border_color = tint.lerp(Color.WHITE, 0.35)
+	return style

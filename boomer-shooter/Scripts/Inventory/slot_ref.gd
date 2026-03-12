@@ -23,6 +23,12 @@ static func storage(slot_index: int) -> SlotRef:
 	ref.index = slot_index
 	return ref
 
+static func chest(slot_index: int) -> SlotRef:
+	var ref := SlotRef.new()
+	ref.section = &"chest"
+	ref.index = slot_index
+	return ref
+
 func is_equal(other: SlotRef) -> bool:
 	if other == null:
 		return false

@@ -169,6 +169,8 @@ func _try_interact() -> void:
 			collider.open()
 		elif collider.has_method("interact"):
 			collider.interact()
+			if _is_inventory_open():
+				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
 func _is_inventory_open() -> bool:
 	return inventory_system != null and inventory_system.is_inventory_open()
