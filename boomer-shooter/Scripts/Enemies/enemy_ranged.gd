@@ -7,8 +7,8 @@ class_name EnemyRanged
 func _move_towards_player() -> void:
 	if not player: return
 	
-	var dist = global_position.distance_to(player.global_position)
-	if dist < min_distance:
+	var dist_squared = global_position.distance_squared_to(player.global_position)
+	if dist_squared < min_distance * min_distance:
 		# Simple: Backup away slightly if too close
 		var flee_dir = player.global_position.direction_to(global_position)
 		flee_dir.y = 0

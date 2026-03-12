@@ -9,6 +9,6 @@ func _perform_attack() -> void:
 
 	if time_since_attack >= attack_cooldown:
 		time_since_attack = 0.0
-		if player and global_position.distance_to(player.global_position) <= attack_range:
+		if player and global_position.distance_squared_to(player.global_position) <= attack_range * attack_range:
 			if player.has_method("take_damage"):
 				player.take_damage(attack_damage)

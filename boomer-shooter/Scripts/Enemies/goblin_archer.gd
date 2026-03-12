@@ -22,7 +22,7 @@ func _move_towards_player() -> void:
 	if not player: return
 	attack_ready_timer += get_physics_process_delta_time()
 
-	var dist = global_position.distance_to(player.global_position)
+	var dist_squared = global_position.distance_squared_to(player.global_position)
 	var dir_to_player = global_position.direction_to(player.global_position)
 	dir_to_player.y = 0
 	dir_to_player = dir_to_player.normalized()
@@ -44,13 +44,13 @@ func _move_towards_player() -> void:
 
 	var right_dir = dir_to_player.cross(Vector3.UP).normalized()
 
-	if dist < min_distance:
+	if dist_squared < min_distance * min_distance:
 		# Back up and strafe
 		var flee_dir = -dir_to_player
 		var move_dir = (flee_dir + (right_dir * strafe_dir * 0.5)).normalized()
 		velocity.x = move_dir.x * move_speed
 		velocity.z = move_dir.z * move_speed
-	elif dist > optimal_distance:
+	elif dist_squared > optimal_distance * optimal_distance:
 		# Move closer and strafe
 		nav_agent.target_position = player.global_position
 		var next_nav_point = nav_agent.get_next_path_position()
