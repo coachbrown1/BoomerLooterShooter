@@ -87,12 +87,12 @@ func _process_state(delta: float) -> void:
 	if not player:
 		return
 
-	var dist_to_player = global_position.distance_to(player.global_position)
+	var dist_squared_to_player = global_position.distance_squared_to(player.global_position)
 	var player_in_same_room := _is_player_in_same_room()
 
 	match current_state:
 		State.IDLE:
-			if player_in_same_room and dist_to_player <= aggro_range:
+			if player_in_same_room and dist_squared_to_player <= pow(aggro_range, 2):
 				current_state = State.CHASE
 			else:
 				if billboard_sprite.animate:
@@ -106,9 +106,9 @@ func _process_state(delta: float) -> void:
 				current_state = State.IDLE
 				velocity.x = 0
 				velocity.z = 0
-			elif _should_start_windup(dist_to_player):
+			elif _should_start_windup(dist_squared_to_player):
 				_start_windup()
-			elif dist_to_player > aggro_range * 2.0:
+			elif dist_squared_to_player > pow(aggro_range * 2.0, 2):
 				current_state = State.IDLE
 			else:
 				if not billboard_sprite.animate:
@@ -178,8 +178,8 @@ func _get_windup_start_range() -> float:
 		return windup_start_range
 	return attack_range
 
-func _should_start_windup(dist_to_player: float) -> bool:
-	return dist_to_player <= _get_windup_start_range()
+func _should_start_windup(dist_squared_to_player: float) -> bool:
+	return dist_squared_to_player <= pow(_get_windup_start_range(), 2)
 
 func _start_windup() -> void:
 	current_state = State.WINDUP
