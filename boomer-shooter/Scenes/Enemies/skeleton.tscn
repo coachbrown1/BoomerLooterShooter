@@ -1,11 +1,11 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://dprxvxrny58r5"]
 
-[ext_resource type="Script" path="res://Scripts/Enemies/skeleton_melee.gd" id="1_a"]
-[ext_resource type="Script" path="res://Scripts/Components/health_component.gd" id="2_b"]
-[ext_resource type="Script" path="res://Scripts/Components/hitbox_component.gd" id="3_c"]
-[ext_resource type="Script" path="res://Scripts/Components/billboard_sprite.gd" id="4_d"]
-[ext_resource type="Texture" path="res://Assets/Enemies/Skeleton/skeleton_armor_clean.png" id="5_e"]
-[ext_resource type="Material" path="res://Materials/enemy_outline_material.tres" id="6_mat"]
+[ext_resource type="Script" uid="uid://d1kytrtocy1pl" path="res://Scripts/Enemies/skeleton_melee.gd" id="1_a"]
+[ext_resource type="Script" uid="uid://cjjywi22247q4" path="res://Scripts/Components/health_component.gd" id="2_b"]
+[ext_resource type="Script" uid="uid://cq7c3rgbvvmh2" path="res://Scripts/Components/hitbox_component.gd" id="3_c"]
+[ext_resource type="Script" uid="uid://d11y815ukmppm" path="res://Scripts/Components/billboard_sprite.gd" id="4_d"]
+[ext_resource type="Texture2D" uid="uid://7levj5jcptaq" path="res://Assets/Enemies/Skeleton/skeleton_armor_clean.png" id="5_e"]
+[ext_resource type="Material" uid="uid://cx6i4m3cny0m1" path="res://Materials/enemy_outline_material.tres" id="6_mat"]
 
 [sub_resource type="CapsuleShape3D" id="1"]
 radius = 0.6
@@ -15,37 +15,36 @@ height = 2.7
 radius = 0.75
 height = 2.85
 
-[node name="SkeletonMelee" type="CharacterBody3D"]
+[node name="SkeletonMelee" type="CharacterBody3D" unique_id=2092361946]
 collision_layer = 4
 collision_mask = 7
 script = ExtResource("1_a")
-spawn_cost = 1.0
-spawn_min_floor = 1
 move_speed = 3.5
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=118620041]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 0)
 shape = SubResource("1")
 
-[node name="HealthComponent" type="Node" parent="."]
+[node name="HealthComponent" type="Node" parent="." unique_id=707075876]
 script = ExtResource("2_b")
 
-[node name="HitboxComponent" type="Area3D" parent="." node_paths=PackedStringArray("health_component")]
+[node name="HitboxComponent" type="Area3D" parent="." unique_id=101803609 node_paths=PackedStringArray("health_component")]
 collision_layer = 4
 collision_mask = 2
 script = ExtResource("3_c")
 health_component = NodePath("../HealthComponent")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="HitboxComponent"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="HitboxComponent" unique_id=516937287]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 0)
 shape = SubResource("2")
 
-[node name="Sprite3D" type="Sprite3D" parent="."]
+[node name="Sprite3D" type="Sprite3D" parent="." unique_id=483161991]
+transform = Transform3D(1, 0, 0, 0, 1.8330222, 0, 0, 0, 1, 0, 1.245331, 0)
 material_override = ExtResource("6_mat")
 texture = ExtResource("5_e")
 hframes = 8
-vframes = 4
+frame = 2
 script = ExtResource("4_d")
 bounce_walk_mode = true
 
-[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="." unique_id=1329691030]

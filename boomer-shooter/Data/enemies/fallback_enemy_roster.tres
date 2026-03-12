@@ -1,8 +1,7 @@
 [gd_resource type="Resource" script_class="EnemyRosterData" format=3 uid="uid://c41fqlny3hplv"]
 
 [ext_resource type="Script" uid="uid://cq6447502rd7b" path="res://Scripts/Data/enemy_roster_data.gd" id="1_enemy_roster_data"]
-[ext_resource type="PackedScene" path="res://Scenes/Enemies/skeleton.tscn" id="2_skeleton"]
-[ext_resource type="PackedScene" uid="uid://c1m2e3l4e5e6" path="res://Scenes/Enemies/goblin_melee.tscn" id="3_goblin"]
+[ext_resource type="PackedScene" uid="uid://dprxvxrny58r5" path="res://Scenes/Enemies/skeleton.tscn" id="2_skeleton"]
 [ext_resource type="PackedScene" uid="uid://r1a2n3g4e5d6" path="res://Scenes/Enemies/goblin_archer.tscn" id="4_goblin_archer"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/kobold.tscn" id="5_kobold"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/orc.tscn" id="6_orc"]
@@ -15,4 +14,4 @@
 
 [resource]
 script = ExtResource("1_enemy_roster_data")
-enemy_scenes = Array[PackedScene]([ExtResource("2_skeleton"), ExtResource("3_goblin"), ExtResource("4_goblin_archer"), ExtResource("5_kobold"), ExtResource("6_orc"), ExtResource("7_cultist"), ExtResource("8_flaming_skull"), ExtResource("9_death_knight"), ExtResource("10_gargoyle"), ExtResource("11_fungal_cube"), ExtResource("12_spore_husk")])
+enemy_scenes = Array[PackedScene]([ExtResource("2_skeleton"), ExtResource("12_spore_husk"), ExtResource("4_goblin_archer"), ExtResource("5_kobold"), ExtResource("6_orc"), ExtResource("7_cultist"), ExtResource("8_flaming_skull"), ExtResource("9_death_knight"), ExtResource("10_gargoyle"), ExtResource("11_fungal_cube"), ExtResource("12_spore_husk")])

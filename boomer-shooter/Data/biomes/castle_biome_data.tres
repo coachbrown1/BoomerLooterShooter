@@ -13,12 +13,13 @@
 [ext_resource type="Texture2D" uid="uid://cclufjw2yr6ga" path="res://Assets/Environment/Castle/castle_ceiling_v1.png" id="9_ceil1"]
 [ext_resource type="Texture2D" uid="uid://dxjug5myneuu3" path="res://Assets/Environment/Castle/castle_ceiling_v2.png" id="10_ceil2"]
 [ext_resource type="PackedScene" uid="uid://bamyeedre1p87" path="res://Scenes/Dungeon/castle_doorway_assembly.tscn" id="11_castle_doorway"]
+[ext_resource type="Texture2D" uid="uid://d4fxnoh7rr26c" path="res://Assets/Effects/cookie_grate.png" id="11_nd585"]
 [ext_resource type="PackedScene" uid="uid://da6yle0euhfqj" path="res://Scenes/Props/Castle/propcastletorch.tscn" id="12_torch"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_barrel.tscn" id="13_uprop1"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_crate.tscn" id="14_uprop2"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Common/propskullpile.tscn" id="15_uprop3"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Common/propbrokenpillar.tscn" id="16_uprop4"]
-[ext_resource type="PackedScene" path="res://Scenes/Enemies/skeleton.tscn" id="17_enemy1"]
+[ext_resource type="PackedScene" uid="uid://dprxvxrny58r5" path="res://Scenes/Enemies/skeleton.tscn" id="17_enemy1"]
 
 [resource]
 script = ExtResource("1_biome_data")
@@ -41,7 +42,6 @@ wall_light_color = Color(1, 0.6, 0.2, 1)
 wall_light_energy = 1.5
 wall_light_range = 10.0
 wall_light_height = 1.2
-floor_light_scene = null
 floor_light_color = Color(1, 0.6, 0.2, 1)
 floor_light_energy = 1.5
 floor_light_range = 10.0
