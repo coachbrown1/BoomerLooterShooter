@@ -516,28 +516,28 @@ func _place_lights(
 ) -> void:
 	var room_color: Color = Color(0.9, 0.75, 0.5)
 	var room_cookie_path := "res://Assets/Effects/cookie_grate.png"
-	var use_bioluminescent_props := biome == "fungal"
+	var use_custom_prop_lights := biome == "fungal"
 	var corridor_color := Color(1.0, 0.6, 0.2) if biome == "crypt" else Color(1.0, 0.35, 0.1)
 	var corridor_energy := 0.5
 	var corridor_range := 6.0
 	var corridor_height_ratio := 0.6
 	var corridor_step := 4
 	var corridor_chance := 0.3
-	var bioluminescent_sources: Array = []
+	var custom_light_sources: Array = []
 
 	if _has_biome_data(biome_data):
 		room_color = biome_data.room_light_color
 		room_cookie_path = biome_data.room_light_cookie_texture
-		use_bioluminescent_props = biome_data.use_bioluminescent_props_for_room_lights
+		use_custom_prop_lights = biome_data.use_custom_prop_lights
 		corridor_color = biome_data.corridor_light_color
 		corridor_energy = biome_data.corridor_light_energy
 		corridor_range = biome_data.corridor_light_range
 		corridor_height_ratio = biome_data.corridor_light_height
 		corridor_step = maxi(1, biome_data.corridor_light_step)
 		corridor_chance = clampf(biome_data.corridor_light_chance, 0.0, 1.0)
-		bioluminescent_sources = biome_data.bioluminescent_light_sources.duplicate()
-	if bioluminescent_sources.is_empty():
-		bioluminescent_sources = [
+		custom_light_sources = biome_data.custom_light_sources.duplicate()
+	if custom_light_sources.is_empty():
+		custom_light_sources = [
 			{
 				"tex": "res://Assets/Environment/Fungal/prop_fungal_crystal.png",
 				"color": Color(0.5, 0.4, 1.0),
@@ -564,7 +564,7 @@ func _place_lights(
 			continue
 		var pos = r.get_world_center(TILE_SIZE)
 
-		if use_bioluminescent_props:
+		if use_custom_prop_lights:
 			# Try to place a wall crystal, otherwise use a center mushroom
 			var rect: Rect2i = r.grid_rect
 			var candidates := []
@@ -584,8 +584,8 @@ func _place_lights(
 			var wx: float
 			var wz: float
 			var ry: float = 0.0
-			var use_crystal := not candidates.is_empty()
-			if not use_crystal:
+			var use_wall_light := not candidates.is_empty()
+			if not use_wall_light:
 				wx = pos.x
 				wz = pos.z
 			else:
@@ -609,14 +609,14 @@ func _place_lights(
 						ry = 0.0
 			var holder := Node3D.new()
 			holder.position = Vector3(wx, 0.0, wz)
-			var crystal_src: Dictionary = _pick_light_source(bioluminescent_sources, true)
-			var mushroom_src: Dictionary = _pick_light_source(bioluminescent_sources, false)
-			var active_src: Dictionary = crystal_src if use_crystal else mushroom_src
+			var wall_light_src: Dictionary = _pick_light_source(custom_light_sources, true)
+			var floor_light_src: Dictionary = _pick_light_source(custom_light_sources, false)
+			var active_src: Dictionary = wall_light_src if use_wall_light else floor_light_src
 			var tex_path := str(active_src.get("tex", ""))
 			if load(tex_path):
-				_add_3d_mushroom(holder, ry if use_crystal else 0.0, use_crystal, biome_data)
+				_add_3d_prop_light(holder, ry if use_wall_light else 0.0, use_wall_light, biome_data)
 			var light := OmniLight3D.new()
-			light.light_color = _as_color(active_src.get("color", Color(0.2, 0.6, 1.0) if use_crystal else Color(0.3, 1.0, 0.3)))
+			light.light_color = _as_color(active_src.get("color", Color(0.2, 0.6, 1.0) if use_wall_light else Color(0.3, 1.0, 0.3)))
 			light.light_energy = float(active_src.get("energy", 1.2))
 			light.omni_range = float(active_src.get("range", 15.0))
 			light.shadow_enabled = true
@@ -674,23 +674,23 @@ func _place_lights(
 	var grid_w = tile_grid.size()
 	var grid_h = tile_grid[0].size()
 	
-	# Fungal biome: use bioluminescent prop sprites as the light source
-	if use_bioluminescent_props:
+	# Use custom prop sprites as the light source
+	if use_custom_prop_lights:
 		for x in range(2, grid_w - 2, corridor_step):
 			for z in range(2, grid_h - 2, corridor_step):
 				var tile_room: RoomData = room_tile_owner.get(_tile_key(x, z), null)
 				if tile_room != null and (tile_room.has_handcrafted_layout or tile_room.handcrafted_scene != null or tile_room.handcrafted_scene_path != ""):
 					continue
 				if tile_grid[x][z] == TILE_FLOOR and randf() < corridor_chance:
-					var src: Dictionary = bioluminescent_sources[randi() % bioluminescent_sources.size()]
+					var src: Dictionary = custom_light_sources[randi() % custom_light_sources.size()]
 					
 					# Container node so the sprite and light share a transform
 					var holder := Node3D.new()
 					var wx = x * TILE_SIZE + TILE_SIZE / 2.0
 					var wz = z * TILE_SIZE + TILE_SIZE / 2.0
-					# If crystal, shift to wall
-					var crystal_ry: float = 0.0
-					var is_wall_crystal: bool = false
+					# If wall light, shift to wall
+					var wall_light_ry: float = 0.0
+					var found_flat_wall: bool = false
 					var requires_wall: bool = bool(src.get("requires_wall", false))
 					if requires_wall:
 						var key := _tile_key(x, z)
@@ -698,39 +698,39 @@ func _place_lights(
 							# Check neighbors for a flat wall segment
 							if x > 0 and tile_grid[x-1][z] == TILE_WALL and tile_grid[x-1][z-1] == TILE_WALL and tile_grid[x-1][z+1] == TILE_WALL:
 								wx = x * TILE_SIZE + 0.05
-								crystal_ry = -90.0
-								is_wall_crystal = true
+								wall_light_ry = -90.0
+								found_flat_wall = true
 							elif x < grid_w - 1 and tile_grid[x+1][z] == TILE_WALL and tile_grid[x+1][z-1] == TILE_WALL and tile_grid[x+1][z+1] == TILE_WALL:
 								wx = (x + 1) * TILE_SIZE - 0.05
-								crystal_ry = 90.0
-								is_wall_crystal = true
+								wall_light_ry = 90.0
+								found_flat_wall = true
 							elif z > 0 and tile_grid[x][z-1] == TILE_WALL and tile_grid[x-1][z-1] == TILE_WALL and tile_grid[x+1][z-1] == TILE_WALL:
 								wz = z * TILE_SIZE + 0.05
-								crystal_ry = 180.0
-								is_wall_crystal = true
+								wall_light_ry = 180.0
+								found_flat_wall = true
 							elif z < grid_h - 1 and tile_grid[x][z+1] == TILE_WALL and tile_grid[x-1][z+1] == TILE_WALL and tile_grid[x+1][z+1] == TILE_WALL:
 								wz = (z + 1) * TILE_SIZE - 0.05
-								crystal_ry = 0.0
-								is_wall_crystal = true
+								wall_light_ry = 0.0
+								found_flat_wall = true
 					holder.position = Vector3(wx, 0.0, wz)
 					
 					# Sprite / Mesh
 					var sprite: Sprite3D = null
 					if requires_wall:
-						if not is_wall_crystal:
+						if not found_flat_wall:
 							holder.queue_free()
 							continue
 						sprite = Sprite3D.new()
 						sprite.texture = load(str(src.get("tex", "")))
 						sprite.billboard = BaseMaterial3D.BILLBOARD_DISABLED
-						sprite.rotation_degrees.y = crystal_ry
+						sprite.rotation_degrees.y = wall_light_ry
 						sprite.pixel_size = float(src.get("pixel_size", 0.004))
 						sprite.position.y = float(src.get("height", 0.8))
 						sprite.modulate = _as_color(src.get("color", Color(0.4, 0.3, 0.9))).lightened(0.3)
 						holder.add_child(sprite)
 					else:
-						# It's a mushroom, use the 3D mesh
-						_add_3d_mushroom(holder, 0.0, false, biome_data)
+						# It's a floor prop light, use the 3D mesh
+						_add_3d_prop_light(holder, 0.0, false, biome_data)
 					
 					# Light
 					var light := OmniLight3D.new()
@@ -859,18 +859,18 @@ func _place_generated_doorway_assemblies(parent: Node3D, doorways: Array, biome_
 			doorway_assembly.rotation_degrees.y = 90.0
 		parent.add_child(doorway_assembly)
 
-func _add_3d_mushroom(parent: Node3D, ry: float, is_crystal: bool, biome_data: Resource = null) -> void:
-	var scene_path := "res://Scenes/Dungeon/fungal_crystal.tscn" if is_crystal else "res://Scenes/Dungeon/fungal_mushroom.tscn"
+func _add_3d_prop_light(parent: Node3D, ry: float, is_wall_light: bool, biome_data: Resource = null) -> void:
+	var scene_path := "res://Scenes/Dungeon/fungal_crystal.tscn" if is_wall_light else "res://Scenes/Dungeon/fungal_mushroom.tscn"
 	if _has_biome_data(biome_data):
-		if is_crystal and biome_data.crystal_scene != "":
-			scene_path = biome_data.crystal_scene
-		elif not is_crystal and biome_data.mushroom_scene != "":
-			scene_path = biome_data.mushroom_scene
+		if is_wall_light and biome_data.wall_light_scene != "":
+			scene_path = biome_data.wall_light_scene
+		elif not is_wall_light and biome_data.floor_light_scene != "":
+			scene_path = biome_data.floor_light_scene
 	var scene = load(scene_path)
 	if scene:
 		var inst = scene.instantiate()
 		parent.add_child(inst)
-		if is_crystal:
+		if is_wall_light:
 			inst.rotation_degrees.y = ry
 
 func _pick_light_source(sources: Array, requires_wall: bool) -> Dictionary:

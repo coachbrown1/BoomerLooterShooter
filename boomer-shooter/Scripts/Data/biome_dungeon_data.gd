@@ -23,10 +23,10 @@ class_name BiomeDungeonData
 @export var corridor_light_step: int = 4
 @export var corridor_light_chance: float = 0.3
 
-@export var use_bioluminescent_props_for_room_lights: bool = false
-@export var bioluminescent_light_sources: Array[Dictionary] = []
-@export_file("*.tscn") var mushroom_scene: String = ""
-@export_file("*.tscn") var crystal_scene: String = ""
+@export var use_custom_prop_lights: bool = false
+@export var custom_light_sources: Array[Dictionary] = []
+@export_file("*.tscn") var floor_light_scene: String = ""
+@export_file("*.tscn") var wall_light_scene: String = ""
 
 @export var fog_light_color: Color = Color(0.05, 0.03, 0.08, 1.0)
 @export_file("*.png", "*.jpg", "*.jpeg", "*.webp", "*.tga", "*.bmp", "*.exr", "*.hdr") var exit_portal_texture: String = "res://Assets/Environment/exit_portal.png"
