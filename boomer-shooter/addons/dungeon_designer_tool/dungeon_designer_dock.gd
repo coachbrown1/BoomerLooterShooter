@@ -69,7 +69,8 @@ func _build_ui() -> void:
 	layout_tab.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	tabs.add_child(layout_tab)
 
-	var layout_action_row := HBoxContainer.new()
+	var layout_action_row := HFlowContainer.new()
+	layout_action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	layout_action_row.add_child(_make_button("Open Dungeon Scene", _on_open_dungeon_scene_pressed))
 	layout_action_row.add_child(_make_button("Refresh", _on_refresh_pressed))
 	layout_action_row.add_child(_make_button("Save Open Scene", _on_save_scene_pressed))
@@ -97,7 +98,8 @@ func _build_ui() -> void:
 	_corridor_length_spin = _add_spin_row(quick_layout_grid, "Corridor Length (tiles)", 1, 200, 1)
 	_seed_spin = _add_spin_row(quick_layout_grid, "Generation Seed (0=random)", 0, 2147483647, 1)
 
-	var quick_layout_actions := HBoxContainer.new()
+	var quick_layout_actions := HFlowContainer.new()
+	quick_layout_actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	quick_layout_actions.add_child(_make_button("Load From Scene", _on_load_layout_pressed))
 	quick_layout_actions.add_child(_make_button("Apply + Save Layout", _on_apply_layout_pressed))
 	quick_layout_root.add_child(quick_layout_actions)
@@ -106,12 +108,16 @@ func _build_ui() -> void:
 	preview_nav_header.text = "Preview Room Jump (START/EXIT + handcrafted)"
 	quick_layout_root.add_child(preview_nav_header)
 
-	var preview_nav_row := HBoxContainer.new()
+	var preview_nav_row := VBoxContainer.new()
 	_preview_room_selector = OptionButton.new()
+	_preview_room_selector.fit_to_longest_item = false
 	_preview_room_selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	preview_nav_row.add_child(_preview_room_selector)
-	preview_nav_row.add_child(_make_button("Refresh Rooms", _on_refresh_preview_rooms_pressed))
-	preview_nav_row.add_child(_make_button("Go To Room", _on_go_to_preview_room_pressed))
+	var preview_nav_actions := HFlowContainer.new()
+	preview_nav_actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	preview_nav_actions.add_child(_make_button("Refresh Rooms", _on_refresh_preview_rooms_pressed))
+	preview_nav_actions.add_child(_make_button("Go To Room", _on_go_to_preview_room_pressed))
+	preview_nav_row.add_child(preview_nav_actions)
 	quick_layout_root.add_child(preview_nav_row)
 
 	var manager_header := Label.new()
@@ -128,19 +134,21 @@ func _build_ui() -> void:
 	biome_tab.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	tabs.add_child(biome_tab)
 
-	var biome_action_row := HBoxContainer.new()
+	var biome_action_row := HFlowContainer.new()
+	biome_action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	biome_action_row.add_child(_make_button("Refresh", _on_refresh_pressed))
 	biome_action_row.add_child(_make_button("Save Selected Biome", _on_save_biome_pressed))
 	biome_action_row.add_child(_make_button("Open Biome Resource", _on_open_biome_resource_pressed))
 	biome_action_row.add_child(_make_button("Open Start Scene", _on_open_start_scene_pressed))
 	biome_tab.add_child(biome_action_row)
 
-	var biome_row := HBoxContainer.new()
+	var biome_row := VBoxContainer.new()
 	var biome_label := Label.new()
 	biome_label.text = "Selected Biome:"
 	biome_row.add_child(biome_label)
 
 	_biome_selector = OptionButton.new()
+	_biome_selector.fit_to_longest_item = false
 	_biome_selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_biome_selector.item_selected.connect(_on_biome_selected)
 	biome_row.add_child(_biome_selector)
@@ -225,7 +233,7 @@ func _refresh_biome_section() -> void:
 		var biome_id := "<unnamed>"
 		if _has_property(biome, "biome_id"):
 			biome_id = str(biome.get("biome_id"))
-		_biome_selector.add_item("%s (%s)" % [biome_id, biome.resource_path])
+		_biome_selector.add_item(biome_id)
 
 	if _biomes.is_empty():
 		_set_status("No biome resources found in %s." % BIOME_DB_PATH, true)
@@ -594,6 +602,7 @@ func _add_resource_picker_row(container: VBoxContainer, label_text: String, prop
 	row.add_child(label)
 
 	var picker := OptionButton.new()
+	picker.fit_to_longest_item = false
 	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	picker.add_item("(None)")
 	picker.set_item_metadata(0, "")
@@ -655,10 +664,12 @@ func _add_resource_array_editor(container: VBoxContainer, title: String, propert
 			list.select(0)
 	refresh.call()
 
-	var controls := HBoxContainer.new()
+	var controls := HFlowContainer.new()
+	controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	container.add_child(controls)
 
 	var picker := OptionButton.new()
+	picker.fit_to_longest_item = false
 	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for path in options:
 		var index := picker.get_item_count()
