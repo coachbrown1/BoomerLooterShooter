@@ -419,7 +419,8 @@ func _show_muzzle_flash() -> void:
 	muzzle_flash.visible = true
 	if _muzzle_2d:
 		_muzzle_2d.visible = true
-		_muzzle_2d.frame = randi() % 4
+		var frame_count = max(1, _muzzle_2d.hframes * _muzzle_2d.vframes)
+		_muzzle_2d.frame = randi() % frame_count
 		_muzzle_2d.rotation = randf() * TAU
 	
 	await get_tree().create_timer(0.05).timeout
