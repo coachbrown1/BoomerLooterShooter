@@ -248,6 +248,8 @@ func build_network_snapshot(include_health: bool = true) -> Dictionary:
 	}
 	if include_health:
 		snapshot["health"] = current_health
+	if weapon_manager:
+		snapshot["current_weapon_index"] = weapon_manager.current_weapon_index
 	return snapshot
 
 func apply_network_snapshot(snapshot: Dictionary) -> void:
@@ -265,6 +267,12 @@ func apply_network_snapshot(snapshot: Dictionary) -> void:
 				var hud = _get_hud()
 				if hud:
 					hud.update_health(current_health)
+
+	if snapshot.has("current_weapon_index") and weapon_manager:
+		var target_weapon_index: int = int(snapshot.get("current_weapon_index", -1))
+		if target_weapon_index >= 0 and target_weapon_index != weapon_manager.current_weapon_index:
+			weapon_manager.switch_to_weapon(target_weapon_index)
+
 	_has_network_snapshot = true
 
 func apply_authoritative_health(value: int) -> void:
