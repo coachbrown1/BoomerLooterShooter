@@ -33,6 +33,8 @@ var _latest_snapshot: Dictionary = {}
 var _teammate_health_label: Label = null
 var _session_role_label: Label = null
 var _teammate_refresh_timer: float = 0.0
+var _cached_local_player: Node = null
+var _cached_teammate: Node = null
 
 func _ready() -> void:
 	# Print out a message so the user knows about the debug key
@@ -108,6 +110,7 @@ func _update_teammate_health_label() -> void:
 		return
 	if not _is_multiplayer_active():
 		_teammate_health_label.visible = false
+		_cached_teammate = null
 		return
 
 	var local_player = _find_local_player()
@@ -127,21 +130,29 @@ func _update_teammate_health_label() -> void:
 	_teammate_health_label.visible = true
 
 func _find_local_player() -> Node:
+	if is_instance_valid(_cached_local_player):
+		return _cached_local_player
+
 	for player_variant in get_tree().get_nodes_in_group("player"):
 		if not (player_variant is Node):
 			continue
 		var player: Node = player_variant
 		if player.has_method("is_local_controlled") and bool(player.call("is_local_controlled")):
+			_cached_local_player = player
 			return player
 	return null
 
 func _find_teammate(local_player: Node) -> Node:
+	if is_instance_valid(_cached_teammate):
+		return _cached_teammate
+
 	for player_variant in get_tree().get_nodes_in_group("player"):
 		if not (player_variant is Node):
 			continue
 		var player: Node = player_variant
 		if player == local_player:
 			continue
+		_cached_teammate = player
 		return player
 	return null
 
