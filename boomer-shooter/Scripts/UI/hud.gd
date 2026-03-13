@@ -14,6 +14,7 @@ const EQUIPMENT_LABELS: Dictionary = {
 	&"legs": "Legs",
 	&"feet": "Feet"
 }
+const WEAPON_ICON_PATH := "res://Assets/Icons/Weapons/icon_%s.png"
 const PANEL_DESIRED_SIZE := Vector2(980, 560)
 const WEAPON_SLOT_UI_COUNT := 4
 const STORAGE_SLOT_UI_COUNT := 10
@@ -391,6 +392,10 @@ func _make_slot_button(slot_ref: SlotRef) -> InventorySlotButton:
 		button.custom_minimum_size = Vector2(60, 60)
 		button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	elif slot_ref.section == &"weapons":
+		button.custom_minimum_size = Vector2(80, 80)
+		button.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		button.expand_icon = true
 	button.slot_pressed.connect(_on_slot_button_pressed)
 	button.slot_double_clicked.connect(_on_slot_button_double_clicked)
 	button.slot_drop_requested.connect(_on_slot_drop_requested)
@@ -455,9 +460,16 @@ func _refresh_inventory_ui() -> void:
 	for key in _slot_buttons.keys():
 		var button: InventorySlotButton = _slot_buttons[key]
 		var slot_ref: SlotRef = _slot_button_refs.get(key)
-		button.text = _slot_button_text(slot_ref)
-
 		var item_snapshot = _get_slot_item_snapshot(slot_ref)
+
+		if slot_ref.section == &"weapons":
+			var icon_tex := _get_weapon_icon(item_snapshot)
+			button.icon = icon_tex
+			button.text = "" if icon_tex != null else _slot_button_text(slot_ref)
+		else:
+			button.icon = null
+			button.text = _slot_button_text(slot_ref)
+
 		button.set_has_item(item_snapshot != null)
 		if item_snapshot != null:
 			button.tooltip_text = String(item_snapshot.get("display_name", "Item"))
@@ -465,6 +477,17 @@ func _refresh_inventory_ui() -> void:
 			button.tooltip_text = "Empty slot"
 
 		button.modulate = Color(1, 0.95, 0.55, 1) if _selected_slot != null and _selected_slot.is_equal(slot_ref) else Color(1, 1, 1, 1)
+
+func _get_weapon_icon(item_snapshot: Variant) -> Texture2D:
+	if item_snapshot == null:
+		return null
+	var weapon_key := String(item_snapshot.get("weapon_key", ""))
+	if weapon_key.is_empty():
+		return null
+	var path := WEAPON_ICON_PATH % weapon_key
+	if not ResourceLoader.exists(path):
+		return null
+	return load(path)
 
 func _slot_button_text(slot_ref: SlotRef) -> String:
 	var item_snapshot = _get_slot_item_snapshot(slot_ref)

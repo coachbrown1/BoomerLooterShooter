@@ -36,10 +36,17 @@ func _get_drag_data(_at_position: Vector2) -> Variant:
 	if slot_ref == null or not has_item:
 		return null
 
-	var preview := Label.new()
-	preview.text = text
-	preview.add_theme_font_size_override("font_size", 14)
-	set_drag_preview(preview)
+	if icon != null:
+		var preview := TextureRect.new()
+		preview.texture = icon
+		preview.custom_minimum_size = Vector2(64, 64)
+		preview.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		set_drag_preview(preview)
+	else:
+		var preview := Label.new()
+		preview.text = text
+		preview.add_theme_font_size_override("font_size", 14)
+		set_drag_preview(preview)
 
 	return {
 		"type": "inventory_slot",
