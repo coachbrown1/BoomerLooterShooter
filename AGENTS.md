@@ -57,3 +57,7 @@ This file is the canonical instruction set for any AI agent working in this repo
 - Match existing style and patterns before introducing new ones.
 - Do not broaden task scope without a clear reason tied to correctness, safety, or requested outcomes.
 - If repo instructions conflict, follow the more specific instruction for the files or subsystem you are changing.
+
+## 7. Multiplayer TODOs
+
+- [ ] Fix client-side enemy animation playback in co-op. Current state: enemy movement/state replication works, but clients still intermittently see static/non-updating enemy visuals.

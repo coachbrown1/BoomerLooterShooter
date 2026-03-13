@@ -12,6 +12,7 @@ class_name Projectile
 var direction: Vector3 = Vector3.ZERO
 var velocity: Vector3 = Vector3.ZERO
 var shooter: Node3D = null
+var network_visual_only: bool = false
 var _did_impact: bool = false
 
 const EXPLOSION_SCENE = preload("res://Scenes/Effects/fireball_explosion.tscn")
@@ -51,16 +52,24 @@ func _physics_process(delta: float) -> void:
 func _trigger_impact() -> void:
 	if _did_impact: return
 	_did_impact = true
+	# Stop participating in area/body events before freeing to avoid Jolt flush warnings.
+	set_deferred("monitoring", false)
+	set_deferred("monitorable", false)
+	set_deferred("collision_layer", 0)
+	set_deferred("collision_mask", 0)
 	
 	if explode_on_impact:
 		_explode()
-	queue_free()
+	call_deferred("queue_free")
 
 func _explode() -> void:
 	# Visual Explosion
 	var expl = EXPLOSION_SCENE.instantiate()
 	get_tree().current_scene.add_child(expl)
 	expl.global_position = global_position
+
+	if network_visual_only:
+		return
 	
 	# Area damage logic
 	var space_state = get_world_3d().direct_space_state
@@ -109,6 +118,10 @@ func _on_area_entered(area: Area3D) -> void:
 	if shooter and (area == shooter or shooter.is_ancestor_of(area)):
 		return
 
+	if network_visual_only:
+		_trigger_impact()
+		return
+
 	if area is HitboxComponent or area.has_method("take_damage"):
 		# Apply direct hit damage
 		if area.has_method("take_damage"):
@@ -121,6 +134,10 @@ func _on_area_entered(area: Area3D) -> void:
 func _on_body_entered(body: Node3D) -> void:
 	if _did_impact: return
 	if shooter and body == shooter:
+		return
+
+	if network_visual_only:
+		_trigger_impact()
 		return
 
 	if body.is_in_group("player"):
