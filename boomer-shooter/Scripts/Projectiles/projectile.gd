@@ -59,7 +59,7 @@ func _trigger_impact() -> void:
 	set_deferred("collision_mask", 0)
 	
 	if explode_on_impact:
-		_explode()
+		call_deferred("_explode")
 	call_deferred("queue_free")
 
 func _explode() -> void:
@@ -99,7 +99,10 @@ func _explode() -> void:
 		# Find the actual entity to damage
 		var target_entity: Node = null
 		if collider is HitboxComponent:
-			target_entity = collider # Can take damage directly
+			# Resolve to parent so CharacterBody3D + HitboxComponent hits for the same
+			# enemy both map to the same node, preventing double-damage from one explosion.
+			var parent = collider.get_parent()
+			target_entity = parent if (parent and parent.has_method("take_damage")) else collider
 		elif collider.has_method("take_damage"):
 			target_entity = collider
 		elif collider.get_parent() and collider.get_parent().has_method("take_damage"):
