@@ -12,7 +12,6 @@ var _slot_weapons: Array = []
 var _weapon_key_to_weapon: Dictionary = {}
 
 var _cached_huds: Array[Node] = []
-var _huds_cached: bool = false
 var _input_enabled: bool = true
 var _viewmodel_enabled: bool = true
 
@@ -118,12 +117,18 @@ func _update_hud() -> void:
 	ammo_changed.emit(current_weapon.current_mag, get_ammo(current_weapon.ammo_type), current_weapon.ammo_type)
 
 	# Optional: Directly update HUD group
-	if not _huds_cached:
+	var huds_valid = _cached_huds.size() > 0
+	if huds_valid:
+		for hud in _cached_huds:
+			if not is_instance_valid(hud):
+				huds_valid = false
+				break
+
+	if not huds_valid:
 		_cached_huds = get_tree().get_nodes_in_group("hud")
-		_huds_cached = true
 
 	for hud in _cached_huds:
-		if hud.has_method("update_ammo_display"):
+		if is_instance_valid(hud) and hud.has_method("update_ammo_display"):
 			hud.update_ammo_display(
 				current_weapon.current_mag,
 				current_weapon.mag_size,

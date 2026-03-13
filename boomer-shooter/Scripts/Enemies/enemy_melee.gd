@@ -1,9 +1,6 @@
 extends EnemyBase
 class_name EnemyMelee
 
-func _process_windup_effect() -> void:
-	pass
-
 func _execute_attack() -> void:
 	# End of windup: Check if player is still in range
 	if player:
