@@ -566,6 +566,7 @@ func _build_leave_session_ui() -> void:
 
 	var leave_button := Button.new()
 	leave_button.text = "Leave Session"
+	leave_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	leave_button.anchor_left = 1.0
 	leave_button.anchor_right = 1.0
 	leave_button.anchor_top = 0.0
