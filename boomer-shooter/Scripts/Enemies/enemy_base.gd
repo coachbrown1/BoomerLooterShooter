@@ -222,6 +222,10 @@ func _update_proxy_visual_state() -> void:
 	if billboard_sprite == null:
 		return
 	if _network_proxy_mode:
+		if current_state == State.CHASE or current_state == State.IDLE:
+			if not billboard_sprite.animate:
+				billboard_sprite.animate = true
+			return
 		var frame_limit := maxi(0, billboard_sprite.hframes - 1)
 		billboard_sprite.animate = false
 		billboard_sprite.frame = clampi(_proxy_visual_frame, 0, frame_limit)

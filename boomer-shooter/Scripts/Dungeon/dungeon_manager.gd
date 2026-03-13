@@ -361,6 +361,13 @@ func _on_exit_entered(body: Node3D) -> void:
 	if body.is_in_group("player"):
 		if _session_multiplayer and not _session_host:
 			return
+
+		# Emit global event for floor completion before advancing
+		if has_node("/root/GlobalEventBus"):
+			var event_bus = get_node("/root/GlobalEventBus")
+			if event_bus.has_signal("floor_completed"):
+				event_bus.emit_signal("floor_completed", floor_number)
+
 		floor_number += 1
 		print("Descending to floor %d..." % floor_number)
 		generate_floor(floor_number)
@@ -918,16 +925,17 @@ func _find_interaction_target_for_player(interactor: Node3D) -> Node:
 func _find_door_by_position(world_pos: Vector3, max_distance: float = 4.0) -> DungeonDoor:
 	var closest: DungeonDoor = null
 	var closest_distance := max_distance
+	var closest_dist_sq := closest_distance * closest_distance
 	for node_variant in get_tree().get_nodes_in_group("dungeon_door"):
 		if not (node_variant is DungeonDoor):
 			continue
 		var door: DungeonDoor = node_variant
 		if not is_instance_valid(door):
 			continue
-		var distance := door.global_position.distance_to(world_pos)
-		if distance <= closest_distance:
+		var dist_sq := door.global_position.distance_squared_to(world_pos)
+		if dist_sq <= closest_dist_sq:
 			closest = door
-			closest_distance = distance
+			closest_dist_sq = dist_sq
 	return closest
 
 func _add_chest_viewer(chest_path: String, peer_id: int) -> void:
@@ -981,16 +989,17 @@ func _remove_peer_from_chest_views(peer_id: int) -> void:
 func _find_chest_by_position(world_pos: Vector3, max_distance: float = 5.0) -> InteractableChest:
 	var closest: InteractableChest = null
 	var closest_distance := max_distance
+	var closest_dist_sq := closest_distance * closest_distance
 	for node_variant in get_tree().get_nodes_in_group("interactable_chest"):
 		if not (node_variant is InteractableChest):
 			continue
 		var chest: InteractableChest = node_variant
 		if not is_instance_valid(chest):
 			continue
-		var distance := chest.global_position.distance_to(world_pos)
-		if distance <= closest_distance:
+		var dist_sq := chest.global_position.distance_squared_to(world_pos)
+		if dist_sq <= closest_dist_sq:
 			closest = chest
-			closest_distance = distance
+			closest_dist_sq = dist_sq
 	return closest
 
 func _get_local_player_node() -> Node3D:
