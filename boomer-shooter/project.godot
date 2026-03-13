@@ -11,14 +11,19 @@ config_version=5
 [application]
 
 config/name="BoomerShooter"
-run/main_scene="res://Scenes/World/dungeon.tscn"
+run/main_scene="res://Scenes/System/bootstrap.tscn"
 config/features=PackedStringArray("4.6", "Mobile")
 config/icon="res://icon.svg"
 
+[autoload]
+
+NetworkSession="*res://Scripts/Networking/network_session.gd"
+NetSession="*res://Scripts/Networking/network_session.gd"
+
 [display]
 
-window/size/viewport_width=1920
-window/size/viewport_height=1080
+window/size/viewport_width=1280
+window/size/viewport_height=720
 window/stretch/mode="canvas_items"
 
 [editor_plugins]

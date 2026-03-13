@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://Scenes/Projectiles/arrow.tscn" id="5_arrow"]
 [ext_resource type="Material" uid="uid://d1g4a3h8j6p2" path="res://Materials/weapon_outline_material.tres" id="3_mat"]
 [ext_resource type="Texture2D" uid="uid://flash_sheet_001" path="res://Assets/Weapons/muzzle_flash_sheet.png" id="4_flash"]
+[ext_resource type="Texture2D" path="res://Assets/Icons/Weapons/icon_crossbow.png" id="6_icon"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_muzzle"]
 radius = 0.04
@@ -32,6 +33,7 @@ albedo_color = Color(1, 0.9, 0.5, 0.8)
 [node name="Weapon" type="Node3D"]
 script = ExtResource("1_xxx")
 weapon_name = "Crossbow"
+weapon_icon = ExtResource("6_icon")
 damage = 40
 fire_rate = 1.0
 ammo_type = "arrows"

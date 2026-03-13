@@ -1,0 +1,75 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Networking/network_bootstrap.gd" id="1_boot"]
+
+[node name="Bootstrap" type="Node"]
+script = ExtResource("1_boot")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="CenterContainer" type="CenterContainer" parent="CanvasLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="CanvasLayer/CenterContainer"]
+custom_minimum_size = Vector2(460, 300)
+
+[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/CenterContainer/PanelContainer"]
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer"]
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+text = "BoomerShooter Co-op"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 28
+
+[node name="Hint" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+text = "Use single-player, host, or join by IP."
+horizontal_alignment = 1
+
+[node name="IpInput" type="LineEdit" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+placeholder_text = "Host IP (example: 192.168.1.12)"
+text = "127.0.0.1"
+
+[node name="PortInput" type="LineEdit" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+placeholder_text = "Port"
+text = "7000"
+
+[node name="Buttons" type="HBoxContainer" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="SingleButton" type="Button" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons"]
+text = "Single Player"
+
+[node name="HostButton" type="Button" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons"]
+text = "Host"
+
+[node name="JoinButton" type="Button" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons"]
+text = "Join"
+
+[node name="StartButton" type="Button" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons"]
+text = "Start Game"
+visible = false
+
+[node name="LeaveButton" type="Button" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons"]
+text = "Leave"
+visible = false
+
+[node name="StatusLabel" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+text = "Ready"
+horizontal_alignment = 1
+
+[connection signal="pressed" from="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/SingleButton" to="." method="_on_single_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/HostButton" to="." method="_on_host_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/JoinButton" to="." method="_on_join_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/StartButton" to="." method="_on_start_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/LeaveButton" to="." method="_on_leave_button_pressed"]

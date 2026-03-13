@@ -122,7 +122,7 @@ func set_weapon_slot_active(index: int) -> void:
 
 func set_inventory_open(value: bool) -> void:
 	if not value and _active_chest != null:
-		_commit_and_clear_active_chest()
+		_commit_and_clear_active_chest(_should_close_chest_visual_on_inventory_close())
 		_emit_inventory_changed()
 
 	if is_open == value:
@@ -152,6 +152,11 @@ func get_active_chest_name() -> String:
 	if _active_chest == null:
 		return ""
 	return _active_chest.chest_name
+
+func get_active_chest_path() -> String:
+	if _active_chest == null:
+		return ""
+	return String(_active_chest.get_path())
 
 func _is_valid_slot(slot_ref: SlotRef) -> bool:
 	if slot_ref == null:
@@ -205,13 +210,20 @@ func _set_item(slot_ref: SlotRef, item: InventoryItemData) -> void:
 		&"chest":
 			chest_storage[slot_ref.index] = item
 
-func _commit_and_clear_active_chest() -> void:
+func _commit_and_clear_active_chest(close_visual: bool = true) -> void:
 	if _active_chest == null:
 		return
 	_active_chest.set_storage_items(chest_storage)
-	_active_chest.close_chest()
+	if close_visual:
+		_active_chest.close_chest()
 	_active_chest = null
 	chest_storage.clear()
+
+func _should_close_chest_visual_on_inventory_close() -> bool:
+	var session = get_node_or_null("/root/NetworkSession")
+	if session == null:
+		return true
+	return not bool(session.call("is_multiplayer_active"))
 
 func _emit_inventory_changed() -> void:
 	inventory_changed.emit(get_slot_snapshot())

@@ -8,6 +8,7 @@ class_name DungeonDoor
 @onready var door_mesh: MeshInstance3D = $Hinge/DoorMesh
 
 func _ready() -> void:
+	add_to_group("dungeon_door")
 	hinge.rotation_degrees.y = 90.0 if is_open else 0.0
 	collision_shape.disabled = is_open
 

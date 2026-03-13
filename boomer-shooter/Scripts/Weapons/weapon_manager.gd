@@ -13,6 +13,8 @@ var _weapon_key_to_weapon: Dictionary = {}
 
 var _cached_huds: Array[Node] = []
 var _huds_cached: bool = false
+var _input_enabled: bool = true
+var _viewmodel_enabled: bool = true
 
 # Inventory of ammo
 # "light" is bullets
@@ -72,7 +74,7 @@ func prev_weapon() -> void:
 	_cycle_weapon(-1)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if is_input_blocked():
+	if is_input_blocked() or not _input_enabled:
 		return
 	if not current_weapon or current_weapon.is_reloading:
 		return
@@ -85,6 +87,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if InputMap.has_action("reload") and event.is_action_pressed("reload"):
 		if current_weapon and current_weapon.can_reload():
+			if _is_network_multiplayer_active() and not _is_network_host():
+				var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
+				if dungeon_manager != null and dungeon_manager.has_method("request_weapon_reload"):
+					dungeon_manager.call("request_weapon_reload", _get_owner_peer_id(), current_weapon_index)
 			current_weapon.reload()
 
 func get_ammo(type: String) -> int:
@@ -105,7 +111,10 @@ func _on_weapon_fired() -> void:
 	_update_hud()
 
 func _update_hud() -> void:
-	if not current_weapon: return
+	if not current_weapon:
+		return
+	if not _is_local_owner():
+		return
 	ammo_changed.emit(current_weapon.current_mag, get_ammo(current_weapon.ammo_type), current_weapon.ammo_type)
 
 	# Optional: Directly update HUD group
@@ -148,6 +157,40 @@ func get_weapon_key_for_weapon(weapon: Weapon) -> String:
 
 func is_input_blocked() -> bool:
 	return inventory_system != null and inventory_system.is_inventory_open()
+
+func set_input_enabled(enabled: bool) -> void:
+	_input_enabled = enabled
+
+func is_input_enabled() -> bool:
+	return _input_enabled
+
+func set_viewmodel_enabled(enabled: bool) -> void:
+	_viewmodel_enabled = enabled
+	for weapon in weapons:
+		if weapon == null:
+			continue
+		weapon.set_viewmodel_enabled(enabled)
+
+func get_current_weapon_slot() -> int:
+	return current_weapon_index
+
+func get_current_weapon() -> Weapon:
+	return current_weapon
+
+func get_ammo_snapshot() -> Dictionary:
+	return ammo_inventory.duplicate(true)
+
+func apply_authoritative_weapon_state(slot_index: int, current_mag_value: int, ammo_snapshot: Dictionary) -> void:
+	for ammo_key in ammo_snapshot.keys():
+		ammo_inventory[ammo_key] = int(ammo_snapshot[ammo_key])
+
+	if slot_index >= 0:
+		switch_to_weapon(slot_index)
+
+	if current_weapon != null:
+		current_weapon.current_mag = max(0, min(current_weapon.mag_size, current_mag_value))
+
+	_update_hud()
 
 func _on_weapon_slots_changed(weapon_items: Array) -> void:
 	_slot_weapons.resize(4)
@@ -231,3 +274,34 @@ func _find_slot_index_for_weapon(target_weapon: Weapon) -> int:
 
 func _normalize_weapon_name(raw_name: String) -> String:
 	return raw_name.strip_edges().to_lower().replace(" ", "_")
+
+func _get_owner_peer_id() -> int:
+	if player != null and player.has_method("get_network_peer_id"):
+		return int(player.call("get_network_peer_id"))
+	return _get_network_local_peer_id()
+
+func _is_local_owner() -> bool:
+	if player != null and player.has_method("is_local_controlled"):
+		return bool(player.call("is_local_controlled"))
+	return true
+
+func _get_network_session():
+	return get_node_or_null("/root/NetworkSession")
+
+func _is_network_multiplayer_active() -> bool:
+	var session = _get_network_session()
+	if session == null:
+		return false
+	return bool(session.call("is_multiplayer_active"))
+
+func _is_network_host() -> bool:
+	var session = _get_network_session()
+	if session == null:
+		return true
+	return bool(session.call("is_host"))
+
+func _get_network_local_peer_id() -> int:
+	var session = _get_network_session()
+	if session == null:
+		return 1
+	return int(session.call("get_local_peer_id"))

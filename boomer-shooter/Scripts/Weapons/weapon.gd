@@ -5,6 +5,7 @@ class_name Weapon
 @export var weapon_name: String = "Weapon"
 @export var damage: int = 15
 @export var fire_rate: float = 0.15
+@export var weapon_icon: Texture2D = null
 
 @export_group("Ammo & Reload")
 @export var ammo_type: String = "light" # "light", "shells", "energy", "arrows", "none"
@@ -47,6 +48,7 @@ var _canvas_layer: CanvasLayer
 var _viewmodel_2d: Sprite2D
 var _emissive_2d: Sprite2D
 var _muzzle_2d: Sprite2D
+var _viewmodel_enabled: bool = true
 
 signal fired
 signal hit_target(target, dmg)
@@ -151,7 +153,7 @@ func show_weapon() -> void:
 	set_process(true)
 	set_physics_process(true)
 	if _canvas_layer:
-		_canvas_layer.visible = true
+		_canvas_layer.visible = _viewmodel_enabled
 
 	# Reset animations and timers when drawn
 	can_fire = true
@@ -167,6 +169,11 @@ func hide_weapon() -> void:
 	if _canvas_layer:
 		_canvas_layer.visible = false
 	is_reloading = false
+
+func set_viewmodel_enabled(enabled: bool) -> void:
+	_viewmodel_enabled = enabled
+	if _canvas_layer:
+		_canvas_layer.visible = visible and _viewmodel_enabled
 
 func can_reload() -> bool:
 	if ammo_type == "none" or is_reloading or current_mag == mag_size:
@@ -212,6 +219,18 @@ func reload() -> void:
 			can_fire = true
 		)
 
+func perform_authoritative_reload() -> bool:
+	if not can_reload():
+		return false
+	is_reloading = false
+	var ammo_needed = mag_size - current_mag
+	var reserve = weapon_manager.get_ammo(ammo_type)
+	var ammo_to_take = min(ammo_needed, reserve)
+	weapon_manager.consume_ammo(ammo_type, ammo_to_take)
+	current_mag += ammo_to_take
+	can_fire = true
+	return true
+
 func _physics_process(delta: float) -> void:
 	if weapon_manager and weapon_manager.has_method("is_input_blocked") and weapon_manager.is_input_blocked():
 		return
@@ -223,14 +242,59 @@ func _physics_process(delta: float) -> void:
 			can_fire = true
 			fire_timer = 0.0
 
+	if weapon_manager and weapon_manager.has_method("is_input_enabled") and not weapon_manager.is_input_enabled():
+		return
+
 	if Input.is_action_pressed("shoot") and can_fire:
 		if current_mag <= 0 and ammo_type != "none":
 			if can_reload():
 				reload()
 		else:
-			fire()
+			if _should_request_host_fire():
+				_request_host_fire()
+			else:
+				fire()
 
 func fire() -> void:
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	if not cam:
+		return
+	_fire_with_aim(cam.global_position, -cam.global_transform.basis.z.normalized(), true, true, _get_player())
+
+func fire_authoritative_from_network(cam_origin: Vector3, cam_forward: Vector3, shooter_node: Node3D) -> bool:
+	if not can_fire:
+		return false
+	if ammo_type != "none" and current_mag <= 0:
+		return false
+	_fire_with_aim(cam_origin, cam_forward.normalized(), false, true, shooter_node)
+	return true
+
+func _request_host_fire() -> void:
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	if not cam:
+		return
+
+	var current_player := _get_player()
+	var player_peer_id := 1
+	if current_player != null and current_player.has_method("get_network_peer_id"):
+		player_peer_id = int(current_player.call("get_network_peer_id"))
+
+	var manager = get_tree().get_first_node_in_group("dungeon_manager")
+	if manager == null or not manager.has_method("request_weapon_fire"):
+		fire()
+		return
+
+	_fire_with_aim(cam.global_position, -cam.global_transform.basis.z.normalized(), true, false, current_player)
+	manager.call(
+		"request_weapon_fire",
+		player_peer_id,
+		weapon_manager.get_current_weapon_slot(),
+		cam.global_position,
+		-cam.global_transform.basis.z.normalized(),
+		int(Time.get_ticks_msec())
+	)
+
+func _fire_with_aim(cam_origin: Vector3, cam_forward: Vector3, play_local_feedback: bool, apply_damage: bool, shooter_override: Node3D) -> void:
 	can_fire = false
 
 	if ammo_type != "none":
@@ -238,70 +302,85 @@ func fire() -> void:
 
 	fired.emit()
 
-	# Recoil animation in 2D
+	var current_player: Node3D = shooter_override if shooter_override != null else _get_player()
+	var player_rid = RID()
+	if current_player:
+		player_rid = current_player.get_rid()
+
+	if play_local_feedback:
+		_play_local_feedback(current_player)
+
+	if not apply_damage:
+		_show_muzzle_flash()
+		return
+
+	if is_projectile and projectile_scene:
+		_fire_projectile(cam_origin, cam_forward, current_player)
+		_show_muzzle_flash()
+		return
+
+	var cam_basis := _basis_from_forward(cam_forward)
+
+	for _i in range(pellet_count):
+		var final_dir = cam_forward
+		if spread_angle > 0.0:
+			var spread_rad = deg_to_rad(spread_angle)
+			var right = cam_basis.x
+			var up = cam_basis.y
+			var dx = randf_range(-1.0, 1.0)
+			var dy = randf_range(-1.0, 1.0)
+			if dx * dx + dy * dy > 1.0:
+				var angle = atan2(dy, dx)
+				var rad = randf()
+				dx = cos(angle) * rad
+				dy = sin(angle) * rad
+			final_dir = (cam_forward + right * dx * spread_rad + up * dy * spread_rad).normalized()
+		_fire_hitscan(cam_origin, final_dir, player_rid)
+	_show_muzzle_flash()
+
+func _basis_from_forward(forward: Vector3) -> Basis:
+	var forward_norm: Vector3 = forward.normalized()
+	if forward_norm.length_squared() < 0.0001:
+		return Basis.IDENTITY
+
+	var up_ref: Vector3 = Vector3.UP
+	if abs(forward_norm.dot(up_ref)) > 0.99:
+		up_ref = Vector3.RIGHT
+
+	var right: Vector3 = forward_norm.cross(up_ref).normalized()
+	var up: Vector3 = right.cross(forward_norm).normalized()
+	return Basis(right, up, -forward_norm)
+
+func _play_local_feedback(shooter_node: Node3D) -> void:
 	if _viewmodel_2d:
 		_viewmodel_2d.frame = 1
-		if _emissive_2d: _emissive_2d.frame = 1
-		
+		if _emissive_2d:
+			_emissive_2d.frame = 1
+
 		var tween = create_tween()
 		var target_y = _viewmodel_2d.position.y + 20
 		var orig_y = _viewmodel_2d.position.y
 		tween.tween_property(_viewmodel_2d, "position:y", target_y, 0.05)
 		tween.tween_property(_viewmodel_2d, "position:y", orig_y, 0.1)
-		tween.finished.connect(func(): 
-			if _viewmodel_2d: 
+		tween.finished.connect(func():
+			if _viewmodel_2d:
 				_viewmodel_2d.frame = 0
-				if _emissive_2d: _emissive_2d.frame = 0
+				if _emissive_2d:
+					_emissive_2d.frame = 0
 		)
 
 	if ejects_shells:
 		_eject_shell()
-	
-	# FOV Kick & Pitch/Yaw Recoil
-	var player = _get_player()
-	if player:
-		if player.has_method("apply_fov_kick"):
-			player.apply_fov_kick(fov_kick_amount)
-		if player.has_method("add_camera_recoil"):
-			# Add some randomness to yaw
+
+	var shooter = shooter_node
+	if shooter == null:
+		shooter = _get_player()
+	if shooter:
+		if shooter.has_method("apply_fov_kick"):
+			shooter.apply_fov_kick(fov_kick_amount)
+		if shooter.has_method("add_camera_recoil"):
 			var r_yaw = recoil_yaw * randf_range(-1.0, 1.0)
-			player.add_camera_recoil(recoil_pitch, r_yaw)
-
-	var cam: Camera3D = get_viewport().get_camera_3d()
-	if not cam: return
-
-	var cam_origin = cam.global_position
-	var cam_forward = -cam.global_transform.basis.z.normalized()
-
-	var current_player = _get_player()
-	var player_rid = RID()
-	if current_player:
-		player_rid = current_player.get_rid()
-
-	if is_projectile and projectile_scene:
-		_fire_projectile(cam_origin, cam_forward, current_player)
-		_show_muzzle_flash()
-	else:
-		for i in range(pellet_count):
-			var final_dir = cam_forward
-			if spread_angle > 0.0:
-				var spread_rad = deg_to_rad(spread_angle)
-				var right = cam.global_transform.basis.x
-				var up = cam.global_transform.basis.y
-				var dx = randf_range(-1.0, 1.0)
-				var dy = randf_range(-1.0, 1.0)
-				# Normalize circular spread
-				if dx*dx + dy*dy > 1.0:
-					var angle = atan2(dy, dx)
-					var rad = randf()
-					dx = cos(angle) * rad
-					dy = sin(angle) * rad
-				
-				final_dir = (cam_forward + right * dx * spread_rad + up * dy * spread_rad).normalized()
-				
-			_fire_hitscan(cam_origin, final_dir, player_rid)
-			
-		_show_muzzle_flash()
+			shooter.add_camera_recoil(recoil_pitch, r_yaw)
 
 func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3, shooter_node: Node) -> void:
 	var proj = projectile_scene.instantiate() as Node3D
@@ -327,6 +406,12 @@ func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3, shooter_node: N
 			proj.look_at(proj.global_position + cam_forward, Vector3.RIGHT)
 		else:
 			proj.look_at(proj.global_position + cam_forward, Vector3.UP)
+
+	# Host replicates projectile visuals to clients so they can see travel/explosions.
+	if _is_network_multiplayer_active() and _is_network_host():
+		var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
+		if dungeon_manager != null and dungeon_manager.has_method("broadcast_projectile_visual"):
+			dungeon_manager.call("broadcast_projectile_visual", projectile_scene.resource_path, cam_origin, cam_forward)
 
 func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3, player_rid: RID) -> void:
 	var space_state = get_world_3d().direct_space_state
@@ -406,6 +491,16 @@ func _place_decal(scene: PackedScene, pos: Vector3, normal: Vector3) -> void:
 	decal.global_transform.basis = Basis(x_axis, normal, z_axis)
 	decal.rotate_object_local(Vector3.UP, randf() * TAU)
 
+func _should_request_host_fire() -> bool:
+	if not _is_network_multiplayer_active() or _is_network_host():
+		return false
+	var shooter := _get_player()
+	if shooter == null:
+		return false
+	if shooter.has_method("is_local_controlled"):
+		return bool(shooter.call("is_local_controlled"))
+	return true
+
 func _get_player() -> CharacterBody3D:
 	if weapon_manager and is_instance_valid(weapon_manager.player):
 		return weapon_manager.player
@@ -418,9 +513,14 @@ func _get_player() -> CharacterBody3D:
 func _find_hitbox(node: Node) -> HitboxComponent:
 	var current = node
 	while current != null and current != get_tree().root:
+		if current.has_method("is_network_proxy_mode") and bool(current.call("is_network_proxy_mode")):
+			return null
 		if current is HitboxComponent: return current
 		for child in current.get_children():
-			if child is HitboxComponent: return child
+			if child is HitboxComponent:
+				if current.has_method("is_network_proxy_mode") and bool(current.call("is_network_proxy_mode")):
+					return null
+				return child
 		current = current.get_parent()
 	return null
 
@@ -471,3 +571,18 @@ func _show_tracer(from: Vector3, to: Vector3) -> void:
 	await get_tree().create_timer(0.05).timeout
 	if is_instance_valid(temp_tracer):
 		temp_tracer.queue_free()
+
+func _get_network_session():
+	return get_node_or_null("/root/NetworkSession")
+
+func _is_network_multiplayer_active() -> bool:
+	var session = _get_network_session()
+	if session == null:
+		return false
+	return bool(session.call("is_multiplayer_active"))
+
+func _is_network_host() -> bool:
+	var session = _get_network_session()
+	if session == null:
+		return true
+	return bool(session.call("is_host"))

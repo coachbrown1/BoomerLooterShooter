@@ -14,24 +14,21 @@ var _cached_inventory_system: InventorySystem = null
 func _ready() -> void:
 	# Add to interactable group if not already, useful for raycasts
 	add_to_group("interactable")
+	add_to_group("interactable_chest")
 	_stored_items.resize(max(slot_count, 1))
 	for i in range(_stored_items.size()):
 		_stored_items[i] = null
 
-func interact() -> void:
-	if not is_open:
-		is_open = true
-		_kill_lid_tween_if_active()
-		_lid_tween = create_tween()
-		_lid_tween.set_trans(Tween.TRANS_SINE)
-		_lid_tween.set_ease(Tween.EASE_IN_OUT)
-		# Rotates lid up to open
-		_lid_tween.tween_property(lid_hinge, "rotation_degrees:x", -110.0, 0.8)
+func interact(interactor: Node = null) -> void:
+	_open_lid()
 
-	var inventory_system := _get_player_inventory_system()
+	var inventory_system := _get_player_inventory_system(interactor)
 	if inventory_system:
 		inventory_system.open_chest(self)
 		print("Chest opened: ", chest_name)
+
+func open_visual_only() -> void:
+	_open_lid()
 
 func get_storage_copy() -> Array:
 	return _stored_items.duplicate()
@@ -51,7 +48,23 @@ func close_chest() -> void:
 	_lid_tween.set_ease(Tween.EASE_IN_OUT)
 	_lid_tween.tween_property(lid_hinge, "rotation_degrees:x", 0.0, 0.5)
 
-func _get_player_inventory_system() -> InventorySystem:
+func _open_lid() -> void:
+	if is_open:
+		return
+	is_open = true
+	_kill_lid_tween_if_active()
+	_lid_tween = create_tween()
+	_lid_tween.set_trans(Tween.TRANS_SINE)
+	_lid_tween.set_ease(Tween.EASE_IN_OUT)
+	# Rotates lid up to open
+	_lid_tween.tween_property(lid_hinge, "rotation_degrees:x", -110.0, 0.8)
+
+func _get_player_inventory_system(interactor: Node = null) -> InventorySystem:
+	if interactor != null and interactor.has_method("get"):
+		var candidate: Variant = interactor.get("inventory_system")
+		if candidate is InventorySystem:
+			return candidate
+
 	if not is_instance_valid(_cached_inventory_system):
 		var players := get_tree().get_nodes_in_group("player")
 		if not players.is_empty():

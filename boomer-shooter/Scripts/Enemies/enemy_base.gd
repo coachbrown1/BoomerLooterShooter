@@ -27,6 +27,11 @@ var _flash_active: bool = false
 var _hitstop_active: bool = false
 var _attack_timer: float = 0.0
 var actual_height: float = 1.0
+var _network_proxy_mode: bool = false
+var _proxy_target_position: Vector3 = Vector3.ZERO
+var _proxy_target_velocity: Vector3 = Vector3.ZERO
+var _has_proxy_snapshot: bool = false
+var _proxy_visual_frame: int = 0
 
 signal enemy_died
 
@@ -40,9 +45,7 @@ func _ready() -> void:
 
 	health_component.died.connect(_on_died)
 	health_component.health_changed.connect(_on_health_changed)
-	var players = get_tree().get_nodes_in_group("player")
-	if players.size() > 0:
-		player = players[0]
+	_refresh_target_player()
 	_dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
 	
 	# Align sprite to ground and adjust collision
@@ -76,10 +79,15 @@ func _ready() -> void:
 				hb_col.position.y = actual_h / 2.0
 
 func take_damage(amount: int) -> void:
+	if _network_proxy_mode:
+		return
 	if health_component:
 		health_component.take_damage(amount)
 
 func _physics_process(delta: float) -> void:
+	if _network_proxy_mode:
+		_apply_proxy_motion(delta)
+		return
 	if current_state == State.DEAD or _hitstop_active:
 		return
 
@@ -90,6 +98,7 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 func _process_state(delta: float) -> void:
+	_refresh_target_player()
 	if not player:
 		return
 
@@ -154,23 +163,142 @@ func _process_state(delta: float) -> void:
 				_attack_timer = 0.0
 				current_state = State.CHASE if player_in_same_room else State.IDLE
 
-func _is_player_in_same_room() -> bool:
-	if not is_instance_valid(player):
-		return false
+func set_network_proxy_mode(enabled: bool) -> void:
+	_network_proxy_mode = enabled
+	if hitbox_component:
+		hitbox_component.monitoring = not enabled
+		hitbox_component.monitorable = not enabled
+		hitbox_component.collision_layer = 0 if enabled else 4
+		hitbox_component.collision_mask = 0 if enabled else 2
+	if enabled:
+		velocity = Vector3.ZERO
+		if billboard_sprite:
+			# Proxy visuals are driven by host snapshots to avoid client-side drift.
+			billboard_sprite.animate = false
 
+func is_network_proxy_mode() -> bool:
+	return _network_proxy_mode
+
+func get_network_state_snapshot() -> Dictionary:
+	var current_health := 0
+	if health_component:
+		current_health = health_component.current_health
+	var anim_frame := 0
+	if billboard_sprite:
+		anim_frame = billboard_sprite.frame
+	return {
+		"position": global_position,
+		"velocity": velocity,
+		"state": int(current_state),
+		"health": current_health,
+		"anim_frame": anim_frame,
+	}
+
+func apply_network_state_snapshot(snapshot: Dictionary) -> void:
+	if snapshot.is_empty():
+		return
+	_proxy_target_position = snapshot.get("position", global_position)
+	_proxy_target_velocity = snapshot.get("velocity", velocity)
+	current_state = int(snapshot.get("state", int(current_state)))
+	if health_component:
+		health_component.current_health = int(snapshot.get("health", health_component.current_health))
+	_proxy_visual_frame = int(snapshot.get("anim_frame", _proxy_visual_frame))
+	_has_proxy_snapshot = true
+
+func _apply_proxy_motion(delta: float) -> void:
+	if not _has_proxy_snapshot:
+		return
+	global_position = global_position.lerp(_proxy_target_position, min(1.0, delta * 12.0))
+	velocity = velocity.lerp(_proxy_target_velocity, min(1.0, delta * 10.0))
+	if velocity.length_squared() > 0.001:
+		var look_dir := velocity.normalized()
+		var up_axis := Vector3.UP
+		if abs(look_dir.dot(up_axis)) > 0.99:
+			up_axis = Vector3.RIGHT
+		look_at(global_position + look_dir, up_axis)
+	_update_proxy_visual_state()
+
+func _update_proxy_visual_state() -> void:
+	if billboard_sprite == null:
+		return
+	if _network_proxy_mode:
+		var frame_limit := maxi(0, billboard_sprite.hframes - 1)
+		billboard_sprite.animate = false
+		billboard_sprite.frame = clampi(_proxy_visual_frame, 0, frame_limit)
+		return
+	if current_state == State.DEAD:
+		billboard_sprite.animate = false
+		billboard_sprite.frame = maxi(0, billboard_sprite.hframes - 1)
+		return
+	if current_state == State.CHASE:
+		if not billboard_sprite.animate:
+			billboard_sprite.animate = true
+		return
+	if current_state == State.WINDUP:
+		billboard_sprite.animate = false
+		if billboard_sprite.hframes == 8:
+			billboard_sprite.frame = 2
+		elif billboard_sprite.hframes == 5:
+			billboard_sprite.frame = 2
+		else:
+			billboard_sprite.frame = mini(2, maxi(0, billboard_sprite.hframes - 1))
+		return
+	if current_state == State.ATTACK:
+		billboard_sprite.animate = false
+		billboard_sprite.frame = mini(3, maxi(0, billboard_sprite.hframes - 1))
+		return
+	if billboard_sprite.animate:
+		billboard_sprite.animate = false
+	if billboard_sprite.hframes > 0:
+		billboard_sprite.frame = 0
+
+func _refresh_target_player() -> void:
+	var players := get_tree().get_nodes_in_group("player")
+	if players.is_empty():
+		player = null
+		return
+
+	var nearest_same_room: Node3D = null
+	var nearest_same_room_dist := INF
+	var nearest_any: Node3D = null
+	var nearest_any_dist := INF
+
+	for candidate_variant in players:
+		if not (candidate_variant is Node3D):
+			continue
+		var candidate: Node3D = candidate_variant
+		if not is_instance_valid(candidate):
+			continue
+
+		var dist := global_position.distance_squared_to(candidate.global_position)
+		if dist < nearest_any_dist:
+			nearest_any_dist = dist
+			nearest_any = candidate
+
+		if _is_same_room_as(candidate) and dist < nearest_same_room_dist:
+			nearest_same_room_dist = dist
+			nearest_same_room = candidate
+
+	player = nearest_same_room if nearest_same_room != null else nearest_any
+
+func _is_same_room_as(target: Node3D) -> bool:
+	if target == null:
+		return false
 	if not is_instance_valid(_dungeon_manager):
 		_dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
-
 	if not is_instance_valid(_dungeon_manager):
 		return true
 	if not _dungeon_manager.has_method("get_room_id_for_world_position"):
 		return true
 
 	var enemy_room_id := int(_dungeon_manager.call("get_room_id_for_world_position", global_position))
-	var player_room_id := int(_dungeon_manager.call("get_room_id_for_world_position", player.global_position))
+	var player_room_id := int(_dungeon_manager.call("get_room_id_for_world_position", target.global_position))
 	if enemy_room_id < 0 or player_room_id < 0:
 		return false
 	return enemy_room_id == player_room_id
+
+func _is_player_in_same_room() -> bool:
+	return _is_same_room_as(player)
 
 func _move_towards_player() -> void:
 	nav_agent.target_position = player.global_position

@@ -18,6 +18,7 @@ const PANEL_DESIRED_SIZE := Vector2(980, 560)
 const WEAPON_SLOT_UI_COUNT := 4
 const STORAGE_SLOT_UI_COUNT := 10
 const CHEST_SLOT_UI_COUNT := 16
+const TEAMMATE_REFRESH_INTERVAL := 0.2
 
 var _inventory_system: InventorySystem = null
 var _inventory_panel: PanelContainer = null
@@ -29,14 +30,30 @@ var _slot_buttons: Dictionary = {}
 var _slot_button_refs: Dictionary = {}
 var _selected_slot: SlotRef = null
 var _latest_snapshot: Dictionary = {}
+var _teammate_health_label: Label = null
+var _session_role_label: Label = null
+var _teammate_refresh_timer: float = 0.0
 
 func _ready() -> void:
 	# Print out a message so the user knows about the debug key
 	print("Debug: Press 'G' to toggle Screen Effects (Saturation/Vignette)")
+	_ensure_session_role_label()
+	_ensure_teammate_health_label()
 	_configure_bottom_hud_layout()
 	if not get_viewport().size_changed.is_connected(_configure_bottom_hud_layout):
 		get_viewport().size_changed.connect(_configure_bottom_hud_layout)
 	_build_inventory_ui()
+	_update_session_role_label()
+	_update_teammate_health_label()
+	set_process(true)
+
+func _process(delta: float) -> void:
+	_teammate_refresh_timer += delta
+	if _teammate_refresh_timer < TEAMMATE_REFRESH_INTERVAL:
+		return
+	_teammate_refresh_timer = 0.0
+	_update_session_role_label()
+	_update_teammate_health_label()
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_G:
@@ -66,6 +83,108 @@ func update_ammo_display(current_mag: int, mag_size: int, reserve: int, is_infin
 			ammo_label.text = "Ammo: " + str(current_mag) + " / " + str(reserve)
 	_configure_bottom_hud_layout()
 
+func _ensure_teammate_health_label() -> void:
+	if _teammate_health_label != null:
+		return
+	if _bottom_row == null:
+		return
+
+	_teammate_health_label = Label.new()
+	_teammate_health_label.name = "TeammateHealthLabel"
+	_teammate_health_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_teammate_health_label.text = "Teammate: --"
+	_teammate_health_label.visible = false
+	if health_label and health_label.label_settings != null:
+		_teammate_health_label.label_settings = health_label.label_settings
+
+	var insert_index := _bottom_row.get_child_count()
+	if ammo_label != null:
+		insert_index = ammo_label.get_index()
+	_bottom_row.add_child(_teammate_health_label)
+	_bottom_row.move_child(_teammate_health_label, insert_index)
+
+func _update_teammate_health_label() -> void:
+	if _teammate_health_label == null:
+		return
+	if not _is_multiplayer_active():
+		_teammate_health_label.visible = false
+		return
+
+	var local_player = _find_local_player()
+	var teammate = _find_teammate(local_player)
+	if teammate == null:
+		_teammate_health_label.visible = false
+		return
+
+	var teammate_health_variant: Variant = teammate.get("current_health")
+	if teammate_health_variant == null:
+		_teammate_health_label.text = "Teammate: --"
+		_teammate_health_label.visible = true
+		return
+
+	var teammate_health: int = maxi(0, int(teammate_health_variant))
+	_teammate_health_label.text = "Teammate: %d" % teammate_health
+	_teammate_health_label.visible = true
+
+func _find_local_player() -> Node:
+	for player_variant in get_tree().get_nodes_in_group("player"):
+		if not (player_variant is Node):
+			continue
+		var player: Node = player_variant
+		if player.has_method("is_local_controlled") and bool(player.call("is_local_controlled")):
+			return player
+	return null
+
+func _find_teammate(local_player: Node) -> Node:
+	for player_variant in get_tree().get_nodes_in_group("player"):
+		if not (player_variant is Node):
+			continue
+		var player: Node = player_variant
+		if player == local_player:
+			continue
+		return player
+	return null
+
+func _ensure_session_role_label() -> void:
+	if _session_role_label != null:
+		return
+
+	_session_role_label = Label.new()
+	_session_role_label.name = "SessionRoleLabel"
+	_session_role_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_session_role_label.anchor_left = 0.0
+	_session_role_label.anchor_top = 0.0
+	_session_role_label.anchor_right = 0.0
+	_session_role_label.anchor_bottom = 0.0
+	_session_role_label.offset_left = 14.0
+	_session_role_label.offset_top = 10.0
+	_session_role_label.text = "Net: Single"
+	if health_label and health_label.label_settings != null:
+		_session_role_label.label_settings = health_label.label_settings
+		_session_role_label.add_theme_font_size_override("font_size", 22)
+	add_child(_session_role_label)
+
+func _update_session_role_label() -> void:
+	if _session_role_label == null:
+		return
+	var session = _get_network_session()
+	if session == null or not bool(session.call("is_multiplayer_active")):
+		_session_role_label.text = "Net: Single"
+		return
+	if bool(session.call("is_host")):
+		_session_role_label.text = "Net: Host"
+	else:
+		_session_role_label.text = "Net: Client"
+
+func _get_network_session():
+	return get_node_or_null("/root/NetworkSession")
+
+func _is_multiplayer_active() -> bool:
+	var session = _get_network_session()
+	if session == null:
+		return false
+	return bool(session.call("is_multiplayer_active"))
+
 func set_inventory_system(system: InventorySystem) -> void:
 	if _inventory_system:
 		if _inventory_system.inventory_changed.is_connected(_on_inventory_changed):
@@ -90,12 +209,20 @@ func _on_inventory_changed(snapshot: Dictionary) -> void:
 	_refresh_inventory_ui()
 
 func _on_inventory_opened_changed(is_open: bool) -> void:
+	if _inventory_panel == null:
+		_build_inventory_ui()
 	if _inventory_panel:
 		_inventory_panel.visible = is_open
+		if is_open:
+			_recenter_inventory_panel()
+			_inventory_panel.move_to_front()
 	if not is_open:
 		_selected_slot = null
 		_set_feedback("")
 		_refresh_inventory_ui()
+
+func set_inventory_panel_visible(is_open: bool) -> void:
+	_on_inventory_opened_changed(is_open)
 
 func _build_inventory_ui() -> void:
 	_inventory_panel = PanelContainer.new()

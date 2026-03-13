@@ -4,6 +4,7 @@
 [ext_resource type="Texture2D" path="res://Assets/Weapons/weapon_rifle_viewmodel.png" id="2_yyy"]
 [ext_resource type="Material" uid="uid://d1g4a3h8j6p2" path="res://Materials/weapon_outline_material.tres" id="3_mat"]
 [ext_resource type="Texture2D" uid="uid://flash_sheet_001" path="res://Assets/Weapons/muzzle_flash_sheet.png" id="4_flash"]
+[ext_resource type="Texture2D" path="res://Assets/Icons/Weapons/icon_rifle.png" id="5_icon"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_muzzle"]
 radius = 0.04
@@ -31,6 +32,7 @@ albedo_color = Color(1, 0.9, 0.5, 0.8)
 [node name="Weapon" type="Node3D"]
 script = ExtResource("1_xxx")
 weapon_name = "Rifle"
+weapon_icon = ExtResource("5_icon")
 ammo_type = "none"
 
 [node name="WeaponSprite" type="Sprite3D" parent="."]

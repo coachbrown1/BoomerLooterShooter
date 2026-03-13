@@ -15,10 +15,11 @@ func _init() -> void:
 	rng.randomize()
 
 # Populate a room with enemies — returns Array of instanced nodes (not yet added to tree)
-func populate_room(room: RoomData, floor_num: int, parent: Node3D, biome_data: Resource = null) -> void:
+func populate_room(room: RoomData, floor_num: int, parent: Node3D, biome_data: Resource = null) -> Array:
+	var spawned: Array = []
 	# Skip start room
 	if room.room_type == RoomData.RoomType.START:
-		return
+		return spawned
 
 	var room_area: float = room.grid_rect.size.x * room.grid_rect.size.y
 	var budget: float = THREAT_BASE + (floor_num * THREAT_DEPTH_SCALE) + (room_area * THREAT_SIZE_SCALE)
@@ -30,7 +31,7 @@ func populate_room(room: RoomData, floor_num: int, parent: Node3D, biome_data: R
 	var roster_scenes := _get_roster_scenes(biome_data)
 	if roster_scenes.is_empty():
 		push_error("EncounterSystem: No enemy_scenes resolved for biome '%s' on floor %d." % [room.biome, floor_num])
-		return
+		return spawned
 
 	var valid: Array = []
 	for packed_variant in roster_scenes:
@@ -45,7 +46,7 @@ func populate_room(room: RoomData, floor_num: int, parent: Node3D, biome_data: R
 
 	if valid.is_empty():
 		push_warning("EncounterSystem: no eligible enemy scenes for floor %d in biome '%s'." % [floor_num, room.biome])
-		return
+		return spawned
 
 	# Spend budget
 	while budget > 0.5:
@@ -76,10 +77,13 @@ func populate_room(room: RoomData, floor_num: int, parent: Node3D, biome_data: R
 		var enemy: Node3D = enemy_variant
 
 		parent.add_child(enemy)
+		spawned.append(enemy)
 
 		# Random position within the room
 		var spawn_pos := _random_room_pos(room)
 		enemy.global_position = spawn_pos
+
+	return spawned
 
 func _get_roster_scenes(biome_data: Resource) -> Array:
 	if _has_biome_data(biome_data):

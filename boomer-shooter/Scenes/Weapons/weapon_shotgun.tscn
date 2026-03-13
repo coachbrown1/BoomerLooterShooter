@@ -4,6 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://c0tq5urk62w0d" path="res://Assets/Weapons/weapon_shotgun_viewmodel.png" id="2_yyy"]
 [ext_resource type="Material" uid="uid://d1g4a3h8j6p2" path="res://Materials/weapon_outline_material.tres" id="3_mat"]
 [ext_resource type="Texture2D" uid="uid_flash_shotgun" path="res://Assets/Effects/vfx_muzzle_shotgun.png" id="4_flash"]
+[ext_resource type="Texture2D" path="res://Assets/Icons/Weapons/icon_shotgun.png" id="5_icon"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_muzzle"]
 radius = 0.04
@@ -31,6 +32,7 @@ albedo_color = Color(1, 0.9, 0.5, 0.8)
 [node name="Weapon" type="Node3D"]
 script = ExtResource("1_xxx")
 weapon_name = "Shotgun"
+weapon_icon = ExtResource("5_icon")
 damage = 30
 fire_rate = 0.8
 ammo_type = "shells"
