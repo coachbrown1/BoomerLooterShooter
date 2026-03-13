@@ -38,6 +38,7 @@ var is_reloading: bool = false
 
 var can_fire: bool = true
 var fire_timer: float = 0.0
+var _next_fire_ready_time: float = 0.0
 var sprite_origin_z: float = 0.0
 var weapon_manager: WeaponManager = null
 
@@ -62,11 +63,9 @@ func _ready() -> void:
 	muzzle_flash.visible = false
 	tracer.visible = false
 	current_mag = mag_size
-	
-	# Hide the 3D sprite as we'll use a 2D overlay
 	if sprite:
-		sprite.visible = false
 		_setup_2d_viewmodel()
+	set_viewmodel_enabled(_viewmodel_enabled)
 
 func _setup_2d_viewmodel() -> void:
 	# Create a CanvasLayer to keep the weapon fixed on screen
@@ -115,7 +114,6 @@ func _setup_2d_viewmodel() -> void:
 		_muzzle_2d.material = mat
 		
 		_canvas_layer.add_child(_muzzle_2d)
-		flash_3d.visible = false
 	
 	_update_viewmodel_position()
 	get_viewport().size_changed.connect(_update_viewmodel_position)
@@ -158,6 +156,7 @@ func show_weapon() -> void:
 	# Reset animations and timers when drawn
 	can_fire = true
 	fire_timer = 0.0
+	_next_fire_ready_time = 0.0
 	is_reloading = false
 	if _viewmodel_2d:
 		_viewmodel_2d.position.y = get_viewport().get_visible_rect().size.y
@@ -174,6 +173,11 @@ func set_viewmodel_enabled(enabled: bool) -> void:
 	_viewmodel_enabled = enabled
 	if _canvas_layer:
 		_canvas_layer.visible = visible and _viewmodel_enabled
+	if sprite:
+		sprite.visible = not _viewmodel_enabled
+	var flash_sprite := muzzle_flash.get_node_or_null("FlashSprite")
+	if flash_sprite:
+		flash_sprite.visible = (not _viewmodel_enabled) or _muzzle_2d == null
 
 func can_reload() -> bool:
 	if ammo_type == "none" or is_reloading or current_mag == mag_size:
@@ -182,8 +186,22 @@ func can_reload() -> bool:
 		return false
 	return true
 
-func reload() -> void:
+func reload(request_authority: bool = true) -> void:
 	if not can_reload(): return
+
+	if request_authority and _is_network_multiplayer_active() and not _is_network_host():
+		var current_player := _get_player()
+		var player_peer_id := 1
+		if current_player != null and current_player.has_method("get_network_peer_id"):
+			player_peer_id = int(current_player.call("get_network_peer_id"))
+		var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
+		if dungeon_manager != null and dungeon_manager.has_method("request_weapon_reload") and weapon_manager != null:
+			dungeon_manager.call(
+				"request_weapon_reload",
+				player_peer_id,
+				weapon_manager.get_current_weapon_slot(),
+				weapon_manager.get_current_weapon_key()
+			)
 
 	is_reloading = true
 
@@ -231,16 +249,12 @@ func perform_authoritative_reload() -> bool:
 	can_fire = true
 	return true
 
-func _physics_process(delta: float) -> void:
+func _physics_process(_delta: float) -> void:
+	_update_fire_cooldown_gate()
+
 	if weapon_manager and weapon_manager.has_method("is_input_blocked") and weapon_manager.is_input_blocked():
 		return
 	if is_reloading: return
-
-	if not can_fire:
-		fire_timer += delta
-		if fire_timer >= fire_rate:
-			can_fire = true
-			fire_timer = 0.0
 
 	if weapon_manager and weapon_manager.has_method("is_input_enabled") and not weapon_manager.is_input_enabled():
 		return
@@ -256,12 +270,14 @@ func _physics_process(delta: float) -> void:
 				fire()
 
 func fire() -> void:
+	_update_fire_cooldown_gate()
 	var cam: Camera3D = get_viewport().get_camera_3d()
 	if not cam:
 		return
 	_fire_with_aim(cam.global_position, -cam.global_transform.basis.z.normalized(), true, true, _get_player())
 
 func fire_authoritative_from_network(cam_origin: Vector3, cam_forward: Vector3, shooter_node: Node3D) -> bool:
+	_update_fire_cooldown_gate()
 	if not can_fire:
 		return false
 	if ammo_type != "none" and current_mag <= 0:
@@ -289,6 +305,7 @@ func _request_host_fire() -> void:
 		"request_weapon_fire",
 		player_peer_id,
 		weapon_manager.get_current_weapon_slot(),
+		weapon_manager.get_current_weapon_key(),
 		cam.global_position,
 		-cam.global_transform.basis.z.normalized(),
 		int(Time.get_ticks_msec())
@@ -296,6 +313,8 @@ func _request_host_fire() -> void:
 
 func _fire_with_aim(cam_origin: Vector3, cam_forward: Vector3, play_local_feedback: bool, apply_damage: bool, shooter_override: Node3D) -> void:
 	can_fire = false
+	fire_timer = 0.0
+	_next_fire_ready_time = (float(Time.get_ticks_msec()) * 0.001) + max(0.0, fire_rate)
 
 	if ammo_type != "none":
 		current_mag -= 1
@@ -337,6 +356,14 @@ func _fire_with_aim(cam_origin: Vector3, cam_forward: Vector3, play_local_feedba
 			final_dir = (cam_forward + right * dx * spread_rad + up * dy * spread_rad).normalized()
 		_fire_hitscan(cam_origin, final_dir, player_rid)
 	_show_muzzle_flash()
+
+func _update_fire_cooldown_gate() -> void:
+	if can_fire:
+		return
+	var now := float(Time.get_ticks_msec()) * 0.001
+	if now >= _next_fire_ready_time:
+		can_fire = true
+		fire_timer = 0.0
 
 func _basis_from_forward(forward: Vector3) -> Basis:
 	var forward_norm: Vector3 = forward.normalized()
@@ -442,6 +469,10 @@ func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3, player_rid: RID) -
 		hit_pos = ray_end
 
 	_show_tracer(muzzle_flash.global_position, hit_pos)
+	if _is_network_multiplayer_active() and _is_network_host():
+		var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
+		if dungeon_manager != null and dungeon_manager.has_method("broadcast_hitscan_visual"):
+			dungeon_manager.call("broadcast_hitscan_visual", muzzle_flash.global_position, hit_pos)
 
 func _eject_shell() -> void:
 	var casing = CASING_SCENE.instantiate()

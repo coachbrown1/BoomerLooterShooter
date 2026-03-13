@@ -775,21 +775,21 @@ func _send_local_player_snapshot_to_host() -> void:
 		return
 	rpc_id(1, "rpc_submit_client_player_state", _local_peer_id, local_player.call("build_network_snapshot"))
 
-func request_weapon_fire(peer_id: int, weapon_slot: int, cam_origin: Vector3, cam_forward: Vector3, shot_id: int) -> void:
+func request_weapon_fire(peer_id: int, weapon_slot: int, weapon_key: String, cam_origin: Vector3, cam_forward: Vector3, shot_id: int) -> void:
 	if not _session_multiplayer:
 		return
 	if _session_host:
-		_handle_weapon_fire_request(peer_id, weapon_slot, cam_origin, cam_forward, shot_id)
+		_handle_weapon_fire_request(peer_id, weapon_slot, weapon_key, cam_origin, cam_forward, shot_id)
 	else:
-		rpc_id(1, "rpc_request_weapon_fire", peer_id, weapon_slot, cam_origin, cam_forward, shot_id)
+		rpc_id(1, "rpc_request_weapon_fire", peer_id, weapon_slot, weapon_key, cam_origin, cam_forward, shot_id)
 
-func request_weapon_reload(peer_id: int, weapon_slot: int) -> void:
+func request_weapon_reload(peer_id: int, weapon_slot: int, weapon_key: String) -> void:
 	if not _session_multiplayer:
 		return
 	if _session_host:
-		_handle_weapon_reload_request(peer_id, weapon_slot)
+		_handle_weapon_reload_request(peer_id, weapon_slot, weapon_key)
 	else:
-		rpc_id(1, "rpc_request_weapon_reload", peer_id, weapon_slot)
+		rpc_id(1, "rpc_request_weapon_reload", peer_id, weapon_slot, weapon_key)
 
 func broadcast_projectile_visual(scene_path: String, cam_origin: Vector3, cam_forward: Vector3) -> void:
 	if not _session_multiplayer or not _session_host:
@@ -798,15 +798,22 @@ func broadcast_projectile_visual(scene_path: String, cam_origin: Vector3, cam_fo
 		return
 	rpc("rpc_spawn_projectile_visual", scene_path, cam_origin, cam_forward)
 
-func _handle_weapon_fire_request(peer_id: int, weapon_slot: int, cam_origin: Vector3, cam_forward: Vector3, _shot_id: int) -> void:
+func _handle_weapon_fire_request(peer_id: int, weapon_slot: int, weapon_key: String, cam_origin: Vector3, cam_forward: Vector3, _shot_id: int) -> void:
 	var player_node = _player_by_peer_id.get(peer_id, null)
 	if not is_instance_valid(player_node):
 		return
 	var manager: WeaponManager = player_node.get("weapon_manager")
 	if manager == null:
 		return
-	manager.switch_to_weapon(weapon_slot)
+	if not weapon_key.is_empty() and manager.has_method("switch_to_weapon_by_key"):
+		manager.call("switch_to_weapon_by_key", weapon_key)
+	else:
+		manager.switch_to_weapon(weapon_slot)
 	var weapon := manager.get_current_weapon()
+	if weapon == null and not weapon_key.is_empty() and manager.has_method("switch_to_weapon_by_key"):
+		var switched := bool(manager.call("switch_to_weapon_by_key", weapon_key))
+		if switched:
+			weapon = manager.get_current_weapon()
 	if weapon == null:
 		return
 	if not weapon.has_method("fire_authoritative_from_network"):
@@ -816,15 +823,22 @@ func _handle_weapon_fire_request(peer_id: int, weapon_slot: int, cam_origin: Vec
 		return
 	rpc_id(peer_id, "rpc_sync_weapon_state", peer_id, manager.get_current_weapon_slot(), weapon.current_mag, manager.get_ammo_snapshot())
 
-func _handle_weapon_reload_request(peer_id: int, weapon_slot: int) -> void:
+func _handle_weapon_reload_request(peer_id: int, weapon_slot: int, weapon_key: String) -> void:
 	var player_node = _player_by_peer_id.get(peer_id, null)
 	if not is_instance_valid(player_node):
 		return
 	var manager: WeaponManager = player_node.get("weapon_manager")
 	if manager == null:
 		return
-	manager.switch_to_weapon(weapon_slot)
+	if not weapon_key.is_empty() and manager.has_method("switch_to_weapon_by_key"):
+		manager.call("switch_to_weapon_by_key", weapon_key)
+	else:
+		manager.switch_to_weapon(weapon_slot)
 	var weapon := manager.get_current_weapon()
+	if weapon == null and not weapon_key.is_empty() and manager.has_method("switch_to_weapon_by_key"):
+		var switched := bool(manager.call("switch_to_weapon_by_key", weapon_key))
+		if switched:
+			weapon = manager.get_current_weapon()
 	if weapon == null:
 		return
 	if not weapon.has_method("perform_authoritative_reload"):
@@ -1027,6 +1041,8 @@ func _register_network_enemy(enemy: EnemyBase) -> void:
 	rpc("rpc_spawn_enemy", enemy_id, enemy.scene_file_path, enemy.global_position)
 
 func _on_network_enemy_died(enemy_id: int) -> void:
+	rpc("rpc_mark_enemy_dead", enemy_id)
+	await get_tree().create_timer(0.65).timeout
 	_enemy_by_network_id.erase(enemy_id)
 	rpc("rpc_despawn_enemy", enemy_id)
 
@@ -1116,6 +1132,9 @@ func rpc_sync_player_roster(roster: Array) -> void:
 	var to_remove: Array = []
 	for peer_key in _player_by_peer_id.keys():
 		var peer_id := int(peer_key)
+		if peer_id == _local_peer_id:
+			# Avoid transient roster packets despawning the local client avatar.
+			continue
 		if roster_peer_ids.has(peer_id):
 			continue
 		var node = _player_by_peer_id[peer_id]
@@ -1156,20 +1175,25 @@ func rpc_receive_player_snapshots(snapshots: Array) -> void:
 			player_node.call("apply_network_snapshot", state)
 
 @rpc("any_peer", "reliable")
-func rpc_request_weapon_fire(peer_id: int, weapon_slot: int, cam_origin: Vector3, cam_forward: Vector3, shot_id: int) -> void:
+func rpc_request_weapon_fire(peer_id: int, weapon_slot: int, weapon_key: String, cam_origin: Vector3, cam_forward: Vector3, shot_id: int) -> void:
 	if not _session_host:
 		return
 	if multiplayer.get_remote_sender_id() != peer_id:
 		return
-	_handle_weapon_fire_request(peer_id, weapon_slot, cam_origin, cam_forward, shot_id)
+	_handle_weapon_fire_request(peer_id, weapon_slot, weapon_key, cam_origin, cam_forward, shot_id)
+
+func broadcast_hitscan_visual(from: Vector3, to: Vector3) -> void:
+	if not _session_multiplayer or not _session_host:
+		return
+	rpc("rpc_spawn_hitscan_visual", from, to)
 
 @rpc("any_peer", "reliable")
-func rpc_request_weapon_reload(peer_id: int, weapon_slot: int) -> void:
+func rpc_request_weapon_reload(peer_id: int, weapon_slot: int, weapon_key: String) -> void:
 	if not _session_host:
 		return
 	if multiplayer.get_remote_sender_id() != peer_id:
 		return
-	_handle_weapon_reload_request(peer_id, weapon_slot)
+	_handle_weapon_reload_request(peer_id, weapon_slot, weapon_key)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_sync_weapon_state(peer_id: int, slot_index: int, current_mag: int, ammo_snapshot: Dictionary) -> void:
@@ -1276,6 +1300,14 @@ func rpc_spawn_enemy(enemy_id: int, scene_path: String, enemy_position: Vector3)
 	_enemy_by_network_id[enemy_id] = enemy
 
 @rpc("authority", "call_remote", "reliable")
+func rpc_mark_enemy_dead(enemy_id: int) -> void:
+	var enemy = _enemy_by_network_id.get(enemy_id, null)
+	if not is_instance_valid(enemy):
+		return
+	if enemy.has_method("force_network_dead_visual"):
+		enemy.call("force_network_dead_visual")
+
+@rpc("authority", "call_remote", "reliable")
 func rpc_spawn_projectile_visual(scene_path: String, cam_origin: Vector3, cam_forward: Vector3) -> void:
 	if _session_host:
 		return
@@ -1304,6 +1336,42 @@ func rpc_spawn_projectile_visual(scene_path: String, cam_origin: Vector3, cam_fo
 		projectile.look_at(projectile.global_position + projectile.direction, Vector3.RIGHT)
 	else:
 		projectile.look_at(projectile.global_position + projectile.direction, Vector3.UP)
+
+@rpc("authority", "call_remote", "unreliable")
+func rpc_spawn_hitscan_visual(from: Vector3, to: Vector3) -> void:
+	var length := from.distance_to(to)
+	if length <= 0.01:
+		return
+	var t_mesh := CylinderMesh.new()
+	t_mesh.top_radius = 0.01
+	t_mesh.bottom_radius = 0.04
+	t_mesh.height = length
+	t_mesh.radial_segments = 4
+
+	var mat := StandardMaterial3D.new()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = StandardMaterial3D.BLEND_MODE_ADD
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.albedo_color = Color(2.5, 2.5, 1.0, 0.8)
+
+	var temp_tracer := MeshInstance3D.new()
+	temp_tracer.mesh = t_mesh
+	temp_tracer.material_override = mat
+	temp_tracer.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+	var current_scene := get_tree().current_scene
+	if current_scene == null:
+		temp_tracer.queue_free()
+		return
+	current_scene.add_child(temp_tracer)
+
+	temp_tracer.global_position = (from + to) / 2.0
+	temp_tracer.look_at(to, Vector3.UP)
+	temp_tracer.rotate_object_local(Vector3.RIGHT, -PI / 2.0)
+
+	await get_tree().create_timer(0.05).timeout
+	if is_instance_valid(temp_tracer):
+		temp_tracer.queue_free()
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_despawn_enemy(enemy_id: int) -> void:

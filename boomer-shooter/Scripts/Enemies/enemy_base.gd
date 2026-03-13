@@ -32,6 +32,7 @@ var _proxy_target_position: Vector3 = Vector3.ZERO
 var _proxy_target_velocity: Vector3 = Vector3.ZERO
 var _has_proxy_snapshot: bool = false
 var _proxy_visual_frame: int = 0
+var _proxy_visual_animate: bool = false
 
 signal enemy_died
 
@@ -184,14 +185,17 @@ func get_network_state_snapshot() -> Dictionary:
 	if health_component:
 		current_health = health_component.current_health
 	var anim_frame := 0
+	var animating := false
 	if billboard_sprite:
 		anim_frame = billboard_sprite.frame
+		animating = billboard_sprite.animate
 	return {
 		"position": global_position,
 		"velocity": velocity,
 		"state": int(current_state),
 		"health": current_health,
 		"anim_frame": anim_frame,
+		"animating": animating,
 	}
 
 func apply_network_state_snapshot(snapshot: Dictionary) -> void:
@@ -203,6 +207,7 @@ func apply_network_state_snapshot(snapshot: Dictionary) -> void:
 	if health_component:
 		health_component.current_health = int(snapshot.get("health", health_component.current_health))
 	_proxy_visual_frame = int(snapshot.get("anim_frame", _proxy_visual_frame))
+	_proxy_visual_animate = bool(snapshot.get("animating", _proxy_visual_animate))
 	_has_proxy_snapshot = true
 
 func _apply_proxy_motion(delta: float) -> void:
@@ -215,19 +220,18 @@ func _apply_proxy_motion(delta: float) -> void:
 		var up_axis := Vector3.UP
 		if abs(look_dir.dot(up_axis)) > 0.99:
 			up_axis = Vector3.RIGHT
-		look_at(global_position + look_dir, up_axis)
+		var target_pos := global_position + look_dir
+		if not global_position.is_equal_approx(target_pos):
+			look_at(target_pos, up_axis)
 	_update_proxy_visual_state()
 
 func _update_proxy_visual_state() -> void:
 	if billboard_sprite == null:
 		return
 	if _network_proxy_mode:
-		if current_state == State.CHASE or current_state == State.IDLE:
-			if not billboard_sprite.animate:
-				billboard_sprite.animate = true
-			return
 		var frame_limit := maxi(0, billboard_sprite.hframes - 1)
-		billboard_sprite.animate = false
+		if billboard_sprite.animate != _proxy_visual_animate:
+			billboard_sprite.animate = _proxy_visual_animate
 		billboard_sprite.frame = clampi(_proxy_visual_frame, 0, frame_limit)
 		return
 	if current_state == State.DEAD:
@@ -255,6 +259,13 @@ func _update_proxy_visual_state() -> void:
 		billboard_sprite.animate = false
 	if billboard_sprite.hframes > 0:
 		billboard_sprite.frame = 0
+
+func force_network_dead_visual() -> void:
+	current_state = State.DEAD
+	_proxy_visual_animate = false
+	if billboard_sprite:
+		_proxy_visual_frame = maxi(0, billboard_sprite.hframes - 1)
+	_update_proxy_visual_state()
 
 func _refresh_target_player() -> void:
 	var players := get_tree().get_nodes_in_group("player")

@@ -55,6 +55,7 @@ func _process(delta: float) -> void:
 		return
 	_teammate_refresh_timer = 0.0
 	_update_session_role_label()
+	_update_local_health_label()
 	_update_teammate_health_label()
 
 func _input(event: InputEvent) -> void:
@@ -129,32 +130,77 @@ func _update_teammate_health_label() -> void:
 	_teammate_health_label.text = "Teammate: %d" % teammate_health
 	_teammate_health_label.visible = true
 
+func _update_local_health_label() -> void:
+	var local_player = _find_local_player()
+	if local_player == null:
+		return
+	var health_variant: Variant = local_player.get("current_health")
+	if health_variant == null:
+		return
+	update_health(maxi(0, int(health_variant)))
+
 func _find_local_player() -> Node:
 	if is_instance_valid(_cached_local_player):
-		return _cached_local_player
+		if _is_player_local(_cached_local_player):
+			return _cached_local_player
+		_cached_local_player = null
+
+	var local_peer_id := _get_local_peer_id()
+	for player_variant in get_tree().get_nodes_in_group("player"):
+		if not (player_variant is Node):
+			continue
+		var player: Node = player_variant
+		if player.is_queued_for_deletion():
+			continue
+		if not _is_player_local(player):
+			continue
+		if local_peer_id > 0 and player.has_method("get_network_peer_id"):
+			if int(player.call("get_network_peer_id")) != local_peer_id:
+				continue
+		_cached_local_player = player
+		return player
 
 	for player_variant in get_tree().get_nodes_in_group("player"):
 		if not (player_variant is Node):
 			continue
 		var player: Node = player_variant
-		if player.has_method("is_local_controlled") and bool(player.call("is_local_controlled")):
+		if player.is_queued_for_deletion():
+			continue
+		if _is_player_local(player):
 			_cached_local_player = player
 			return player
 	return null
 
 func _find_teammate(local_player: Node) -> Node:
 	if is_instance_valid(_cached_teammate):
-		return _cached_teammate
+		if _cached_teammate != local_player:
+			return _cached_teammate
+		_cached_teammate = null
 
 	for player_variant in get_tree().get_nodes_in_group("player"):
 		if not (player_variant is Node):
 			continue
 		var player: Node = player_variant
+		if player.is_queued_for_deletion():
+			continue
 		if player == local_player:
 			continue
 		_cached_teammate = player
 		return player
 	return null
+
+func _is_player_local(player: Node) -> bool:
+	if player == null:
+		return false
+	if not player.has_method("is_local_controlled"):
+		return false
+	return bool(player.call("is_local_controlled"))
+
+func _get_local_peer_id() -> int:
+	var session = _get_network_session()
+	if session == null:
+		return 1
+	return max(1, int(session.call("get_local_peer_id")))
 
 func _ensure_session_role_label() -> void:
 	if _session_role_label != null:

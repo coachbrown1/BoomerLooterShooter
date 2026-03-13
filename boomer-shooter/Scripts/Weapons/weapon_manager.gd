@@ -89,8 +89,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			if _is_network_multiplayer_active() and not _is_network_host():
 				var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
 				if dungeon_manager != null and dungeon_manager.has_method("request_weapon_reload"):
-					dungeon_manager.call("request_weapon_reload", _get_owner_peer_id(), current_weapon_index)
-			current_weapon.reload()
+					dungeon_manager.call(
+						"request_weapon_reload",
+						_get_owner_peer_id(),
+						current_weapon_index,
+						get_current_weapon_key()
+					)
+			current_weapon.reload(false)
 
 func get_ammo(type: String) -> int:
 	return ammo_inventory.get(type, 0)
@@ -181,6 +186,33 @@ func get_current_weapon_slot() -> int:
 
 func get_current_weapon() -> Weapon:
 	return current_weapon
+
+func get_current_weapon_key() -> String:
+	if current_weapon == null:
+		return ""
+	return get_weapon_key_for_weapon(current_weapon)
+
+func switch_to_weapon_by_key(raw_key: String) -> bool:
+	var key := _normalize_weapon_name(raw_key)
+	if key.is_empty():
+		return false
+	var weapon: Weapon = _weapon_key_to_weapon.get(key, null)
+	if weapon == null:
+		return false
+
+	var slot_index := _find_slot_index_for_weapon(weapon)
+	if slot_index >= 0:
+		switch_to_weapon(slot_index)
+		return true
+
+	if current_weapon and current_weapon != weapon:
+		current_weapon.hide_weapon()
+	current_weapon = weapon
+	current_weapon_index = -1
+	current_weapon.show_weapon()
+	weapon_changed.emit(current_weapon)
+	_update_hud()
+	return true
 
 func get_ammo_snapshot() -> Dictionary:
 	return ammo_inventory.duplicate(true)
