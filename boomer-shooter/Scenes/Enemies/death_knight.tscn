@@ -44,7 +44,7 @@ shape = SubResource("2")
 material_override = ExtResource("6_mat")
 texture = ExtResource("5_e")
 hframes = 6
-vframes = 3
+vframes = 4
 script = ExtResource("4_d")
 bounce_walk_mode = true
 

@@ -1,67 +1,77 @@
-[gd_scene format=3 uid="uid://dk_boss_0001"]
+[gd_scene format=3 uid="uid://cxltf3ak1243t"]
 
-[ext_resource type="Script"   path="res://Scripts/Enemies/death_knight_boss.gd"          id="1_script"]
-[ext_resource type="Script"   path="res://Scripts/Components/health_component.gd"        id="2_health"]
-[ext_resource type="Script"   path="res://Scripts/Components/hitbox_component.gd"        id="3_hitbox"]
-[ext_resource type="Script"   path="res://Scripts/Components/billboard_sprite.gd"        id="4_sprite"]
-[ext_resource type="Texture2D" path="res://Assets/Enemies/DeathKnight/death_knight_spritesheet.png" id="5_tex"]
-[ext_resource type="Material" path="res://Materials/enemy_outline_material.tres"         id="6_mat"]
+[ext_resource type="Script" uid="uid://24tmbg4x2inn" path="res://Scripts/Enemies/death_knight_boss.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://cjjywi22247q4" path="res://Scripts/Components/health_component.gd" id="2_health"]
+[ext_resource type="Script" uid="uid://cq7c3rgbvvmh2" path="res://Scripts/Components/hitbox_component.gd" id="3_hitbox"]
+[ext_resource type="Shader" uid="uid://dqyk77oa5aom7" path="res://Shaders/pixel_outline.gdshader" id="4_1e6il"]
+[ext_resource type="Script" uid="uid://d11y815ukmppm" path="res://Scripts/Components/billboard_sprite.gd" id="4_sprite"]
+[ext_resource type="Texture2D" uid="uid://bd84xciwwpxbl" path="res://Assets/Enemies/DeathKnight/death_knight_spritesheet.png" id="5_tex"]
 
-; Collision shapes are auto-resized by EnemyBase._ready() to match actual_height.
-; Initial sizes here are reasonable defaults so the scene is usable before first run.
 [sub_resource type="CapsuleShape3D" id="body_shape"]
 radius = 0.65
 height = 3.0
 
 [sub_resource type="CapsuleShape3D" id="hbox_shape"]
-radius = 0.80
+radius = 0.8
 height = 3.15
 
-[node name="DeathKnightBoss" type="CharacterBody3D"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ilaiw"]
+resource_local_to_scene = true
+render_priority = 0
+shader = ExtResource("4_1e6il")
+shader_parameter/outline_color = Color(1, 0.4, 0.1, 0.8)
+shader_parameter/texture_albedo = ExtResource("5_tex")
+shader_parameter/outline_width = 1.0
+shader_parameter/enable_outline = true
+shader_parameter/billboard = true
+shader_parameter/alpha_scissor_threshold = 0.5
+shader_parameter/distance_fade_min = 15.0
+shader_parameter/distance_fade_max = 30.0
+shader_parameter/rim_steepness = 3.0
+shader_parameter/rim_color = Color(1, 1, 1, 1)
+shader_parameter/emission_energy = 2.0
+shader_parameter/enable_emission = false
+
+[node name="DeathKnightBoss" type="CharacterBody3D" unique_id=1042555557]
 collision_layer = 4
-collision_mask  = 7
-script          = ExtResource("1_script")
+collision_mask = 7
+script = ExtResource("1_script")
+move_speed = 2.8
+attack_range = 2.5
+windup_start_range = 18.0
+aggro_range = 20.0
+cooldown_time = 1.2
+base_max_health = 400
+spawn_cost = 8.0
 
-; ── Boss stats ──────────────────────────────────────────────────────────────
-base_max_health  = 400
-spawn_cost       = 8.0
-spawn_min_floor  = 1
-move_speed       = 2.8
-aggro_range      = 20.0
-; attack_range / windup_start_range are overridden by the boss script logic,
-; but set them here as sensible display defaults.
-attack_range         = 2.5
-windup_start_range   = 18.0
-cooldown_time        = 1.2
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=2138850314]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
-shape     = SubResource("body_shape")
+shape = SubResource("body_shape")
 
-[node name="HealthComponent" type="Node" parent="."]
-script     = ExtResource("2_health")
+[node name="HealthComponent" type="Node" parent="." unique_id=568237769]
+script = ExtResource("2_health")
 max_health = 400
 
-[node name="HitboxComponent" type="Area3D" parent="." node_paths=PackedStringArray("health_component")]
-collision_layer   = 4
-collision_mask    = 2
-script            = ExtResource("3_hitbox")
-health_component  = NodePath("../HealthComponent")
+[node name="HitboxComponent" type="Area3D" parent="." unique_id=618409864 node_paths=PackedStringArray("health_component")]
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("3_hitbox")
+health_component = NodePath("../HealthComponent")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="HitboxComponent"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="HitboxComponent" unique_id=248120813]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
-shape     = SubResource("hbox_shape")
+shape = SubResource("hbox_shape")
 
-; Scale 1.4× makes the boss visually larger and also scales actual_height in
-; EnemyBase, which auto-resizes the collision capsules to match.
-[node name="Sprite3D" type="Sprite3D" parent="."]
-scale             = Vector3(1.4, 1.4, 1.4)
-material_override = ExtResource("6_mat")
-texture           = ExtResource("5_tex")
-hframes           = 6
-vframes           = 3
-script            = ExtResource("4_sprite")
-animate           = false
-bounce_walk_mode  = false
+[node name="Sprite3D" type="Sprite3D" parent="." unique_id=2008565415]
+transform = Transform3D(1.4, 0, 0, 0, 1.4, 0, 0, 0, 1.4, 0, 0, 0)
+material_override = SubResource("ShaderMaterial_ilaiw")
+billboard = 2
+texture = ExtResource("5_tex")
+hframes = 6
+vframes = 4
+frame = 1
+script = ExtResource("4_sprite")
+animate = false
+total_frames = 6
 
-[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="." unique_id=179093743]

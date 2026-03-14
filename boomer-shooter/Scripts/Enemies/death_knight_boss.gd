@@ -28,16 +28,17 @@ enum AttackType { MELEE, BEAM }
 @export var shake_x_amp: float       = 0.06     # Horizontal pixel-shift amplitude
 @export var shake_scale_amp: float   = 0.045    # Scale-pulse amplitude (0 = off)
 
-# ── Spritesheet frame indices  (hframes=6, vframes=3) ─────────────────────
-# Row 0 (frames  0-5) = IDLE animation
+# ── Spritesheet frame indices  (hframes=6, vframes=4) ─────────────────────
+# Row 0 (frames  0-5)  = IDLE animation
 # Row 1 (frames  6-11) = WALK animation
-# Row 2 (frames 12-17) = ATTACK animation
+# Row 2 (frames 12-17) = WINDUP animation  (charging / pre-attack poses)
+# Row 3 (frames 18-23) = ATTACK animation  (full beam-sword swing)
 const FRAME_IDLE       := 0
 const FRAME_WALK_FIRST := 6    # First frame of WALK row
 const FRAME_WALK_COUNT := 6    # Number of walk frames
 const FRAME_ATK_A      := 12   # Alternate between these two during beam windup
 const FRAME_ATK_B      := 13
-const FRAME_ATK_FIRE   := 14   # Shown at the moment of firing
+const FRAME_ATK_FIRE   := 18   # First frame of the ATTACK row (beam firing)
 
 const BEAM_SCENE := preload("res://Scenes/Projectiles/death_knight_beam.tscn")
 
