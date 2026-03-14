@@ -109,9 +109,6 @@ func _has_line_of_sight() -> bool:
 	var result = space_state.intersect_ray(query)
 	return result.is_empty()
 
-func _process_windup_effect() -> void:
-	pass
-
 func _execute_attack() -> void:
 	# Release the "arrow"
 	if player and projectile_scene:
