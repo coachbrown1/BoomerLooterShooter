@@ -15,7 +15,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="PanelContainer" type="PanelContainer" parent="CanvasLayer/CenterContainer"]
-custom_minimum_size = Vector2(460, 300)
+custom_minimum_size = Vector2(560, 420)
 
 [node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/CenterContainer/PanelContainer"]
 theme_override_constants/margin_left = 16
@@ -27,21 +27,34 @@ theme_override_constants/margin_bottom = 16
 theme_override_constants/separation = 10
 
 [node name="Title" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
-text = "BoomerShooter Co-op"
+text = "BoomerShooter"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 28
 
+[node name="VersionLabel" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+text = "Version"
+horizontal_alignment = 1
+
 [node name="Hint" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
-text = "Use single-player, host, or join by IP."
+text = "Single-player works immediately. Co-op supports one host and one client."
 horizontal_alignment = 1
 
 [node name="IpInput" type="LineEdit" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
 placeholder_text = "Host IP (example: 192.168.1.12)"
-text = "127.0.0.1"
 
 [node name="PortInput" type="LineEdit" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
 placeholder_text = "Port"
 text = "7000"
+
+[node name="HostInfoLabel" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+text = "Host LAN IPv4: not hosting yet"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="InstructionsLabel" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+text = "Host: click Host, share your LAN/public IP and port, then click Start Game after your friend joins.\nJoin: enter the host IP and matching port, then click Join.\nControls: WASD move, Space jump, Shift sprint, E interact, Tab inventory, F11 fullscreen."
+horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="Buttons" type="HBoxContainer" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
 theme_override_constants/separation = 8
@@ -64,6 +77,9 @@ visible = false
 text = "Leave"
 visible = false
 
+[node name="QuitButton" type="Button" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons"]
+text = "Quit"
+
 [node name="StatusLabel" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
 text = "Ready"
 horizontal_alignment = 1
@@ -73,3 +89,4 @@ horizontal_alignment = 1
 [connection signal="pressed" from="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/JoinButton" to="." method="_on_join_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/StartButton" to="." method="_on_start_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/LeaveButton" to="." method="_on_leave_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/QuitButton" to="." method="_on_quit_button_pressed"]

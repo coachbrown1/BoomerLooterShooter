@@ -6,20 +6,25 @@ const ARG_ROLE := "--net-role"
 const ARG_HOST := "--net-host"
 const ARG_PORT := "--net-port"
 const ARG_AUTO_START := "--net-auto-start"
+const VERSION_FALLBACK := "dev"
 
 @onready var _status_label: Label = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/StatusLabel
 @onready var _ip_input: LineEdit = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/IpInput
 @onready var _port_input: LineEdit = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/PortInput
+@onready var _version_label: Label = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/VersionLabel
+@onready var _host_info_label: Label = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/HostInfoLabel
 @onready var _host_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/HostButton
 @onready var _join_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/JoinButton
 @onready var _single_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/SingleButton
 @onready var _start_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/StartButton
 @onready var _leave_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/LeaveButton
+@onready var _quit_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/QuitButton
 
 var _automation_cfg := {}
 
 func _ready() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	_apply_release_metadata()
 	_automation_cfg = _parse_automation_args(OS.get_cmdline_user_args())
 	var session = _get_network_session()
 	if session == null:
@@ -45,6 +50,7 @@ func _ready() -> void:
 			session.connect("match_started", match_cb)
 	_update_ui_state()
 	_update_leave_button()
+	_update_host_info_label()
 	if not _automation_cfg.is_empty():
 		$CanvasLayer.visible = false
 		call_deferred("_run_automation")
@@ -85,6 +91,10 @@ func _on_leave_button_pressed() -> void:
 	_set_status("Session closed.")
 	_update_ui_state()
 	_update_leave_button()
+	_update_host_info_label()
+
+func _on_quit_button_pressed() -> void:
+	get_tree().quit()
 
 func _on_start_button_pressed() -> void:
 	var session = _get_network_session()
@@ -102,11 +112,13 @@ func _on_session_started(is_host: bool) -> void:
 	else:
 		_set_status("Connected. Waiting for host to start...")
 	_update_ui_state()
+	_update_host_info_label()
 
 func _on_connection_failed(reason: String) -> void:
 	_set_status(reason)
 	_update_ui_state()
 	_update_leave_button()
+	_update_host_info_label()
 
 func _on_session_ended(reason: String) -> void:
 	if reason == "server_disconnected":
@@ -115,6 +127,7 @@ func _on_session_ended(reason: String) -> void:
 		_set_status("Session ended.")
 	_update_ui_state()
 	_update_leave_button()
+	_update_host_info_label()
 
 func _on_peer_joined(_peer_id: int) -> void:
 	var session = _get_network_session()
@@ -125,6 +138,7 @@ func _on_peer_joined(_peer_id: int) -> void:
 		if bool(_automation_cfg.get("auto_start", false)):
 			call_deferred("_try_auto_start_match")
 	_update_ui_state()
+	_update_host_info_label()
 
 func _on_peer_left(_peer_id: int) -> void:
 	var session = _get_network_session()
@@ -133,6 +147,7 @@ func _on_peer_left(_peer_id: int) -> void:
 	if bool(session.call("is_host")) and not bool(session.call("is_match_started")):
 		_set_status("Client left. Waiting for client...")
 	_update_ui_state()
+	_update_host_info_label()
 
 func _on_match_started() -> void:
 	_change_to_dungeon()
@@ -141,6 +156,12 @@ func _change_to_dungeon() -> void:
 	var err := get_tree().change_scene_to_file(DUNGEON_SCENE_PATH)
 	if err != OK:
 		_set_status("Failed to load dungeon (error %d)." % err)
+
+func _apply_release_metadata() -> void:
+	var version := String(ProjectSettings.get_setting("application/config/version", VERSION_FALLBACK))
+	if _version_label != null:
+		_version_label.text = "Version %s" % version
+	DisplayServer.window_set_title("BoomerShooter %s" % version)
 
 func _parse_port() -> int:
 	var text := _port_input.text.strip_edges()
@@ -175,6 +196,38 @@ func _update_ui_state() -> void:
 	_port_input.editable = not active
 	_start_button.visible = active and host and not started
 	_start_button.disabled = not has_client
+	_quit_button.visible = not active
+
+func _update_host_info_label() -> void:
+	if _host_info_label == null:
+		return
+
+	var session = _get_network_session()
+	if session == null or not bool(session.call("is_multiplayer_active")):
+		_host_info_label.text = "Host LAN IPv4: start hosting to show local addresses"
+		return
+
+	if not bool(session.call("is_host")):
+		_host_info_label.text = "Joining as client. Enter the host's IP and selected port."
+		return
+
+	var addresses: Array[String] = []
+	for address_variant in IP.get_local_addresses():
+		var address := String(address_variant)
+		if address.contains(":"):
+			continue
+		if address.begins_with("127."):
+			continue
+		if address == "0.0.0.0":
+			continue
+		addresses.append(address)
+
+	addresses.sort()
+	var port := _parse_port()
+	if addresses.is_empty():
+		_host_info_label.text = "Hosting on port %d. No non-loopback IPv4 address detected on this machine." % port
+		return
+	_host_info_label.text = "Hosting on port %d. Share one of these LAN IPv4 addresses: %s" % [port, ", ".join(addresses)]
 
 func _get_network_session():
 	if is_inside_tree():
