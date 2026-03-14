@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dk_beam_0001"]
+
+[ext_resource type="Script" path="res://Scripts/Projectiles/death_knight_beam.gd" id="1_beam"]
+
+[node name="DeathKnightBeam" type="Node3D"]
+script = ExtResource("1_beam")
