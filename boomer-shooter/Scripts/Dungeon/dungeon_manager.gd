@@ -500,12 +500,20 @@ func _spawn_handcrafted_room_overlays(parent: Node3D) -> void:
 		var room_overlay: Node3D = inst
 		room_overlay.position = room.get_world_center(DungeonBuilder.TILE_SIZE)
 		room_overlay.position.y = 0.0
+		_apply_handcrafted_room_orientation(room_overlay)
 		room_overlay.set_meta("room_id", room.id)
 		room_overlay.set_meta("room_type", room.room_type)
 		room_overlay.set_meta("lattice_coord", room.lattice_coord)
 		root.add_child(room_overlay)
 		_handcrafted_room_overlays_by_id[room.id] = room_overlay
 		_configure_handcrafted_room_overlay(room, room_overlay)
+
+func _apply_handcrafted_room_orientation(room_overlay: Node3D) -> void:
+	if room_overlay == null:
+		return
+	if room_overlay is HandcraftedRoomLayout:
+		var handcrafted_layout: HandcraftedRoomLayout = room_overlay
+		handcrafted_layout.rotation.y = handcrafted_layout.get_random_y_rotation_radians(_generator.rng)
 
 func _resource_has_property(resource: Resource, property_name: String) -> bool:
 	if resource == null:
@@ -874,14 +882,16 @@ func _configure_handcrafted_room_enemy_behavior(room: RoomData, spawned_enemies:
 		if not (enemy_variant is EnemyBase):
 			continue
 		var enemy: EnemyBase = enemy_variant
-		if not _is_inside_castle_inner_chamber(enemy.global_position, room_overlay.global_position):
+		if not _is_inside_castle_inner_chamber(enemy.global_position, room_overlay):
 			continue
 		enemy.set_aggro_suppressed(true)
 		suppressed.append(enemy)
 	_suppressed_enemies_by_room_id[room.id] = suppressed
 
-func _is_inside_castle_inner_chamber(enemy_world_pos: Vector3, room_center_world_pos: Vector3) -> bool:
-	var local_pos := enemy_world_pos - room_center_world_pos
+func _is_inside_castle_inner_chamber(enemy_world_pos: Vector3, room_overlay: Node3D) -> bool:
+	if room_overlay == null:
+		return false
+	var local_pos := room_overlay.to_local(enemy_world_pos)
 	return abs(local_pos.x) <= 11.5 and local_pos.z >= -11.5 and local_pos.z <= 11.5
 
 func _collect_handcrafted_enemy_spawners(root: Node) -> Array:

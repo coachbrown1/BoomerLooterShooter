@@ -7,8 +7,11 @@
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/HandcraftedEnemySpawner.tscn" id="6_enemy_spawner"]
 [ext_resource type="PackedScene" uid="uid://gobm31l33777" path="res://Scenes/Enemies/goblin_melee.tscn" id="7_goblin_melee"]
 [ext_resource type="PackedScene" uid="uid://gobarc483377" path="res://Scenes/Enemies/goblin_archer.tscn" id="8_goblin_archer"]
+[ext_resource type="Script" path="res://Scripts/Dungeon/handcrafted_room_layout.gd" id="9_room_layout"]
 
 [node name="CastleInnerChamber" type="Node3D" unique_id=235771710]
+script = ExtResource("9_room_layout")
+allow_random_orientation = true
 
 [node name="FloorInlay" type="Node3D" parent="." unique_id=1260157415]
 
