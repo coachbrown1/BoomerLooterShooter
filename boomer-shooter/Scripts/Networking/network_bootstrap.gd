@@ -16,6 +16,7 @@ const PUBLIC_IP_URL := "https://api.ipify.org"
 @onready var _port_input: LineEdit = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ConnectionFields/PortInput
 @onready var _title_label: Label = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Title
 @onready var _host_info_label: Label = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/HostInfoLabel
+@onready var _firewall_hint_label: Label = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/FirewallHintLabel
 @onready var _host_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/HostButton
 @onready var _join_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/JoinButton
 @onready var _single_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/SingleButton
@@ -237,6 +238,7 @@ func _update_ui_state() -> void:
 	_start_button.disabled = not has_client
 	_quit_button.visible = not active
 	_host_info_label.visible = active and host
+	_firewall_hint_label.visible = active and host
 	if show_join_fields:
 		_connection_prompt_label.text = "Enter the host's IP and port, then click CONNECT."
 
@@ -264,6 +266,7 @@ func _update_host_info_label() -> void:
 	if not _public_ip_text.is_empty():
 		public_text = _public_ip_text
 	_host_info_label.text = "Share your LAN/public IP and port with your guest\nLAN IP: %s\nPublic IP: %s\nPort: %d" % [lan_text, public_text, port]
+	_firewall_hint_label.text = "If players can't connect, ensure port %d UDP is allowed\nthrough your firewall (Windows: search 'Allow an app through Windows Firewall')." % port
 
 func _fetch_public_ip() -> void:
 	if _public_ip_request == null:
