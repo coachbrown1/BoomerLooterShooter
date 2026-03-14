@@ -58,11 +58,17 @@ This file is the canonical instruction set for any AI agent working in this repo
 - Do not broaden task scope without a clear reason tied to correctness, safety, or requested outcomes.
 - If repo instructions conflict, follow the more specific instruction for the files or subsystem you are changing.
 
-## 7. Multiplayer TODOs
+## 7. Multiplayer and Replication
+
+- This is a co-op game. All gameplay features, state changes, and visual effects must be appropriately replicated across the network.
+- Use Godot's multiplayer synchronization systems (MultiplayerSynchronizer, RPCs) and ensure that gameplay-critical logic is server-authoritative.
+- When building or modifying a feature, always consider how it will behave for both the host and connected clients.
+
+## 8. Multiplayer TODOs
 
 - [ ] Fix client-side enemy animation playback in co-op. Current state: enemy movement/state replication works, but clients still intermittently see static/non-updating enemy visuals.
 
-## 8. Multiplayer Verification Harness
+## 9. Multiplayer Verification Harness
 
 - For multiplayer chest/inventory sync work, prefer the local automated harness before relying on reasoning alone.
 - Run the harness from the workspace root with:
