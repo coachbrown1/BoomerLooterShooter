@@ -2,6 +2,10 @@ extends Node
 
 const DUNGEON_SCENE_PATH := "res://Scenes/World/dungeon.tscn"
 const DEFAULT_PORT_FALLBACK := 7000
+const ARG_ROLE := "--net-role"
+const ARG_HOST := "--net-host"
+const ARG_PORT := "--net-port"
+const ARG_AUTO_START := "--net-auto-start"
 
 @onready var _status_label: Label = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/StatusLabel
 @onready var _ip_input: LineEdit = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/IpInput
@@ -12,8 +16,11 @@ const DEFAULT_PORT_FALLBACK := 7000
 @onready var _start_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/StartButton
 @onready var _leave_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/LeaveButton
 
+var _automation_cfg := {}
+
 func _ready() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	_automation_cfg = _parse_automation_args(OS.get_cmdline_user_args())
 	var session = _get_network_session()
 	if session == null:
 		_set_status("NetworkSession autoload missing.")
@@ -38,6 +45,9 @@ func _ready() -> void:
 			session.connect("match_started", match_cb)
 	_update_ui_state()
 	_update_leave_button()
+	if not _automation_cfg.is_empty():
+		$CanvasLayer.visible = false
+		call_deferred("_run_automation")
 
 func _on_single_button_pressed() -> void:
 	if _is_multiplayer_active():
@@ -112,6 +122,8 @@ func _on_peer_joined(_peer_id: int) -> void:
 		return
 	if bool(session.call("is_host")) and not bool(session.call("is_match_started")):
 		_set_status("Client joined. Press Start Game.")
+		if bool(_automation_cfg.get("auto_start", false)):
+			call_deferred("_try_auto_start_match")
 	_update_ui_state()
 
 func _on_peer_left(_peer_id: int) -> void:
@@ -185,3 +197,62 @@ func _leave_game() -> void:
 	if session == null:
 		return
 	session.call("leave_game")
+
+func _run_automation() -> void:
+	var role := String(_automation_cfg.get("role", ""))
+	var host := String(_automation_cfg.get("host", "127.0.0.1"))
+	var port := int(_automation_cfg.get("port", DEFAULT_PORT_FALLBACK))
+	match role:
+		"single":
+			_on_single_button_pressed()
+		"host":
+			_port_input.text = str(port)
+			_on_host_button_pressed()
+		"client":
+			_ip_input.text = host
+			_port_input.text = str(port)
+			_on_join_button_pressed()
+
+func _try_auto_start_match() -> void:
+	var session = _get_network_session()
+	if session == null:
+		return
+	if not bool(session.call("is_host")):
+		return
+	if bool(session.call("is_match_started")):
+		return
+	if session.call("get_connected_peer_ids").size() <= 0:
+		return
+	_on_start_button_pressed()
+
+func _parse_automation_args(args: PackedStringArray) -> Dictionary:
+	var out := {}
+	var i := 0
+	while i < args.size():
+		var key := String(args[i])
+		match key:
+			ARG_ROLE, ARG_HOST, ARG_PORT, ARG_AUTO_START:
+				if i + 1 >= args.size():
+					break
+				var value := String(args[i + 1])
+				match key:
+					ARG_ROLE:
+						out["role"] = value.to_lower()
+					ARG_HOST:
+						out["host"] = value
+					ARG_PORT:
+						out["port"] = int(value)
+					ARG_AUTO_START:
+						out["auto_start"] = value == "1" or value.to_lower() == "true"
+				i += 2
+			_:
+				i += 1
+	if not out.has("role"):
+		return {}
+	if not out.has("host"):
+		out["host"] = "127.0.0.1"
+	if not out.has("port") or int(out["port"]) <= 0:
+		out["port"] = DEFAULT_PORT_FALLBACK
+	if not out.has("auto_start"):
+		out["auto_start"] = false
+	return out

@@ -23,7 +23,7 @@ func _ready() -> void:
 		_stored_items[i] = null
 
 func interact(interactor: Node = null) -> void:
-	_populate_default_loot_if_needed()
+	ensure_loot_populated()
 	_open_lid()
 
 	var inventory_system := _get_player_inventory_system(interactor)
@@ -37,10 +37,38 @@ func open_visual_only() -> void:
 func get_storage_copy() -> Array:
 	return _stored_items.duplicate()
 
+func get_storage_payload() -> Array:
+	var payload: Array = []
+	for item_variant in _stored_items:
+		if item_variant == null:
+			payload.append(null)
+			continue
+		if item_variant is InventoryItemData:
+			var item: InventoryItemData = item_variant
+			payload.append(item.to_dict())
+			continue
+		payload.append(null)
+	return payload
+
 func set_storage_items(items: Array) -> void:
 	_stored_items.resize(max(slot_count, 1))
 	for i in range(_stored_items.size()):
-		_stored_items[i] = items[i] if i < items.size() else null
+		if i >= items.size():
+			_stored_items[i] = null
+			continue
+		_stored_items[i] = _coerce_storage_item(items[i])
+
+func ensure_loot_populated() -> void:
+	_populate_default_loot_if_needed()
+
+func _coerce_storage_item(item_variant: Variant) -> Variant:
+	if item_variant == null:
+		return null
+	if item_variant is InventoryItemData:
+		return item_variant
+	if typeof(item_variant) == TYPE_DICTIONARY:
+		return InventoryItemData.from_dict(item_variant)
+	return null
 
 func close_chest() -> void:
 	if not is_open:

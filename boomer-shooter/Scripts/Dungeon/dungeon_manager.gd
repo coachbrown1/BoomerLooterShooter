@@ -853,7 +853,10 @@ func request_interaction(interactor: Node, target: Node) -> void:
 	if not _session_multiplayer or _session_host:
 		_apply_interaction(interactor, target)
 		return
-	rpc_id(1, "rpc_request_interaction", _local_peer_id, String(target.get_path()))
+	var target_pos := Vector3.ZERO
+	if target is Node3D:
+		target_pos = (target as Node3D).global_position
+	rpc_id(1, "rpc_request_interaction", _local_peer_id, String(target.get_path()), target_pos)
 
 func request_chest_view_closed(peer_id: int, chest_path: String) -> void:
 	if chest_path.is_empty():
@@ -864,6 +867,17 @@ func request_chest_view_closed(peer_id: int, chest_path: String) -> void:
 		_handle_chest_view_closed(peer_id, chest_path)
 	else:
 		rpc_id(1, "rpc_request_close_chest_view", peer_id, chest_path)
+
+func request_sync_active_chest_contents(peer_id: int, chest_path: String, chest_pos: Vector3, items: Array) -> void:
+	if chest_path.is_empty():
+		return
+	if not _session_multiplayer:
+		_apply_shared_chest_contents(chest_path, chest_pos, items)
+		return
+	if _session_host:
+		_apply_shared_chest_contents(chest_path, chest_pos, items)
+	else:
+		rpc_id(1, "rpc_request_sync_chest_contents", peer_id, chest_path, chest_pos, items)
 
 func _apply_interaction(interactor: Node, target: Node) -> void:
 	var resolved_target := _resolve_interaction_target(target)
@@ -879,6 +893,7 @@ func _apply_interaction(interactor: Node, target: Node) -> void:
 		return
 	if target is InteractableChest:
 		var chest: InteractableChest = target
+		chest.ensure_loot_populated()
 		if _session_multiplayer and _session_host:
 			chest.open_visual_only()
 		else:
@@ -888,7 +903,7 @@ func _apply_interaction(interactor: Node, target: Node) -> void:
 			if interactor != null and interactor.has_method("get_network_peer_id"):
 				interactor_peer = int(interactor.call("get_network_peer_id"))
 			var chest_path := String(chest.get_path())
-			var items := chest.get_storage_copy()
+			var items := chest.get_storage_payload()
 			var chest_pos: Vector3 = chest.global_position
 			_add_chest_viewer(chest_path, interactor_peer)
 			if interactor_peer == _local_peer_id:
@@ -935,6 +950,17 @@ func _find_interaction_target_for_player(interactor: Node3D) -> Node:
 	if result.is_empty():
 		return null
 	return _resolve_interaction_target(result.get("collider", null))
+
+func _find_interaction_target_by_position(world_pos: Vector3) -> Node:
+	if world_pos == Vector3.ZERO:
+		return null
+	var chest := _find_chest_by_position(world_pos)
+	if chest != null:
+		return chest
+	var door := _find_door_by_position(world_pos)
+	if door != null:
+		return door
+	return null
 
 func _find_door_by_position(world_pos: Vector3, max_distance: float = 4.0) -> DungeonDoor:
 	var closest: DungeonDoor = null
@@ -983,6 +1009,34 @@ func _close_chest_for_all(chest_path: String) -> void:
 		chest.close_chest()
 	if _session_multiplayer and _session_host:
 		rpc("rpc_sync_chest_closed", chest_path, chest_pos)
+
+func _apply_shared_chest_contents(chest_path: String, chest_pos: Vector3, items: Array) -> void:
+	if chest_path.is_empty():
+		return
+	var chest_node = get_node_or_null(NodePath(chest_path))
+	if not (chest_node is InteractableChest):
+		chest_node = _find_chest_by_position(chest_pos)
+	if not (chest_node is InteractableChest):
+		return
+	var chest: InteractableChest = chest_node
+	chest.set_storage_items(items)
+	if _session_multiplayer and _session_host:
+		rpc("rpc_sync_chest_contents", String(chest.get_path()), items, chest.global_position)
+	_refresh_local_active_chest_view(chest_path, chest)
+
+func _refresh_local_active_chest_view(chest_path: String, chest: InteractableChest) -> void:
+	var local_player := _get_local_player_node()
+	if not is_instance_valid(local_player):
+		return
+	var inventory_candidate: Variant = local_player.get("inventory_system")
+	if not (inventory_candidate is InventorySystem):
+		return
+	var inventory_system: InventorySystem = inventory_candidate
+	var active_path := inventory_system.get_active_chest_path()
+	var local_chest_path := String(chest.get_path())
+	if active_path != chest_path and active_path != local_chest_path:
+		return
+	inventory_system.refresh_active_chest_from_world()
 
 func _remove_peer_from_chest_views(peer_id: int) -> void:
 	if not _session_host:
@@ -1207,7 +1261,7 @@ func rpc_sync_weapon_state(peer_id: int, slot_index: int, current_mag: int, ammo
 	manager.apply_authoritative_weapon_state(slot_index, current_mag, ammo_snapshot)
 
 @rpc("any_peer", "reliable")
-func rpc_request_interaction(peer_id: int, target_path: String) -> void:
+func rpc_request_interaction(peer_id: int, target_path: String, target_pos: Vector3 = Vector3.ZERO) -> void:
 	if not _session_host:
 		return
 	if multiplayer.get_remote_sender_id() != peer_id:
@@ -1215,6 +1269,8 @@ func rpc_request_interaction(peer_id: int, target_path: String) -> void:
 	var interactor = _player_by_peer_id.get(peer_id, null)
 	var target := get_node_or_null(NodePath(target_path))
 	target = _resolve_interaction_target(target)
+	if target == null:
+		target = _find_interaction_target_by_position(target_pos)
 	if target == null and interactor is Node3D:
 		target = _find_interaction_target_for_player(interactor)
 	if target == null:
@@ -1228,6 +1284,14 @@ func rpc_request_close_chest_view(peer_id: int, chest_path: String) -> void:
 	if multiplayer.get_remote_sender_id() != peer_id:
 		return
 	_handle_chest_view_closed(peer_id, chest_path)
+
+@rpc("any_peer", "reliable")
+func rpc_request_sync_chest_contents(peer_id: int, chest_path: String, chest_pos: Vector3, items: Array) -> void:
+	if not _session_host:
+		return
+	if multiplayer.get_remote_sender_id() != peer_id:
+		return
+	_apply_shared_chest_contents(chest_path, chest_pos, items)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_sync_door_open(target_path: String, world_pos: Vector3) -> void:
@@ -1260,6 +1324,7 @@ func rpc_open_chest_for_local_player(chest_path: String, items: Array, chest_pos
 		if inventory_candidate is InventorySystem:
 			var inventory_system: InventorySystem = inventory_candidate
 			inventory_system.open_chest(chest)
+			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_sync_chest_closed(chest_path: String, chest_pos: Vector3) -> void:
@@ -1272,6 +1337,19 @@ func rpc_sync_chest_closed(chest_path: String, chest_pos: Vector3) -> void:
 	if chest == null:
 		return
 	chest.close_chest()
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_sync_chest_contents(chest_path: String, items: Array, chest_pos: Vector3) -> void:
+	var chest: InteractableChest = null
+	var chest_node = get_node_or_null(NodePath(chest_path))
+	if chest_node is InteractableChest:
+		chest = chest_node
+	if chest == null:
+		chest = _find_chest_by_position(chest_pos)
+	if chest == null:
+		return
+	chest.set_storage_items(items)
+	_refresh_local_active_chest_view(chest_path, chest)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_spawn_enemy(enemy_id: int, scene_path: String, enemy_position: Vector3) -> void:

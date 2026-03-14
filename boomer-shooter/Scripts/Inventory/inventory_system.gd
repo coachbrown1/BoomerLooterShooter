@@ -125,6 +125,8 @@ func try_move_item(from_slot: SlotRef, to_slot: SlotRef) -> bool:
 		_emit_weapon_slots_changed()
 	if from_slot.section == &"equipment" or to_slot.section == &"equipment":
 		_emit_equipment_stats_changed()
+	if from_slot.section == &"chest" or to_slot.section == &"chest":
+		_sync_active_chest_state()
 	return true
 
 func set_weapon_slot_active(index: int) -> void:
@@ -192,6 +194,17 @@ func get_active_chest_path() -> String:
 	if _active_chest == null:
 		return ""
 	return String(_active_chest.get_path())
+
+func get_active_chest_payload() -> Array:
+	if _active_chest == null:
+		return []
+	return _active_chest.get_storage_payload()
+
+func refresh_active_chest_from_world() -> void:
+	if _active_chest == null:
+		return
+	chest_storage = _active_chest.get_storage_copy()
+	_emit_inventory_changed()
 
 func _is_valid_slot(slot_ref: SlotRef) -> bool:
 	if slot_ref == null:
@@ -268,6 +281,25 @@ func _emit_weapon_slots_changed() -> void:
 
 func _emit_equipment_stats_changed() -> void:
 	equipment_stats_changed.emit(get_equipped_stats())
+
+func _sync_active_chest_state() -> void:
+	if _active_chest == null:
+		return
+	_active_chest.set_storage_items(chest_storage)
+
+	var session = get_node_or_null("/root/NetworkSession")
+	if session == null or not bool(session.call("is_multiplayer_active")):
+		return
+
+	var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
+	if dungeon_manager == null:
+		return
+	var peer_id := 1
+	var owner_node := owner
+	if owner_node != null and owner_node.has_method("get_network_peer_id"):
+		peer_id = int(owner_node.call("get_network_peer_id"))
+	if dungeon_manager.has_method("request_sync_active_chest_contents"):
+		dungeon_manager.call("request_sync_active_chest_contents", peer_id, get_active_chest_path(), _active_chest.global_position, _active_chest.get_storage_payload())
 
 func _item_to_snapshot(item: InventoryItemData) -> Variant:
 	if item == null:

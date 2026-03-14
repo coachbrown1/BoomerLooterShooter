@@ -61,3 +61,22 @@ This file is the canonical instruction set for any AI agent working in this repo
 ## 7. Multiplayer TODOs
 
 - [ ] Fix client-side enemy animation playback in co-op. Current state: enemy movement/state replication works, but clients still intermittently see static/non-updating enemy visuals.
+
+## 8. Multiplayer Verification Harness
+
+- For multiplayer chest/inventory sync work, prefer the local automated harness before relying on reasoning alone.
+- Run the harness from the workspace root with:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_chest_verifier.ps1'
+  ```
+- What it does:
+  - launches a local headless host and client
+  - auto-connects and auto-starts the match
+  - opens the same chest on both peers
+  - moves one item from the chest on the host
+  - verifies the client sees the same updated chest contents
+- Expected success output:
+  - `Multiplayer chest verification PASS`
+- Harness artifacts are written under `boomer-shooter/.tmp/mp_verify_*`.
+- If the harness fails, inspect `launcher.log`, `host.log`, `host.err.log`, `client.log`, `client.err.log`, and any `*_error.json` files in that run directory.
+- Current coverage is specifically shared chest loot and chest sync behavior. It does not validate all multiplayer systems.

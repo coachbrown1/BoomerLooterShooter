@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://duxammn24t6ay" path="res://Scripts/Dungeon/dungeon_manager.gd" id="1_dmgr"]
 [ext_resource type="PackedScene" uid="uid://b8q7t4y0a1m2x" path="res://Scenes/Player/player.tscn" id="2_player"]
 [ext_resource type="PackedScene" uid="uid://c7x8xa01a2b3c" path="res://Scenes/UI/hud.tscn" id="3_hud"]
+[ext_resource type="Script" path="res://Scripts/Debug/multiplayer_chest_verifier.gd" id="4_mpverify"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 sky_top_color = Color(0.05, 0.03, 0.08, 1)
@@ -59,3 +60,6 @@ navigation_mesh = SubResource("NavigationMesh_fflas")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 
 [node name="HUD" parent="." unique_id=2093266996 instance=ExtResource("3_hud")]
+
+[node name="MultiplayerChestVerifier" type="Node" parent="."]
+script = ExtResource("4_mpverify")
