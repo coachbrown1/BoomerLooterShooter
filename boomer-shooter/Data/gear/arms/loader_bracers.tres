@@ -17,7 +17,7 @@ item_id = &"arms_loader_bracers_uncommon"
 display_name = "Uncommon Loader Bracers"
 category = &"armor"
 equipment_slot = &"arms"
-stats = {"rarity": "Uncommon", "reload_speed_mult": 0.08, "weapon_damage_add": 1}
+stats = {"mag_size_add": 2, "rarity": "Uncommon", "reload_speed_mult": 0.08, "weapon_damage_add": 1}
 
 [sub_resource type="Resource" id="Item_003"]
 script = ExtResource("2_item")
@@ -25,7 +25,7 @@ item_id = &"arms_loader_bracers_rare"
 display_name = "Rare Loader Bracers"
 category = &"armor"
 equipment_slot = &"arms"
-stats = {"rarity": "Rare", "reload_speed_mult": 0.10, "rifle_damage_mult": 0.05, "weapon_damage_add": 2}
+stats = {"mag_size_add": 3, "rarity": "Rare", "reload_speed_mult": 0.10, "rifle_damage_mult": 0.05, "weapon_damage_add": 2}
 
 [sub_resource type="Resource" id="Item_004"]
 script = ExtResource("2_item")
@@ -33,7 +33,7 @@ item_id = &"arms_loader_bracers_epic"
 display_name = "Epic Loader Bracers"
 category = &"armor"
 equipment_slot = &"arms"
-stats = {"rarity": "Epic", "reload_speed_mult": 0.12, "rifle_damage_mult": 0.08, "weapon_damage_add": 3}
+stats = {"mag_size_add": 4, "rarity": "Epic", "reload_speed_mult": 0.12, "rifle_damage_mult": 0.08, "rifle_mag_size_add": 2, "weapon_damage_add": 3}
 
 [sub_resource type="Resource" id="Item_005"]
 script = ExtResource("2_item")
@@ -41,7 +41,7 @@ item_id = &"arms_loader_bracers_legendary"
 display_name = "Legendary Loader Bracers"
 category = &"armor"
 equipment_slot = &"arms"
-stats = {"rarity": "Legendary", "reload_speed_mult": 0.15, "rifle_damage_add": 4, "rifle_damage_mult": 0.10, "weapon_damage_add": 4}
+stats = {"mag_size_add": 5, "mag_size_mult": 0.10, "rarity": "Legendary", "reload_speed_mult": 0.15, "rifle_damage_add": 4, "rifle_damage_mult": 0.10, "rifle_mag_size_add": 3, "rifle_mag_size_mult": 0.10, "weapon_damage_add": 4}
 
 [resource]
 script = ExtResource("1_line")

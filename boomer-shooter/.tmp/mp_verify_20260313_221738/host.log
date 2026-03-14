@@ -1,0 +1,5 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+Debug: Press 'G' to toggle Screen Effects (Saturation/Vignette)
+DungeonGenerator lattice metrics: grid=5x5 rooms=25 corridors=37 doorways=74 start=10(deg=1) end=0(deg=1) min_dist=3
+DungeonManager: Floor 1 generated with 25 rooms (grid=5x5 seed=1689538205).

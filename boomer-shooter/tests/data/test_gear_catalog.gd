@@ -64,46 +64,66 @@ func test_catalog_supports_generic_and_targeted_build_paths() -> void:
 	var catalog = load(CATALOG_PATH)
 	var saw_health_add := false
 	var saw_health_mult := false
+	var saw_damage_reduction := false
 	var saw_move_speed_add := false
 	var saw_move_speed_mult := false
 	var saw_weapon_damage_add := false
 	var saw_weapon_damage_mult := false
+	var saw_mag_size_add := false
+	var saw_mag_size_mult := false
 	var exact_weapon_hits := {}
 	var ammo_family_hits := {}
+	var exact_weapon_mag_hits := {}
+	var ammo_family_mag_hits := {}
 
 	for weapon_key in EXPECTED_WEAPON_KEYS:
 		exact_weapon_hits[weapon_key] = false
+		exact_weapon_mag_hits[weapon_key] = false
 	for ammo_key in EXPECTED_AMMO_KEYS:
 		ammo_family_hits[ammo_key] = false
+		ammo_family_mag_hits[ammo_key] = false
 
 	for item in catalog.get_all_items():
 		var stats: Dictionary = item.stats
 		saw_health_add = saw_health_add or stats.has("health_add")
 		saw_health_mult = saw_health_mult or stats.has("health_mult")
+		saw_damage_reduction = saw_damage_reduction or stats.has("damage_reduction")
 		saw_move_speed_add = saw_move_speed_add or stats.has("move_speed_add")
 		saw_move_speed_mult = saw_move_speed_mult or stats.has("move_speed_mult")
 		saw_weapon_damage_add = saw_weapon_damage_add or stats.has("weapon_damage_add")
 		saw_weapon_damage_mult = saw_weapon_damage_mult or stats.has("weapon_damage_mult")
+		saw_mag_size_add = saw_mag_size_add or stats.has("mag_size_add")
+		saw_mag_size_mult = saw_mag_size_mult or stats.has("mag_size_mult")
 
 		for weapon_key in EXPECTED_WEAPON_KEYS:
 			if stats.has("%s_damage_add" % weapon_key) or stats.has("%s_damage_mult" % weapon_key):
 				exact_weapon_hits[weapon_key] = true
+			if stats.has("%s_mag_size_add" % weapon_key) or stats.has("%s_mag_size_mult" % weapon_key):
+				exact_weapon_mag_hits[weapon_key] = true
 
 		for ammo_key in EXPECTED_AMMO_KEYS:
 			if stats.has("%s_damage_mult" % ammo_key):
 				ammo_family_hits[ammo_key] = true
+			if stats.has("%s_mag_size_add" % ammo_key) or stats.has("%s_mag_size_mult" % ammo_key):
+				ammo_family_mag_hits[ammo_key] = true
 
 	assert_true(saw_health_add)
 	assert_true(saw_health_mult)
+	assert_true(saw_damage_reduction)
 	assert_true(saw_move_speed_add)
 	assert_true(saw_move_speed_mult)
 	assert_true(saw_weapon_damage_add)
 	assert_true(saw_weapon_damage_mult)
+	assert_true(saw_mag_size_add)
+	assert_true(saw_mag_size_mult)
 
 	for weapon_key in EXPECTED_WEAPON_KEYS:
 		assert_true(exact_weapon_hits[weapon_key], "Missing exact-weapon support for %s" % weapon_key)
+	assert_true(exact_weapon_mag_hits["rifle"], "Missing exact-weapon magazine support for rifle")
+	assert_true(exact_weapon_mag_hits["shotgun"], "Missing exact-weapon magazine support for shotgun")
 	for ammo_key in EXPECTED_AMMO_KEYS:
 		assert_true(ammo_family_hits[ammo_key], "Missing ammo-family support for %s" % ammo_key)
+	assert_true(ammo_family_mag_hits["shells"], "Missing ammo-family magazine support for shells")
 
 func test_catalog_can_duplicate_specific_and_random_items() -> void:
 	var catalog = load(CATALOG_PATH)
@@ -111,6 +131,9 @@ func test_catalog_can_duplicate_specific_and_random_items() -> void:
 	assert_not_null(starter_item)
 	assert_eq(starter_item.item_id, &"helmet_scout_visor_common")
 	assert_ne(String(starter_item.to_dict().get("icon_path", "")), "")
+	assert_eq(String(starter_item.to_dict().get("rarity", "")), "Common")
+	assert_eq((starter_item.to_dict().get("affixes", []) as Array).size(), 0)
+	assert_false((starter_item.to_dict().get("implicit_stats", {}) as Dictionary).is_empty())
 
 	var loot: Array = catalog.create_random_items(4, 1337)
 	assert_eq(loot.size(), 4)
@@ -119,3 +142,39 @@ func test_catalog_can_duplicate_specific_and_random_items() -> void:
 		assert_not_null(item)
 		assert_false(ids.has(item.item_id), "Duplicate loot item %s" % item.item_id)
 		ids[item.item_id] = true
+		var snapshot: Dictionary = item.to_dict()
+		var rarity_name := String(snapshot.get("rarity", ""))
+		var affix_count := (snapshot.get("affixes", []) as Array).size()
+		match rarity_name:
+			"Legendary":
+				assert_eq(affix_count, 4)
+			"Epic":
+				assert_eq(affix_count, 3)
+			"Rare":
+				assert_eq(affix_count, 2)
+			"Uncommon":
+				assert_eq(affix_count, 1)
+			_:
+				assert_eq(affix_count, 0)
+
+func test_generated_items_use_implicits_and_random_affixes() -> void:
+	var catalog = load(CATALOG_PATH)
+	var first_roll = catalog.create_random_items(8, 111)
+	var second_roll = catalog.create_random_items(8, 222)
+	assert_eq(first_roll.size(), 8)
+	assert_eq(second_roll.size(), 8)
+
+	var saw_affixed_item := false
+	var saw_different_rolls := false
+	for i in range(min(first_roll.size(), second_roll.size())):
+		var first_item: Dictionary = first_roll[i].to_dict()
+		var second_item: Dictionary = second_roll[i].to_dict()
+		var rarity_name := String(first_item.get("rarity", ""))
+		if rarity_name != "Common":
+			saw_affixed_item = saw_affixed_item or (first_item.get("affixes", []) as Array).size() > 0
+		if first_item.get("affixes", []) != second_item.get("affixes", []):
+			saw_different_rolls = true
+		assert_false((first_item.get("implicit_stats", {}) as Dictionary).is_empty(), "Missing implicit stats on %s" % first_item.get("item_id", "item"))
+
+	assert_true(saw_affixed_item)
+	assert_true(saw_different_rolls)

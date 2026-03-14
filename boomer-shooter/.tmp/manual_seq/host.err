@@ -1,0 +1,207 @@
+WARNING: res://Scenes/Projectiles/projectile.tscn:4 - ext_resource, invalid UID: uid://b3p4q5r6s7t8 - using text path instead: res://Assets/Projectiles/arrow.png
+   at: load (scene/resources/resource_format_text.cpp:444)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+WARNING: res://Scenes/Dungeon/fungal_crystal.tscn:3 - ext_resource, invalid UID: uid_crystal - using text path instead: res://Assets/Environment/Fungal/prop_fungal_crystal.png
+   at: load (scene/resources/resource_format_text.cpp:444)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+WARNING: res://Scenes/Dungeon/fungal_crystal.tscn:3 - ext_resource, invalid UID: uid_crystal - using text path instead: res://Assets/Environment/Fungal/prop_fungal_crystal.png
+   at: load (scene/resources/resource_format_text.cpp:444)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+WARNING: res://Scenes/Effects/bullet_hole.tscn:3 - ext_resource, invalid UID: uid://bullet_hole_tex_001 - using text path instead: res://Assets/Effects/bullet_hole_0.png
+   at: load (scene/resources/resource_format_text.cpp:444)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+WARNING: res://Scenes/Effects/blood_splatter.tscn:3 - ext_resource, invalid UID: uid://blood_splatter_tex_001 - using text path instead: res://Assets/Effects/blood_splatter_0.png
+   at: load (scene/resources/resource_format_text.cpp:444)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+WARNING: res://Scenes/Player/player.tscn:6 - ext_resource, invalid UID: uid://c7t4y0a1m2x - using text path instead: res://Scenes/Weapons/weapon_rifle.tscn
+   at: load (scene/resources/resource_format_text.cpp:444)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+WARNING: res://Scenes/Weapons/weapon_rifle.tscn:6 - ext_resource, invalid UID: uid://flash_sheet_001 - using text path instead: res://Assets/Weapons/muzzle_flash_sheet.png
+   at: load (scene/resources/resource_format_text.cpp:444)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+WARNING: res://Scenes/Player/player.tscn:7 - ext_resource, invalid UID: uid://d7t4y0a1m2x - using text path instead: res://Scenes/Weapons/weapon_shotgun.tscn
+   at: load (scene/resources/resource_format_text.cpp:444)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+WARNING: res://Scenes/Weapons/weapon_shotgun.tscn:6 - ext_resource, invalid UID: uid_flash_shotgun - using text path instead: res://Assets/Effects/vfx_muzzle_shotgun.png
+   at: load (scene/resources/resource_format_text.cpp:444)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+WARNING: res://Scenes/Player/player.tscn:8 - ext_resource, invalid UID: uid://e7t4y0a1m2x - using text path instead: res://Scenes/Weapons/weapon_crossbow.tscn
+   at: load (scene/resources/resource_format_text.cpp:444)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+WARNING: res://Scenes/Projectiles/arrow.tscn:4 - ext_resource, invalid UID: uid://b3p4q5r6s7t8 - using text path instead: res://Assets/Projectiles/arrow.png
+   at: load (scene/resources/resource_format_text.cpp:444)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+WARNING: res://Scenes/Weapons/weapon_crossbow.tscn:7 - ext_resource, invalid UID: uid://flash_sheet_001 - using text path instead: res://Assets/Weapons/muzzle_flash_sheet.png
+   at: load (scene/resources/resource_format_text.cpp:444)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+WARNING: res://Scenes/Player/player.tscn:9 - ext_resource, invalid UID: uid://f7t4y0a1m2x - using text path instead: res://Scenes/Weapons/weapon_fireball.tscn
+   at: load (scene/resources/resource_format_text.cpp:444)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+WARNING: res://Scenes/Weapons/weapon_fireball.tscn:7 - ext_resource, invalid UID: uid_flash_fireball - using text path instead: res://Assets/Effects/vfx_muzzle_fireball.png
+   at: load (scene/resources/resource_format_text.cpp:444)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+SCRIPT ERROR: Parse Error: Cannot infer the type of "chest" variable because the value doesn't have a set type.
+   at: GDScript::reload (res://Scripts/Debug/multiplayer_chest_verifier.gd:30)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+SCRIPT ERROR: Parse Error: Cannot infer the type of "inventory_system" variable because the value doesn't have a set type.
+   at: GDScript::reload (res://Scripts/Debug/multiplayer_chest_verifier.gd:36)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+SCRIPT ERROR: Parse Error: Cannot infer the type of "moved" variable because the value doesn't have a set type.
+   at: GDScript::reload (res://Scripts/Debug/multiplayer_chest_verifier.gd:73)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+SCRIPT ERROR: Parse Error: Cannot infer the type of "local_player" variable because the value doesn't have a set type.
+   at: GDScript::reload (res://Scripts/Debug/multiplayer_chest_verifier.gd:126)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+SCRIPT ERROR: Parse Error: Cannot infer the type of "player" variable because the value doesn't have a set type.
+   at: GDScript::reload (res://Scripts/Debug/multiplayer_chest_verifier.gd:146)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+SCRIPT ERROR: Parse Error: Cannot infer the type of "local_player" variable because the value doesn't have a set type.
+   at: GDScript::reload (res://Scripts/Debug/multiplayer_chest_verifier.gd:151)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+SCRIPT ERROR: Parse Error: The variable type is being inferred from a Variant value, so it will be typed as Variant. (Warning treated as error.)
+   at: GDScript::reload (res://Scripts/Debug/multiplayer_chest_verifier.gd:232)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+ERROR: Failed to load script "res://Scripts/Debug/multiplayer_chest_verifier.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript.cpp:3041)
+   GDScript backtrace (most recent call first):
+       [0] _change_to_dungeon (res://Scripts/Networking/network_bootstrap.gd:141)
+       [1] _on_match_started (res://Scripts/Networking/network_bootstrap.gd:138)
+       [2] start_match (res://Scripts/Networking/network_session.gd:82)
+       [3] _on_start_button_pressed (res://Scripts/Networking/network_bootstrap.gd:94)
+       [4] _try_auto_start_match (res://Scripts/Networking/network_bootstrap.gd:226)
+WARNING: Property agent_height is ceiled to cell_height voxel units and loses precision.
+   at: generator_bake_from_source_geometry_data (modules/navigation_3d/3d/nav_mesh_generator_3d.cpp:366)
+   GDScript backtrace (most recent call first):
+       [0] generate_floor (res://Scripts/Dungeon/dungeon_manager.gd:158)
+WARNING: Property agent_max_climb is floored to cell_height voxel units and loses precision.
+   at: generator_bake_from_source_geometry_data (modules/navigation_3d/3d/nav_mesh_generator_3d.cpp:369)
+   GDScript backtrace (most recent call first):
+       [0] generate_floor (res://Scripts/Dungeon/dungeon_manager.gd:158)
+WARNING: Property agent_radius is ceiled to cell_size voxel units and loses precision.
+   at: generator_bake_from_source_geometry_data (modules/navigation_3d/3d/nav_mesh_generator_3d.cpp:372)
+   GDScript backtrace (most recent call first):
+       [0] generate_floor (res://Scripts/Dungeon/dungeon_manager.gd:158)
+WARNING: Sending 4643 bytes unreliably which is above the MTU (1392), this will result in higher packet loss
+   at: put_packet (modules/enet/enet_multiplayer_peer.cpp:363)
+   GDScript backtrace (most recent call first):
+       [0] _broadcast_enemy_snapshots (res://Scripts/Dungeon/dungeon_manager.gd:1098)
+       [1] _process (res://Scripts/Dungeon/dungeon_manager.gd:76)
+ERROR: BUG: Unreferenced static string to 0: NavMapBuilder3D
+   at: unref (core/string/string_name.cpp:116)
+ERROR: BUG: Unreferenced static string to 0: NavRegionBuilder3D
+   at: unref (core/string/string_name.cpp:116)
+ERROR: BUG: Unreferenced static string to 0: _request_gizmo_for_id
+   at: unref (core/string/string_name.cpp:116)
+ERROR: BUG: Unreferenced static string to 0: _enter_world
+   at: unref (core/string/string_name.cpp:116)
+ERROR: BUG: Unreferenced static string to 0: use_dynamic_gi
+   at: unref (core/string/string_name.cpp:116)
+ERROR: BUG: Unreferenced static string to 0: use_in_baked_light
+   at: unref (core/string/string_name.cpp:116)
+ERROR: BUG: Unreferenced static string to 0: servers
+   at: unref (core/string/string_name.cpp:116)

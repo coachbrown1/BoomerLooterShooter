@@ -638,7 +638,7 @@ func _build_item_tooltip(item_snapshot: Dictionary) -> String:
 	lines.append(String(item_snapshot.get("display_name", "Item")))
 
 	var stats: Dictionary = item_snapshot.get("stats", {})
-	var rarity := String(stats.get("rarity", ""))
+	var rarity := String(item_snapshot.get("rarity", stats.get("rarity", "")))
 	if not rarity.is_empty():
 		lines.append("Rarity: %s" % rarity)
 
@@ -652,10 +652,28 @@ func _build_item_tooltip(item_snapshot: Dictionary) -> String:
 		if not weapon_key.is_empty():
 			lines.append("Weapon: %s" % weapon_key.capitalize())
 
-	var stat_lines := _build_stat_lines(stats)
-	if not stat_lines.is_empty():
+	var implicit_stats: Dictionary = item_snapshot.get("implicit_stats", {})
+	var affixes: Array = item_snapshot.get("affixes", [])
+	var implicit_lines := _build_stat_lines(implicit_stats)
+	if not implicit_lines.is_empty():
 		lines.append("")
-		lines.append_array(stat_lines)
+		lines.append("Implicit")
+		lines.append_array(implicit_lines)
+
+	if not affixes.is_empty():
+		lines.append("")
+		lines.append("Added Modifiers")
+		for affix_variant in affixes:
+			if typeof(affix_variant) != TYPE_DICTIONARY:
+				continue
+			var affix: Dictionary = affix_variant
+			var affix_lines := _build_stat_lines(affix.get("stats", {}))
+			lines.append_array(affix_lines)
+
+	var total_only_lines := _build_stat_lines(_get_total_only_stats(stats, implicit_stats, affixes))
+	if implicit_lines.is_empty() and affixes.is_empty() and not total_only_lines.is_empty():
+		lines.append("")
+		lines.append_array(total_only_lines)
 
 	return "\n".join(lines)
 
@@ -740,6 +758,13 @@ func _get_rarity_border_color(item_snapshot: Variant) -> Color:
 	if category == "weapon":
 		return Color("d7dce5")
 	return Color("7f8793")
+
+func _get_total_only_stats(total_stats: Dictionary, implicit_stats: Dictionary, affixes: Array) -> Dictionary:
+	if not implicit_stats.is_empty() or not affixes.is_empty():
+		return {}
+	var display_stats := total_stats.duplicate(true)
+	display_stats.erase("rarity")
+	return display_stats
 
 func _get_slot_item_snapshot(slot_ref: SlotRef) -> Variant:
 	if _latest_snapshot.is_empty():

@@ -17,7 +17,7 @@ item_id = &"chest_bruiser_plate_uncommon"
 display_name = "Uncommon Bruiser Plate"
 category = &"armor"
 equipment_slot = &"chest"
-stats = {"health_add": 25, "health_mult": 0.05, "rarity": "Uncommon"}
+stats = {"damage_reduction": 0.03, "health_add": 25, "health_mult": 0.05, "rarity": "Uncommon"}
 
 [sub_resource type="Resource" id="Item_003"]
 script = ExtResource("2_item")
@@ -25,7 +25,7 @@ item_id = &"chest_bruiser_plate_rare"
 display_name = "Rare Bruiser Plate"
 category = &"armor"
 equipment_slot = &"chest"
-stats = {"health_add": 35, "health_mult": 0.08, "rarity": "Rare"}
+stats = {"damage_reduction": 0.05, "health_add": 35, "health_mult": 0.08, "rarity": "Rare"}
 
 [sub_resource type="Resource" id="Item_004"]
 script = ExtResource("2_item")
@@ -33,7 +33,7 @@ item_id = &"chest_bruiser_plate_epic"
 display_name = "Epic Bruiser Plate"
 category = &"armor"
 equipment_slot = &"chest"
-stats = {"fov_kick_reduction": 0.05, "health_add": 45, "health_mult": 0.10, "rarity": "Epic"}
+stats = {"damage_reduction": 0.07, "fov_kick_reduction": 0.05, "health_add": 45, "health_mult": 0.10, "rarity": "Epic"}
 
 [sub_resource type="Resource" id="Item_005"]
 script = ExtResource("2_item")
@@ -41,7 +41,7 @@ item_id = &"chest_bruiser_plate_legendary"
 display_name = "Legendary Bruiser Plate"
 category = &"armor"
 equipment_slot = &"chest"
-stats = {"fov_kick_reduction": 0.07, "health_add": 60, "health_mult": 0.12, "rarity": "Legendary", "reload_speed_mult": 0.05}
+stats = {"damage_reduction": 0.10, "fov_kick_reduction": 0.07, "health_add": 60, "health_mult": 0.12, "rarity": "Legendary", "reload_speed_mult": 0.05}
 
 [resource]
 script = ExtResource("1_line")

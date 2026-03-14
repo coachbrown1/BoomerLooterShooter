@@ -1,5 +1,0 @@
-File: j:\BoomerShooter\boomer-shooter\Assets\Enemies\GoblinArcherForward\goblin_archer_forward_spritesheet.png
-Size: 640x128
-Opaque pixels: 17153
-Transparent pixels (alpha=0): 64767
-Semi-transparent pixels (0 < alpha < 255): 0
