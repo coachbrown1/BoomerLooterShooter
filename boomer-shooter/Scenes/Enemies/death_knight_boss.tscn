@@ -25,7 +25,7 @@ script          = ExtResource("1_script")
 ; ── Boss stats ──────────────────────────────────────────────────────────────
 base_max_health  = 400
 spawn_cost       = 8.0
-spawn_min_floor  = 4
+spawn_min_floor  = 1
 move_speed       = 2.8
 aggro_range      = 20.0
 ; attack_range / windup_start_range are overridden by the boss script logic,
