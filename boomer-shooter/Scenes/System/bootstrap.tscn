@@ -58,23 +58,29 @@ alignment = 1
 
 [node name="SingleButton" type="Button" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons"]
 text = "Single Player"
+mouse_default_cursor_shape = 2
 
 [node name="HostButton" type="Button" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons"]
 text = "Host"
+mouse_default_cursor_shape = 2
 
 [node name="JoinButton" type="Button" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons"]
 text = "Join"
+mouse_default_cursor_shape = 2
 
 [node name="StartButton" type="Button" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons"]
 text = "Start Game"
 visible = false
+mouse_default_cursor_shape = 2
 
 [node name="LeaveButton" type="Button" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons"]
 text = "Leave"
 visible = false
+mouse_default_cursor_shape = 2
 
 [node name="QuitButton" type="Button" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons"]
 text = "Quit"
+mouse_default_cursor_shape = 2
 
 [node name="StatusLabel" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
 visible = false
