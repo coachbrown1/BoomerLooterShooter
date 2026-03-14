@@ -1,7 +1,7 @@
-[gd_scene load_steps=4 format=3 uid="uid://b2p3q4r5s6t7"]
+[gd_scene load_steps=4 format=3 uid="uid://projarrowid003"]
 
 [ext_resource type="Script" path="res://Scripts/Projectiles/projectile.gd" id="1_a"]
-[ext_resource type="Texture2D" uid="uid://b3p4q5r6s7t8" path="res://Assets/Projectiles/arrow.png" id="2_b"]
+[ext_resource type="Texture2D" uid="uid://b0rxsmbqh4qng" path="res://Assets/Projectiles/arrow.png" id="2_b"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_1"]
 radius = 0.3

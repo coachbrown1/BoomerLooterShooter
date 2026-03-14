@@ -1,9 +1,9 @@
-[gd_scene load_steps=10 format=3 uid="uid://e8y7z8w1a2b3c"]
+[gd_scene load_steps=10 format=3 uid="uid://wbase000uid00"]
 
 [ext_resource type="Script" path="res://Scripts/Weapons/weapon.gd" id="1_xxx"]
 [ext_resource type="Texture2D" path="res://Assets/Weapons/weapon_rifle_viewmodel.png" id="2_yyy"]
 [ext_resource type="Material" uid="uid://d1g4a3h8j6p2" path="res://Materials/weapon_outline_material.tres" id="3_mat"]
-[ext_resource type="Texture2D" uid="uid://flash_sheet_001" path="res://Assets/Weapons/muzzle_flash_sheet.png" id="4_flash"]
+[ext_resource type="Texture2D" uid="uid://b5khbchiprmh8" path="res://Assets/Weapons/muzzle_flash_sheet.png" id="4_flash"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_muzzle"]
 radius = 0.04

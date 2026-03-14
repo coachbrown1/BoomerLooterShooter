@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="Texture2D" uid="uid_crystal" path="res://Assets/Environment/Fungal/prop_fungal_crystal.png" id="1_crystal"]
+[ext_resource type="Texture2D" uid="uid://dxusyqnu21hb" path="res://Assets/Environment/Fungal/prop_fungal_crystal.png" id="1_crystal"]
 [ext_resource type="Script" path="res://Scripts/Environment/fungal_prop_vfx.gd" id="2_vfx"]
 
 [node name="FungalCrystal" type="Node3D"]

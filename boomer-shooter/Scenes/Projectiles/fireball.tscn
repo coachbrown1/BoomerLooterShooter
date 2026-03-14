@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://b2p3q4r5s6t7"]
+[gd_scene format=3 uid="uid://projfireuid002"]
 
 [ext_resource type="Script" uid="uid://bvuua3i76w7cn" path="res://Scripts/Projectiles/projectile.gd" id="1_a"]
 [ext_resource type="Texture2D" uid="uid://ckcd0ct4e67i1" path="res://Assets/Projectiles/proj_fireball.png" id="2_b"]

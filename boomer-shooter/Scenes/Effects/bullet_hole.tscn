@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://bullet_hole_001"]
 
-[ext_resource type="Texture2D" uid="uid://bullet_hole_tex_001" path="res://Assets/Effects/bullet_hole_0.png" id="1_tex"]
+[ext_resource type="Texture2D" uid="uid://cr6ouqmpe4yy4" path="res://Assets/Effects/bullet_hole_0.png" id="1_tex"]
 [ext_resource type="Script" path="res://Scripts/Effects/bullet_hole.gd" id="2_bh"]
 
 [node name="BulletHole" type="Decal"]

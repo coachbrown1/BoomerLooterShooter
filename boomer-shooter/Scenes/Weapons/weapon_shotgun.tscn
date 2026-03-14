@@ -1,9 +1,9 @@
-[gd_scene load_steps=10 format=3 uid="uid://e8y7z8w1a2b3c"]
+[gd_scene load_steps=10 format=3 uid="uid://d1sh07g1nuid02"]
 
 [ext_resource type="Script" path="res://Scripts/Weapons/weapon.gd" id="1_xxx"]
 [ext_resource type="Texture2D" uid="uid://c0tq5urk62w0d" path="res://Assets/Weapons/weapon_shotgun_viewmodel.png" id="2_yyy"]
 [ext_resource type="Material" uid="uid://d1g4a3h8j6p2" path="res://Materials/weapon_outline_material.tres" id="3_mat"]
-[ext_resource type="Texture2D" uid="uid_flash_shotgun" path="res://Assets/Effects/vfx_muzzle_shotgun.png" id="4_flash"]
+[ext_resource type="Texture2D" uid="uid://digww5bj0dly0" path="res://Assets/Effects/vfx_muzzle_shotgun.png" id="4_flash"]
 [ext_resource type="Texture2D" path="res://Assets/Icons/Weapons/icon_shotgun.png" id="5_icon"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_muzzle"]

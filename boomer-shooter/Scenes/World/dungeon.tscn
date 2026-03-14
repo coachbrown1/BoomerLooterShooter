@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://duxammn24t6ay" path="res://Scripts/Dungeon/dungeon_manager.gd" id="1_dmgr"]
 [ext_resource type="PackedScene" uid="uid://b8q7t4y0a1m2x" path="res://Scenes/Player/player.tscn" id="2_player"]
-[ext_resource type="PackedScene" uid="uid://c7x8xa01a2b3c" path="res://Scenes/UI/hud.tscn" id="3_hud"]
+[ext_resource type="PackedScene" uid="uid://c7x8w9z1a2b3c" path="res://Scenes/UI/hud.tscn" id="3_hud"]
 [ext_resource type="Script" path="res://Scripts/Debug/multiplayer_chest_verifier.gd" id="4_mpverify"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]

@@ -3,10 +3,10 @@
 [ext_resource type="Script" path="res://Scripts/Player/player.gd" id="1_xxx"]
 [ext_resource type="Script" path="res://Scripts/Weapons/weapon_manager.gd" id="1_manager"]
 [ext_resource type="Script" path="res://Scripts/Inventory/inventory_system.gd" id="1_inventory"]
-[ext_resource type="PackedScene" uid="uid://c7t4y0a1m2x" path="res://Scenes/Weapons/weapon_rifle.tscn" id="2_rifle"]
-[ext_resource type="PackedScene" uid="uid://d7t4y0a1m2x" path="res://Scenes/Weapons/weapon_shotgun.tscn" id="3_shotgun"]
-[ext_resource type="PackedScene" uid="uid://e7t4y0a1m2x" path="res://Scenes/Weapons/weapon_crossbow.tscn" id="4_crossbow"]
-[ext_resource type="PackedScene" uid="uid://f7t4y0a1m2x" path="res://Scenes/Weapons/weapon_fireball.tscn" id="5_fireball"]
+[ext_resource type="PackedScene" uid="uid://cy0r1f13uid01" path="res://Scenes/Weapons/weapon_rifle.tscn" id="2_rifle"]
+[ext_resource type="PackedScene" uid="uid://d1sh07g1nuid02" path="res://Scenes/Weapons/weapon_shotgun.tscn" id="3_shotgun"]
+[ext_resource type="PackedScene" uid="uid://e8xbowuid0003" path="res://Scenes/Weapons/weapon_crossbow.tscn" id="4_crossbow"]
+[ext_resource type="PackedScene" uid="uid://f1reballu1d04" path="res://Scenes/Weapons/weapon_fireball.tscn" id="5_fireball"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_xx"]
 radius = 0.4
