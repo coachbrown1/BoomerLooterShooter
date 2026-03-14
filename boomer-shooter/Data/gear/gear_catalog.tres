@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="GearCatalogData" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Data/gear_catalog_data.gd" id="1_catalog"]
+[ext_resource type="Resource" path="res://Data/gear/helmets/scout_visor.tres" id="2_1"]
+[ext_resource type="Resource" path="res://Data/gear/helmets/iron_sight_hood.tres" id="3_2"]
+[ext_resource type="Resource" path="res://Data/gear/helmets/warcaster_crown.tres" id="4_3"]
+[ext_resource type="Resource" path="res://Data/gear/chests/bruiser_plate.tres" id="5_4"]
+[ext_resource type="Resource" path="res://Data/gear/chests/bloodwoven_coat.tres" id="6_5"]
+[ext_resource type="Resource" path="res://Data/gear/chests/siege_harness.tres" id="7_6"]
+[ext_resource type="Resource" path="res://Data/gear/arms/loader_bracers.tres" id="8_7"]
+[ext_resource type="Resource" path="res://Data/gear/arms/gunner_wraps.tres" id="9_8"]
+[ext_resource type="Resource" path="res://Data/gear/arms/slayer_gauntlets.tres" id="10_9"]
+[ext_resource type="Resource" path="res://Data/gear/legs/raider_greaves.tres" id="11_10"]
+[ext_resource type="Resource" path="res://Data/gear/legs/pursuit_leggings.tres" id="12_11"]
+[ext_resource type="Resource" path="res://Data/gear/legs/shockrunner_pants.tres" id="13_12"]
+[ext_resource type="Resource" path="res://Data/gear/feet/strider_boots.tres" id="14_13"]
+[ext_resource type="Resource" path="res://Data/gear/feet/breach_stompers.tres" id="15_14"]
+[ext_resource type="Resource" path="res://Data/gear/feet/slipstep_soles.tres" id="16_15"]
+
+[resource]
+script = ExtResource("1_catalog")
+lines = [ExtResource("2_1"), ExtResource("3_2"), ExtResource("4_3"), ExtResource("5_4"), ExtResource("6_5"), ExtResource("7_6"), ExtResource("8_7"), ExtResource("9_8"), ExtResource("10_9"), ExtResource("11_10"), ExtResource("12_11"), ExtResource("13_12"), ExtResource("14_13"), ExtResource("15_14"), ExtResource("16_15")]

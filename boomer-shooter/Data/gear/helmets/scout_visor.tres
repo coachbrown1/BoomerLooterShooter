@@ -1,0 +1,51 @@
+[gd_resource type="Resource" script_class="GearLineData" format=3]
+
+[ext_resource type="Script" path="res://Scripts/Data/gear_line_data.gd" id="1_line"]
+[ext_resource type="Script" path="res://Scripts/Inventory/inventory_item_data.gd" id="2_item"]
+
+[sub_resource type="Resource" id="Item_001"]
+script = ExtResource("2_item")
+item_id = &"helmet_scout_visor_common"
+display_name = "Common Scout Visor"
+category = &"armor"
+equipment_slot = &"helmet"
+stats = {"rarity": "Common", "spread_reduction": 0.04}
+
+[sub_resource type="Resource" id="Item_002"]
+script = ExtResource("2_item")
+item_id = &"helmet_scout_visor_uncommon"
+display_name = "Uncommon Scout Visor"
+category = &"armor"
+equipment_slot = &"helmet"
+stats = {"rarity": "Uncommon", "recoil_recovery_mult": 0.03, "spread_reduction": 0.06}
+
+[sub_resource type="Resource" id="Item_003"]
+script = ExtResource("2_item")
+item_id = &"helmet_scout_visor_rare"
+display_name = "Rare Scout Visor"
+category = &"armor"
+equipment_slot = &"helmet"
+stats = {"rarity": "Rare", "recoil_recovery_mult": 0.05, "shells_damage_mult": 0.05, "spread_reduction": 0.08}
+
+[sub_resource type="Resource" id="Item_004"]
+script = ExtResource("2_item")
+item_id = &"helmet_scout_visor_epic"
+display_name = "Epic Scout Visor"
+category = &"armor"
+equipment_slot = &"helmet"
+stats = {"rarity": "Epic", "recoil_recovery_mult": 0.07, "shells_damage_mult": 0.06, "shotgun_damage_mult": 0.08, "spread_reduction": 0.10}
+
+[sub_resource type="Resource" id="Item_005"]
+script = ExtResource("2_item")
+item_id = &"helmet_scout_visor_legendary"
+display_name = "Legendary Scout Visor"
+category = &"armor"
+equipment_slot = &"helmet"
+stats = {"rarity": "Legendary", "recoil_recovery_mult": 0.10, "shells_damage_mult": 0.08, "shotgun_damage_add": 4, "shotgun_damage_mult": 0.10, "spread_reduction": 0.12}
+
+[resource]
+script = ExtResource("1_line")
+slot_name = &"helmet"
+piece_name = "Scout Visor"
+build_theme = "Shotgun precision"
+variants = [SubResource("Item_001"), SubResource("Item_002"), SubResource("Item_003"), SubResource("Item_004"), SubResource("Item_005")]
