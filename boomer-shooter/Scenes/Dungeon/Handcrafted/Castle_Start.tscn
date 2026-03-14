@@ -35,101 +35,128 @@ size = Vector3(0.25, 0.2, 20)
 
 [node name="Castle_Start" type="Node3D" unique_id=1424852170]
 
-[node name="CompactWalls" type="Node3D" parent="."]
+[node name="CompactWalls" type="Node3D" parent="." unique_id=1564375748]
 
-[node name="NorthWall01" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="NorthWall01" parent="CompactWalls" unique_id=992103591 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.5, 0, -10.5)
 
-[node name="NorthWall02" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="NorthWall07" parent="CompactWalls" unique_id=771060789 instance=ExtResource("2_wall_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.484852, 0, -10.5)
+
+[node name="NorthWall08" parent="CompactWalls" unique_id=1426833298 instance=ExtResource("2_wall_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.367623, 0, -10.5)
+
+[node name="NorthWall02" parent="CompactWalls" unique_id=814097646 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, 0, -10.5)
 
-[node name="NorthWall03" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="NorthWall03" parent="CompactWalls" unique_id=1663629312 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, -10.5)
 
-[node name="NorthWall04" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="NorthWall04" parent="CompactWalls" unique_id=1779884280 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, -10.5)
 
-[node name="NorthWall05" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="NorthWall05" parent="CompactWalls" unique_id=1796412337 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0, -10.5)
 
-[node name="NorthWall06" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="NorthWall06" parent="CompactWalls" unique_id=847089242 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 0, -10.5)
 
-[node name="WestWall01" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="WestWall01" parent="CompactWalls" unique_id=855956453 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, -7.5)
 
-[node name="WestWall02" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="WestWall07" parent="CompactWalls" unique_id=706063905 instance=ExtResource("2_wall_tile")]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, -10.47899)
+
+[node name="WestWall02" parent="CompactWalls" unique_id=1072392124 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, -4.5)
 
-[node name="WestWall03" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="WestWall03" parent="CompactWalls" unique_id=1109565883 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, -1.5)
 
-[node name="WestWall04" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="WestWall04" parent="CompactWalls" unique_id=493008344 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, 1.5)
 
-[node name="WestWall05" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="WestWall05" parent="CompactWalls" unique_id=2026708144 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, 4.5)
 
-[node name="WestWall06" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="WestWall06" parent="CompactWalls" unique_id=480660638 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, 7.5)
 
-[node name="EastWall01" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="WestWall08" parent="CompactWalls" unique_id=1930190018 instance=ExtResource("2_wall_tile")]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, 10.220005)
+
+[node name="EastWall01" parent="CompactWalls" unique_id=1519092232 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, -7.5)
 
-[node name="EastWall02" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="EastWall07" parent="CompactWalls" unique_id=1494689956 instance=ExtResource("2_wall_tile")]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, -10.470303)
+
+[node name="EastWall02" parent="CompactWalls" unique_id=648547625 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, -4.5)
 
-[node name="EastWall03" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="EastWall03" parent="CompactWalls" unique_id=815587995 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, -1.5)
 
-[node name="EastWall04" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="EastWall04" parent="CompactWalls" unique_id=858992921 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, 1.5)
 
-[node name="EastWall05" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="EastWall05" parent="CompactWalls" unique_id=2121698728 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, 4.5)
 
-[node name="EastWall06" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="EastWall06" parent="CompactWalls" unique_id=1285029109 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, 7.5)
 
-[node name="SouthWallWest01" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="EastWall08" parent="CompactWalls" unique_id=1590656146 instance=ExtResource("2_wall_tile")]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, 10.375866)
+
+[node name="SouthWallWest01" parent="CompactWalls" unique_id=1559776865 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.5, 0, 10.5)
 
-[node name="SouthWallWest02" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="SouthWallWest03" parent="CompactWalls" unique_id=881528073 instance=ExtResource("2_wall_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.530791, 0, 10.5)
+
+[node name="SouthWallWest02" parent="CompactWalls" unique_id=1507631966 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, 0, 10.5)
 
-[node name="SouthWallEast01" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="SouthWallEast01" parent="CompactWalls" unique_id=1993070742 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0, 10.5)
 
-[node name="SouthWallEast02" parent="CompactWalls" instance=ExtResource("2_wall_tile")]
+[node name="SouthWallEast02" parent="CompactWalls" unique_id=638509936 instance=ExtResource("2_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 0, 10.5)
 
+[node name="SouthWallEast03" parent="CompactWalls" unique_id=715622913 instance=ExtResource("2_wall_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.386345, 0, 10.5)
+
 [node name="SpawnPad" type="MeshInstance3D" parent="." unique_id=2056314260]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, -3.4477577)
 mesh = SubResource("2_pad_mesh")
 
 [node name="PlayerSpawn" type="Node3D" parent="." unique_id=1107195828]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2.5)
 
-[node name="TorchWest" parent="." instance=ExtResource("3_torch")]
+[node name="TorchWest" parent="." unique_id=347520570 instance=ExtResource("3_torch")]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, -6.5, 0, -9.6)
 
-[node name="TorchEast" parent="." instance=ExtResource("3_torch")]
+[node name="TorchEast" parent="." unique_id=1065931320 instance=ExtResource("3_torch")]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 6.5, 0, -9.6)
 
-[node name="BrokenPillarWest" parent="." instance=ExtResource("6_broken_pillar")]
+[node name="BrokenPillarWest" parent="." unique_id=1147144600 instance=ExtResource("6_broken_pillar")]
 transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, -6.2, 0, 2.8)
 
-[node name="BrokenPillarEast" parent="." instance=ExtResource("6_broken_pillar")]
+[node name="BrokenPillarEast" parent="." unique_id=478180806 instance=ExtResource("6_broken_pillar")]
 transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 6.2, 0, 2.8)
 
-[node name="SupplyCrate" parent="." instance=ExtResource("4_crate")]
+[node name="SupplyCrate" parent="." unique_id=1539293732 instance=ExtResource("4_crate")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 5.2)
+placement_kind = 1
+random_y_rotation_max = 270.0
 
-[node name="SupplyBarrel" parent="." instance=ExtResource("5_barrel")]
+[node name="SupplyBarrel" parent="." unique_id=693944232 instance=ExtResource("5_barrel")]
 transform = Transform3D(0.95, 0, 0, 0, 0.95, 0, 0, 0, 0.95, 4.1, 0, 5.6)
+placement_kind = 1
 
 [node name="InteractableChest" parent="." unique_id=1481217079 instance=ExtResource("1_chest")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.5)
+transform = Transform3D(-0.9997752, 0, 0.021204226, 0, 1, 0, -0.021204226, 0, -0.9997752, 0, 0, 1.5960076)
 
 [node name="RoomBoundsDebug" type="Node3D" parent="." unique_id=1281634822]
 
