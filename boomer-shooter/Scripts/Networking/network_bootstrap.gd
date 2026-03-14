@@ -25,6 +25,7 @@ var _automation_cfg := {}
 func _ready() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	_apply_release_metadata()
+	_seed_default_ip_field()
 	_automation_cfg = _parse_automation_args(OS.get_cmdline_user_args())
 	var session = _get_network_session()
 	if session == null:
@@ -63,6 +64,9 @@ func _on_single_button_pressed() -> void:
 func _on_host_button_pressed() -> void:
 	_set_status("Hosting...")
 	var port := _parse_port()
+	var share_ip := _get_preferred_local_ipv4()
+	if not share_ip.is_empty():
+		_ip_input.text = share_ip
 	var session = _get_network_session()
 	if session == null:
 		_set_status("NetworkSession unavailable.")
@@ -163,6 +167,15 @@ func _apply_release_metadata() -> void:
 		_version_label.text = "Version %s" % version
 	DisplayServer.window_set_title("BoomerShooter %s" % version)
 
+func _seed_default_ip_field() -> void:
+	if _ip_input == null:
+		return
+	var share_ip := _get_preferred_local_ipv4()
+	if share_ip.is_empty():
+		_ip_input.text = "127.0.0.1"
+		return
+	_ip_input.text = share_ip
+
 func _parse_port() -> int:
 	var text := _port_input.text.strip_edges()
 	if text.is_empty():
@@ -204,13 +217,27 @@ func _update_host_info_label() -> void:
 
 	var session = _get_network_session()
 	if session == null or not bool(session.call("is_multiplayer_active")):
-		_host_info_label.text = "Host LAN IPv4: start hosting to show local addresses"
+		var default_ip := _get_preferred_local_ipv4()
+		if default_ip.is_empty():
+			_host_info_label.text = "Host LAN IPv4: start hosting to show local addresses"
+		else:
+			_host_info_label.text = "Host LAN IPv4: %s" % default_ip
 		return
 
 	if not bool(session.call("is_host")):
 		_host_info_label.text = "Joining as client. Enter the host's IP and selected port."
 		return
 
+	var addresses := _get_local_ipv4_addresses()
+	var port := _parse_port()
+	if addresses.is_empty():
+		_host_info_label.text = "Hosting on port %d. No non-loopback IPv4 address detected on this machine." % port
+		return
+	var share_ip := addresses[0]
+	_ip_input.text = share_ip
+	_host_info_label.text = "Hosting on port %d. Share this IP with your guest: %s" % [port, share_ip]
+
+func _get_local_ipv4_addresses() -> Array[String]:
 	var addresses: Array[String] = []
 	for address_variant in IP.get_local_addresses():
 		var address := String(address_variant)
@@ -221,13 +248,29 @@ func _update_host_info_label() -> void:
 		if address == "0.0.0.0":
 			continue
 		addresses.append(address)
+	addresses.sort_custom(func(a: String, b: String) -> bool:
+		return _ip_priority(a) < _ip_priority(b)
+	)
+	return addresses
 
-	addresses.sort()
-	var port := _parse_port()
+func _get_preferred_local_ipv4() -> String:
+	var addresses := _get_local_ipv4_addresses()
 	if addresses.is_empty():
-		_host_info_label.text = "Hosting on port %d. No non-loopback IPv4 address detected on this machine." % port
-		return
-	_host_info_label.text = "Hosting on port %d. Share one of these LAN IPv4 addresses: %s" % [port, ", ".join(addresses)]
+		return ""
+	return addresses[0]
+
+func _ip_priority(address: String) -> int:
+	if address.begins_with("192.168."):
+		return 0
+	if address.begins_with("10."):
+		return 1
+	if address.begins_with("172."):
+		var octets := address.split(".")
+		if octets.size() >= 2:
+			var second_octet := int(octets[1])
+			if second_octet >= 16 and second_octet <= 31:
+				return 2
+	return 3
 
 func _get_network_session():
 	if is_inside_tree():
