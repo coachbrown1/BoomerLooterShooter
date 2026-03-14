@@ -542,7 +542,19 @@ func _spawn_room_once(room_id: int) -> void:
 	if room == null:
 		return
 	_spawned_enemy_rooms[room_id] = true
-	var spawned_enemies: Array = _encounter.populate_room(room, floor_number, nav_region, _active_biome_data)
+	var spawned_enemies: Array = []
+	var room_overlay = _handcrafted_room_overlays_by_id.get(room_id, null)
+	var handcrafted_spawners := _collect_handcrafted_enemy_spawners(room_overlay)
+	if not handcrafted_spawners.is_empty():
+		spawned_enemies = _encounter.populate_handcrafted_spawners(
+			room,
+			floor_number,
+			nav_region,
+			_active_biome_data,
+			handcrafted_spawners
+		)
+	else:
+		spawned_enemies = _encounter.populate_room(room, floor_number, nav_region, _active_biome_data)
 	_configure_handcrafted_room_enemy_behavior(room, spawned_enemies)
 	if not _session_multiplayer or not _session_host:
 		return
@@ -871,6 +883,22 @@ func _configure_handcrafted_room_enemy_behavior(room: RoomData, spawned_enemies:
 func _is_inside_castle_inner_chamber(enemy_world_pos: Vector3, room_center_world_pos: Vector3) -> bool:
 	var local_pos := enemy_world_pos - room_center_world_pos
 	return abs(local_pos.x) <= 11.5 and local_pos.z >= -11.5 and local_pos.z <= 11.5
+
+func _collect_handcrafted_enemy_spawners(root: Node) -> Array:
+	var spawners: Array = []
+	if root == null or not is_instance_valid(root):
+		return spawners
+	var stack: Array = [root]
+	while not stack.is_empty():
+		var current_variant = stack.pop_back()
+		if not (current_variant is Node):
+			continue
+		var current: Node = current_variant
+		if current is HandcraftedEnemySpawner:
+			spawners.append(current)
+		for child in current.get_children():
+			stack.append(child)
+	return spawners
 
 func _on_inner_chamber_door_opened(_door: DungeonDoor, room_id: int) -> void:
 	var suppressed: Array = _suppressed_enemies_by_room_id.get(room_id, [])

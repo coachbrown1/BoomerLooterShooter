@@ -67,22 +67,33 @@ func populate_room(room: RoomData, floor_num: int, parent: Node3D, biome_data: R
 		if not (packed_variant is PackedScene):
 			continue
 		var packed: PackedScene = packed_variant
+		_spawn_enemy_scene(parent, packed, _random_room_pos(room), spawned)
 
-		var enemy_variant: Variant = packed.instantiate()
-		if not (enemy_variant is Node3D):
-			if enemy_variant is Node:
-				var cleanup_node: Node = enemy_variant
-				cleanup_node.free()
+	return spawned
+
+func populate_handcrafted_spawners(
+	room: RoomData,
+	floor_num: int,
+	parent: Node3D,
+	_biome_data: Resource,
+	spawners: Array
+) -> Array:
+	var spawned: Array = []
+	if room == null or room.room_type == RoomData.RoomType.START:
+		return spawned
+	for spawner_variant in spawners:
+		if not (spawner_variant is HandcraftedEnemySpawner):
 			continue
-		var enemy: Node3D = enemy_variant
-
-		parent.add_child(enemy)
-		spawned.append(enemy)
-
-		# Random position within the room
-		var spawn_pos := _random_room_pos(room)
-		enemy.global_position = spawn_pos
-
+		var spawner: HandcraftedEnemySpawner = spawner_variant
+		if spawner.enemy_scene == null:
+			continue
+		var spawn_def := _build_spawn_definition(spawner.enemy_scene)
+		if spawn_def.is_empty():
+			continue
+		if floor_num < int(spawn_def.get("min_floor", 1)):
+			continue
+		for i in range(maxi(1, spawner.spawn_count)):
+			_spawn_enemy_scene(parent, spawner.enemy_scene, spawner.get_spawn_position(i), spawned)
 	return spawned
 
 func _get_roster_scenes(biome_data: Resource) -> Array:
@@ -127,6 +138,20 @@ func _build_spawn_definition(scene: PackedScene) -> Dictionary:
 		"cost": cost,
 		"min_floor": min_floor,
 	}
+
+func _spawn_enemy_scene(parent: Node3D, packed: PackedScene, spawn_pos: Vector3, spawned: Array) -> void:
+	if packed == null or parent == null:
+		return
+	var enemy_variant: Variant = packed.instantiate()
+	if not (enemy_variant is Node3D):
+		if enemy_variant is Node:
+			var cleanup_node: Node = enemy_variant
+			cleanup_node.free()
+		return
+	var enemy: Node3D = enemy_variant
+	parent.add_child(enemy)
+	spawned.append(enemy)
+	enemy.global_position = spawn_pos
 
 func _has_biome_data(biome_data: Resource) -> bool:
 	if biome_data == null:
