@@ -41,7 +41,7 @@ attack_range = 2.5
 windup_start_range = 18.0
 aggro_range = 20.0
 cooldown_time = 1.2
-base_max_health = 400
+base_max_health = 40000
 spawn_cost = 8.0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=2138850314]
@@ -50,7 +50,7 @@ shape = SubResource("body_shape")
 
 [node name="HealthComponent" type="Node" parent="." unique_id=568237769]
 script = ExtResource("2_health")
-max_health = 400
+max_health = 4000
 
 [node name="HitboxComponent" type="Area3D" parent="." unique_id=618409864 node_paths=PackedStringArray("health_component")]
 collision_layer = 4
@@ -69,9 +69,9 @@ billboard = 2
 texture = ExtResource("5_tex")
 hframes = 6
 vframes = 4
-frame = 1
 script = ExtResource("4_sprite")
 animate = false
 total_frames = 6
+bounce_walk_mode = true
 
 [node name="NavigationAgent3D" type="NavigationAgent3D" parent="." unique_id=179093743]
