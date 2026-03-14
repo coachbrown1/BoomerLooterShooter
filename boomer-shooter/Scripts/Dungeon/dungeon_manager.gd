@@ -42,6 +42,7 @@ var _player_spawn_points_by_peer: Dictionary = {}
 var _chest_viewers_by_path: Dictionary = {}
 var _leave_session_ui: CanvasLayer = null
 var _floor_sync_in_progress := false
+var _floor_sync_ready_by_peer: Dictionary = {}
 var _pending_player_roster: Array = []
 var _pending_enemy_spawns: Array = []
 
@@ -692,7 +693,52 @@ func _sync_player_roster_to_clients() -> void:
 			"peer_id": peer_id,
 			"position": player_node.global_position,
 		})
-	rpc("rpc_sync_player_roster", roster)
+	for peer_id in _get_network_connected_peer_ids():
+		if not _is_peer_floor_sync_ready(peer_id):
+			continue
+		rpc_id(peer_id, "rpc_sync_player_roster", roster)
+
+func _mark_all_clients_floor_not_ready() -> void:
+	_floor_sync_ready_by_peer.clear()
+	for peer_id in _get_network_connected_peer_ids():
+		_floor_sync_ready_by_peer[int(peer_id)] = false
+
+func _set_peer_floor_sync_ready(peer_id: int, is_ready: bool) -> void:
+	if peer_id <= 1:
+		return
+	_floor_sync_ready_by_peer[peer_id] = is_ready
+
+func _is_peer_floor_sync_ready(peer_id: int) -> bool:
+	return bool(_floor_sync_ready_by_peer.get(peer_id, false))
+
+func _send_player_roster_to_peer(peer_id: int) -> void:
+	if not _session_multiplayer or not _session_host:
+		return
+	if not _is_peer_floor_sync_ready(peer_id):
+		return
+	var roster: Array = []
+	for peer_key in _player_by_peer_id.keys():
+		var roster_peer_id := int(peer_key)
+		var player_node = _player_by_peer_id[roster_peer_id]
+		if not is_instance_valid(player_node):
+			continue
+		roster.append({
+			"peer_id": roster_peer_id,
+			"position": player_node.global_position,
+		})
+	rpc_id(peer_id, "rpc_sync_player_roster", roster)
+
+func _send_all_enemies_to_peer(peer_id: int) -> void:
+	if not _session_multiplayer or not _session_host:
+		return
+	if not _is_peer_floor_sync_ready(peer_id):
+		return
+	for enemy_id_variant in _enemy_by_network_id.keys():
+		var enemy_id := int(enemy_id_variant)
+		var enemy = _enemy_by_network_id[enemy_id]
+		if not is_instance_valid(enemy):
+			continue
+		rpc_id(peer_id, "rpc_spawn_enemy", enemy_id, enemy.scene_file_path, enemy.global_position)
 
 func _apply_pending_network_sync() -> void:
 	if _floor_sync_in_progress:
@@ -831,8 +877,8 @@ func _leave_network_game() -> void:
 func _sync_floor_to_clients() -> void:
 	if not _session_multiplayer or not _session_host:
 		return
+	_mark_all_clients_floor_not_ready()
 	rpc("rpc_sync_floor_state", floor_number, generation_seed)
-	_sync_player_roster_to_clients()
 
 func _broadcast_player_snapshots() -> void:
 	if not _session_multiplayer or not _session_host:
@@ -1177,7 +1223,10 @@ func _register_network_enemy(enemy: EnemyBase) -> void:
 	_enemy_network_id_by_instance_id[enemy.get_instance_id()] = enemy_id
 	enemy.set_meta("network_id", enemy_id)
 	enemy.enemy_died.connect(_on_network_enemy_died.bind(enemy_id), CONNECT_ONE_SHOT)
-	rpc("rpc_spawn_enemy", enemy_id, enemy.scene_file_path, enemy.global_position)
+	for peer_id in _get_network_connected_peer_ids():
+		if not _is_peer_floor_sync_ready(peer_id):
+			continue
+		rpc_id(peer_id, "rpc_spawn_enemy", enemy_id, enemy.scene_file_path, enemy.global_position)
 
 func _on_network_enemy_died(enemy_id: int) -> void:
 	rpc("rpc_mark_enemy_dead", enemy_id)
@@ -1201,9 +1250,10 @@ func _broadcast_enemy_snapshots() -> void:
 			})
 	rpc("rpc_receive_enemy_snapshots", snapshots)
 
-func _on_network_peer_joined(_peer_id: int) -> void:
+func _on_network_peer_joined(peer_id: int) -> void:
 	if not _session_host:
 		return
+	_set_peer_floor_sync_ready(peer_id, false)
 	_spawn_missing_network_players()
 	_sync_floor_to_clients()
 
@@ -1211,6 +1261,7 @@ func _on_network_peer_left(peer_id: int) -> void:
 	if not _session_host:
 		return
 	_remove_peer_from_chest_views(peer_id)
+	_floor_sync_ready_by_peer.erase(peer_id)
 	var player_node = _player_by_peer_id.get(peer_id, null)
 	if is_instance_valid(player_node):
 		player_node.queue_free()
@@ -1232,14 +1283,9 @@ func rpc_client_ready_for_sync(peer_id: int) -> void:
 	var sender := multiplayer.get_remote_sender_id()
 	if sender != peer_id:
 		return
+	_set_peer_floor_sync_ready(peer_id, false)
 	_spawn_missing_network_players()
 	rpc_id(peer_id, "rpc_sync_floor_state", floor_number, generation_seed)
-	_sync_player_roster_to_clients()
-	for enemy_id_variant in _enemy_by_network_id.keys():
-		var enemy_id := int(enemy_id_variant)
-		var enemy = _enemy_by_network_id[enemy_id]
-		if is_instance_valid(enemy):
-			rpc_id(peer_id, "rpc_spawn_enemy", enemy_id, enemy.scene_file_path, enemy.global_position)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_sync_floor_state(remote_floor: int, remote_seed: int) -> void:
@@ -1250,6 +1296,17 @@ func rpc_sync_floor_state(remote_floor: int, remote_seed: int) -> void:
 	_pending_player_roster.clear()
 	_pending_enemy_spawns.clear()
 	await generate_floor(floor_number)
+	rpc_id(1, "rpc_client_finished_floor_sync", _local_peer_id)
+
+@rpc("any_peer", "reliable")
+func rpc_client_finished_floor_sync(peer_id: int) -> void:
+	if not _session_host:
+		return
+	if multiplayer.get_remote_sender_id() != peer_id:
+		return
+	_set_peer_floor_sync_ready(peer_id, true)
+	_send_player_roster_to_peer(peer_id)
+	_send_all_enemies_to_peer(peer_id)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_sync_player_roster(roster: Array) -> void:
