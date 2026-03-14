@@ -75,7 +75,7 @@ func _start_windup() -> void:
 	attack_ready_timer = 0.0
 	super._start_windup()
 
-func _should_start_windup(dist_to_player: float) -> bool:
+func _should_start_windup(dist_squared_to_player: float) -> bool:
 	if player == null:
 		return false
 
@@ -83,7 +83,7 @@ func _should_start_windup(dist_to_player: float) -> bool:
 	if current_health <= flee_health_threshold:
 		return false
 
-	if dist_to_player < min_distance * 0.9:
+	if dist_squared_to_player < pow(min_distance * 0.9, 2):
 		return false
 
 	if attack_ready_timer < min_strafe_time_before_shot:
@@ -92,7 +92,7 @@ func _should_start_windup(dist_to_player: float) -> bool:
 	if not _has_line_of_sight():
 		return false
 
-	return dist_to_player <= _get_windup_start_range()
+	return dist_squared_to_player <= pow(_get_windup_start_range(), 2)
 
 func _has_line_of_sight() -> bool:
 	if not player: return false
@@ -113,14 +113,19 @@ func _execute_attack() -> void:
 	# Release the "arrow"
 	if player and projectile_scene:
 		var proj = projectile_scene.instantiate()
-		get_parent().add_child(proj)
 
-		# Offset slightly for eye level
-		proj.global_position = global_position + Vector3(0, actual_height * 0.75, 0)
+		var spawn_pos = global_position + Vector3(0, actual_height * 0.75, 0)
+		var dir = (player.global_position + Vector3(0, 1.0, 0) - spawn_pos).normalized()
 
-		var dir = (player.global_position + Vector3(0, 1.0, 0) - proj.global_position).normalized()
+		# Set direction and shooter before add_child:
+		# - direction is read by _ready() to compute velocity
+		# - shooter prevents the projectile self-colliding with the archer's own hitbox
+		# global_position and look_at require being in the tree, so they come after.
 		proj.direction = dir
-		proj.look_at(proj.global_position + dir) # if it had a mesh that mattered for alignment
+		proj.shooter = self
+		get_parent().add_child(proj)
+		proj.global_position = spawn_pos
+		proj.look_at(spawn_pos + dir)
 
 	billboard_sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
 	super._execute_attack()
