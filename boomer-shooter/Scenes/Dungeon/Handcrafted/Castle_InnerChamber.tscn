@@ -1,0 +1,136 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="PackedScene" path="res://Scenes/Props/Castle/propcastletorch.tscn" id="1_torch"]
+[ext_resource type="Texture2D" path="res://Assets/Environment/Castle/castle_wall_v2.png" id="2_wall_tex"]
+[ext_resource type="Texture2D" path="res://Assets/Environment/Castle/castle_floor_v2.png" id="3_floor_tex"]
+[ext_resource type="PackedScene" uid="uid://bamyeedre1p87" path="res://Scenes/Dungeon/castle_doorway_assembly.tscn" id="4_doorway"]
+
+[sub_resource type="StandardMaterial3D" id="1_wall_mat"]
+albedo_color = Color(0.88, 0.88, 0.9, 1)
+albedo_texture = ExtResource("2_wall_tex")
+roughness = 1.0
+texture_filter = 0
+
+[sub_resource type="StandardMaterial3D" id="2_floor_inlay_mat"]
+albedo_color = Color(0.78, 0.78, 0.82, 1)
+albedo_texture = ExtResource("3_floor_tex")
+roughness = 1.0
+texture_filter = 0
+uv1_scale = Vector3(2, 2, 2)
+
+[sub_resource type="BoxMesh" id="3_wall_mesh_ns"]
+material = SubResource("1_wall_mat")
+size = Vector3(24, 3.8, 1)
+
+[sub_resource type="BoxMesh" id="4_wall_mesh_ew"]
+material = SubResource("1_wall_mat")
+size = Vector3(1, 3.8, 24)
+
+[sub_resource type="BoxMesh" id="5_wall_mesh_south_segment"]
+material = SubResource("1_wall_mat")
+size = Vector3(9, 3.8, 1)
+
+[sub_resource type="BoxShape3D" id="6_wall_shape_ns"]
+size = Vector3(24, 3.8, 1)
+
+[sub_resource type="BoxShape3D" id="7_wall_shape_ew"]
+size = Vector3(1, 3.8, 24)
+
+[sub_resource type="BoxShape3D" id="8_wall_shape_south_segment"]
+size = Vector3(9, 3.8, 1)
+
+[sub_resource type="BoxMesh" id="9_floor_inlay_mesh"]
+material = SubResource("2_floor_inlay_mat")
+size = Vector3(18, 0.1, 18)
+
+[sub_resource type="BoxMesh" id="10_trim_mesh_long"]
+material = SubResource("1_wall_mat")
+size = Vector3(24, 0.4, 1.4)
+
+[sub_resource type="BoxMesh" id="11_trim_mesh_short"]
+material = SubResource("1_wall_mat")
+size = Vector3(1.4, 0.4, 24)
+
+[sub_resource type="BoxMesh" id="12_trim_mesh_segment"]
+material = SubResource("1_wall_mat")
+size = Vector3(9, 0.4, 1.4)
+
+[node name="CastleInnerChamber" type="Node3D"]
+
+[node name="FloorInlay" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("9_floor_inlay_mesh")
+
+[node name="NorthWall" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.9, -12)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NorthWall"]
+shape = SubResource("6_wall_shape_ns")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="NorthWall"]
+mesh = SubResource("3_wall_mesh_ns")
+
+[node name="WestWall" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 1.9, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WestWall"]
+shape = SubResource("7_wall_shape_ew")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WestWall"]
+mesh = SubResource("4_wall_mesh_ew")
+
+[node name="EastWall" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 1.9, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="EastWall"]
+shape = SubResource("7_wall_shape_ew")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="EastWall"]
+mesh = SubResource("4_wall_mesh_ew")
+
+[node name="SouthWallWest" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.5, 1.9, 12)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SouthWallWest"]
+shape = SubResource("8_wall_shape_south_segment")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="SouthWallWest"]
+mesh = SubResource("5_wall_mesh_south_segment")
+
+[node name="SouthWallEast" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 1.9, 12)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SouthWallEast"]
+shape = SubResource("8_wall_shape_south_segment")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="SouthWallEast"]
+mesh = SubResource("5_wall_mesh_south_segment")
+
+[node name="NorthTrim" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.9, -12)
+mesh = SubResource("10_trim_mesh_long")
+
+[node name="WestTrim" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 3.9, 0)
+mesh = SubResource("11_trim_mesh_short")
+
+[node name="EastTrim" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 3.9, 0)
+mesh = SubResource("11_trim_mesh_short")
+
+[node name="SouthTrimWest" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.5, 3.9, 12)
+mesh = SubResource("12_trim_mesh_segment")
+
+[node name="SouthTrimEast" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 3.9, 12)
+mesh = SubResource("12_trim_mesh_segment")
+
+[node name="InnerDoorway" parent="." instance=ExtResource("4_doorway")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 12)
+
+[node name="TorchNorthWest" parent="." instance=ExtResource("1_torch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7, 0, -10.8)
+
+[node name="TorchNorthEast" parent="." instance=ExtResource("1_torch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, -10.8)

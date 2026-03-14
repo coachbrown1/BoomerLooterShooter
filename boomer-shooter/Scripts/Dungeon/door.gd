@@ -2,6 +2,8 @@
 extends StaticBody3D
 class_name DungeonDoor
 
+signal door_opened(door: DungeonDoor)
+
 @export var is_open: bool = false
 @onready var hinge: Node3D = $Hinge
 @onready var collision_shape: CollisionShape3D = $CollisionShape3D
@@ -16,6 +18,7 @@ func open() -> void:
 	if is_open:
 		return
 	is_open = true
+	door_opened.emit(self)
 	var tween = create_tween()
 	tween.tween_property(hinge, "rotation_degrees:y", 90.0, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tween.finished.connect(func() -> void:

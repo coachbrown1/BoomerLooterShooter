@@ -33,6 +33,7 @@ var _proxy_target_velocity: Vector3 = Vector3.ZERO
 var _has_proxy_snapshot: bool = false
 var _proxy_visual_frame: int = 0
 var _proxy_visual_animate: bool = false
+var _aggro_suppressed: bool = false
 
 signal enemy_died
 
@@ -85,6 +86,19 @@ func take_damage(amount: int) -> void:
 	if health_component:
 		health_component.take_damage(amount)
 
+func set_aggro_suppressed(enabled: bool) -> void:
+	_aggro_suppressed = enabled
+	if enabled and current_state != State.DEAD:
+		current_state = State.IDLE
+		_attack_timer = 0.0
+		velocity = Vector3.ZERO
+		if billboard_sprite:
+			billboard_sprite.animate = false
+			billboard_sprite.frame = 0
+
+func is_aggro_suppressed() -> bool:
+	return _aggro_suppressed
+
 func _physics_process(delta: float) -> void:
 	if _network_proxy_mode:
 		_apply_proxy_motion(delta)
@@ -101,6 +115,15 @@ func _physics_process(delta: float) -> void:
 func _process_state(delta: float) -> void:
 	_refresh_target_player()
 	if not player:
+		return
+
+	if _aggro_suppressed:
+		current_state = State.IDLE
+		_attack_timer = 0.0
+		velocity = Vector3.ZERO
+		if billboard_sprite:
+			billboard_sprite.animate = false
+			billboard_sprite.frame = 0
 		return
 
 	var dist_squared_to_player = global_position.distance_squared_to(player.global_position)

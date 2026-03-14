@@ -18,6 +18,7 @@ class_name DungeonManager
 
 const PLAYER_SCENE: PackedScene = preload("res://Scenes/Player/player.tscn")
 const SNAPSHOT_INTERVAL: float = 0.05
+const CASTLE_INNER_CHAMBER_SCENE_PATH := "res://Scenes/Dungeon/Handcrafted/Castle_InnerChamber.tscn"
 
 var _generator: DungeonGenerator
 var _builder: DungeonBuilder
@@ -45,6 +46,8 @@ var _floor_sync_in_progress := false
 var _floor_sync_ready_by_peer: Dictionary = {}
 var _pending_player_roster: Array = []
 var _pending_enemy_spawns: Array = []
+var _handcrafted_room_overlays_by_id := {}
+var _suppressed_enemies_by_room_id := {}
 
 func _ready() -> void:
 	add_to_group("dungeon_manager")
@@ -116,6 +119,8 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 	_chest_viewers_by_path.clear()
 	_enemy_by_network_id.clear()
 	_enemy_network_id_by_instance_id.clear()
+	_handcrafted_room_overlays_by_id.clear()
+	_suppressed_enemies_by_room_id.clear()
 
 	# Generate tile layout
 	_generator = DungeonGenerator.new()
@@ -219,6 +224,8 @@ func clear_editor_preview() -> void:
 	_spawned_enemy_rooms = {}
 	_last_player_room_id = -1
 	_encounter = null
+	_handcrafted_room_overlays_by_id.clear()
+	_suppressed_enemies_by_room_id.clear()
 
 func get_editor_preview_room_targets() -> Array:
 	var targets: Array = []
@@ -497,6 +504,8 @@ func _spawn_handcrafted_room_overlays(parent: Node3D) -> void:
 		room_overlay.set_meta("room_type", room.room_type)
 		room_overlay.set_meta("lattice_coord", room.lattice_coord)
 		root.add_child(room_overlay)
+		_handcrafted_room_overlays_by_id[room.id] = room_overlay
+		_configure_handcrafted_room_overlay(room, room_overlay)
 
 func _resource_has_property(resource: Resource, property_name: String) -> bool:
 	if resource == null:
@@ -534,6 +543,7 @@ func _spawn_room_once(room_id: int) -> void:
 		return
 	_spawned_enemy_rooms[room_id] = true
 	var spawned_enemies: Array = _encounter.populate_room(room, floor_number, nav_region, _active_biome_data)
+	_configure_handcrafted_room_enemy_behavior(room, spawned_enemies)
 	if not _session_multiplayer or not _session_host:
 		return
 	for enemy_variant in spawned_enemies:
@@ -824,6 +834,51 @@ func _get_authoritative_progress_player() -> Node3D:
 		if player_variant is Node3D and is_instance_valid(player_variant):
 			return player_variant
 	return null
+
+func _configure_handcrafted_room_overlay(room: RoomData, room_overlay: Node3D) -> void:
+	if room == null or room_overlay == null:
+		return
+	if room.handcrafted_scene_path != CASTLE_INNER_CHAMBER_SCENE_PATH:
+		return
+	var door := room_overlay.get_node_or_null("InnerDoorway/Door") as DungeonDoor
+	if door == null:
+		push_warning("DungeonManager: castle inner chamber missing InnerDoorway/Door for room %d." % room.id)
+		return
+	var open_cb := Callable(self, "_on_inner_chamber_door_opened").bind(room.id)
+	if not door.is_connected("door_opened", open_cb):
+		door.connect("door_opened", open_cb)
+
+func _configure_handcrafted_room_enemy_behavior(room: RoomData, spawned_enemies: Array) -> void:
+	if room == null or room.handcrafted_scene_path != CASTLE_INNER_CHAMBER_SCENE_PATH:
+		return
+	var room_overlay = _handcrafted_room_overlays_by_id.get(room.id, null)
+	if not is_instance_valid(room_overlay):
+		return
+	var door := room_overlay.get_node_or_null("InnerDoorway/Door") as DungeonDoor
+	if door != null and door.is_open:
+		return
+	var suppressed: Array = _suppressed_enemies_by_room_id.get(room.id, [])
+	for enemy_variant in spawned_enemies:
+		if not (enemy_variant is EnemyBase):
+			continue
+		var enemy: EnemyBase = enemy_variant
+		if not _is_inside_castle_inner_chamber(enemy.global_position, room_overlay.global_position):
+			continue
+		enemy.set_aggro_suppressed(true)
+		suppressed.append(enemy)
+	_suppressed_enemies_by_room_id[room.id] = suppressed
+
+func _is_inside_castle_inner_chamber(enemy_world_pos: Vector3, room_center_world_pos: Vector3) -> bool:
+	var local_pos := enemy_world_pos - room_center_world_pos
+	return abs(local_pos.x) <= 11.5 and local_pos.z >= -11.5 and local_pos.z <= 11.5
+
+func _on_inner_chamber_door_opened(_door: DungeonDoor, room_id: int) -> void:
+	var suppressed: Array = _suppressed_enemies_by_room_id.get(room_id, [])
+	for enemy_variant in suppressed:
+		if enemy_variant is EnemyBase and is_instance_valid(enemy_variant):
+			var enemy: EnemyBase = enemy_variant
+			enemy.set_aggro_suppressed(false)
+	_suppressed_enemies_by_room_id.erase(room_id)
 
 func _offset_spawn_position(base_pos: Vector3, index: int) -> Vector3:
 	match index:
