@@ -14,6 +14,61 @@ const EQUIPMENT_LABELS: Dictionary = {
 	&"legs": "Legs",
 	&"feet": "Feet"
 }
+const STAT_LABELS: Dictionary = {
+	"health_add": "Health",
+	"health_mult": "Health %",
+	"move_speed_add": "Move Speed",
+	"move_speed_mult": "Move Speed %",
+	"sprint_multiplier": "Sprint Speed",
+	"damage_reduction": "Damage Reduction",
+	"weapon_damage_add": "Weapon Damage",
+	"weapon_damage_mult": "Weapon Damage %",
+	"mag_size_add": "Magazine Size",
+	"mag_size_mult": "Magazine Size %",
+	"reload_speed_mult": "Reload Speed %",
+	"recoil_recovery_mult": "Recoil Recovery %",
+	"spread_reduction": "Spread Reduction",
+	"fov_kick_reduction": "FOV Kick Reduction",
+	"light_damage_add": "Rifle Damage",
+	"light_damage_mult": "Rifle Damage %",
+	"light_mag_size_add": "Rifle Mag Size",
+	"light_mag_size_mult": "Rifle Mag Size %",
+	"shells_damage_add": "Shotgun Family Damage",
+	"shells_damage_mult": "Shotgun Family Damage %",
+	"shells_mag_size_add": "Shotgun Family Mag Size",
+	"shells_mag_size_mult": "Shotgun Family Mag Size %",
+	"arrows_damage_add": "Crossbow Family Damage",
+	"arrows_damage_mult": "Crossbow Family Damage %",
+	"arrows_mag_size_add": "Crossbow Family Mag Size",
+	"arrows_mag_size_mult": "Crossbow Family Mag Size %",
+	"energy_damage_add": "Energy Family Damage",
+	"energy_damage_mult": "Energy Family Damage %",
+	"energy_mag_size_add": "Energy Family Mag Size",
+	"energy_mag_size_mult": "Energy Family Mag Size %",
+	"rifle_damage_add": "Rifle Damage",
+	"rifle_damage_mult": "Rifle Damage %",
+	"rifle_mag_size_add": "Rifle Mag Size",
+	"rifle_mag_size_mult": "Rifle Mag Size %",
+	"shotgun_damage_add": "Shotgun Damage",
+	"shotgun_damage_mult": "Shotgun Damage %",
+	"shotgun_mag_size_add": "Shotgun Mag Size",
+	"shotgun_mag_size_mult": "Shotgun Mag Size %",
+	"crossbow_damage_add": "Crossbow Damage",
+	"crossbow_damage_mult": "Crossbow Damage %",
+	"crossbow_mag_size_add": "Crossbow Mag Size",
+	"crossbow_mag_size_mult": "Crossbow Mag Size %",
+	"fireball_damage_add": "Fireball Damage",
+	"fireball_damage_mult": "Fireball Damage %",
+	"fireball_mag_size_add": "Fireball Mag Size",
+	"fireball_mag_size_mult": "Fireball Mag Size %"
+}
+const RARITY_BORDER_COLORS: Dictionary = {
+	"Common": Color("8b919d"),
+	"Uncommon": Color("49b36a"),
+	"Rare": Color("4d7dff"),
+	"Epic": Color("b05cff"),
+	"Legendary": Color("ff9f2f")
+}
 const WEAPON_ICON_PATH := "res://Assets/Icons/Weapons/icon_%s.png"
 const PANEL_DESIRED_SIZE := Vector2(980, 560)
 const WEAPON_SLOT_UI_COUNT := 4
@@ -77,14 +132,14 @@ func update_ammo(ammo: int, max_ammo: int) -> void:
 	if ammo_label:
 		ammo_label.text = "Ammo: " + str(ammo) + " / " + str(max_ammo)
 
-func update_ammo_display(current_mag: int, _mag_size: int, reserve: int, is_infinite: bool) -> void:
+func update_ammo_display(current_mag: int, mag_size: int, reserve: int, is_infinite: bool) -> void:
 	if not is_node_ready():
 		await ready
 	if ammo_label:
 		if is_infinite:
 			ammo_label.text = "Ammo: \u221E / \u221E" # Infinity symbol
 		else:
-			ammo_label.text = "Ammo: " + str(current_mag) + " / " + str(reserve)
+			ammo_label.text = "Ammo: %d / %d | %d" % [current_mag, mag_size, reserve]
 	_configure_bottom_hud_layout()
 
 func _ensure_teammate_health_label() -> void:
@@ -438,8 +493,13 @@ func _make_slot_button(slot_ref: SlotRef) -> InventorySlotButton:
 		button.custom_minimum_size = Vector2(60, 60)
 		button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		button.expand_icon = true
 	elif slot_ref.section == &"weapons":
 		button.custom_minimum_size = Vector2(80, 80)
+		button.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		button.expand_icon = true
+	else:
+		button.custom_minimum_size = Vector2(96, 64)
 		button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.expand_icon = true
 	button.slot_pressed.connect(_on_slot_button_pressed)
@@ -479,10 +539,17 @@ func _on_slot_button_pressed(slot_ref: SlotRef) -> void:
 func _on_slot_button_double_clicked(slot_ref: SlotRef) -> void:
 	if _inventory_system == null:
 		return
-	if slot_ref == null or slot_ref.section != &"chest":
+	if slot_ref == null:
 		return
 	var item_snapshot = _get_slot_item_snapshot(slot_ref)
 	if item_snapshot == null:
+		return
+	if _try_auto_equip_item(slot_ref, item_snapshot):
+		_selected_slot = null
+		_set_feedback("")
+		return
+	if slot_ref.section != &"chest":
+		_set_feedback("No compatible equipment slot.", true)
 		return
 	if _try_quick_transfer_to_player_inventory(slot_ref, item_snapshot):
 		_selected_slot = null
@@ -507,25 +574,32 @@ func _refresh_inventory_ui() -> void:
 		var button: InventorySlotButton = _slot_buttons[key]
 		var slot_ref: SlotRef = _slot_button_refs.get(key)
 		var item_snapshot = _get_slot_item_snapshot(slot_ref)
-
-		if slot_ref.section == &"weapons":
-			var icon_tex := _get_weapon_icon(item_snapshot)
-			button.icon = icon_tex
-			button.text = "" if icon_tex != null else _slot_button_text(slot_ref)
+		var icon_tex := _get_item_icon(item_snapshot, slot_ref)
+		button.icon = icon_tex
+		if icon_tex != null:
+			if slot_ref.section == &"equipment":
+				button.text = _slot_label(slot_ref)
+			else:
+				button.text = ""
 		else:
-			button.icon = null
 			button.text = _slot_button_text(slot_ref)
 
 		button.set_has_item(item_snapshot != null)
+		button.set_rarity_border_color(_get_rarity_border_color(item_snapshot))
 		if item_snapshot != null:
-			button.tooltip_text = String(item_snapshot.get("display_name", "Item"))
+			button.tooltip_text = _build_item_tooltip(item_snapshot)
 		else:
 			button.tooltip_text = "Empty slot"
 
 		button.modulate = Color(1, 0.95, 0.55, 1) if _selected_slot != null and _selected_slot.is_equal(slot_ref) else Color(1, 1, 1, 1)
 
-func _get_weapon_icon(item_snapshot: Variant) -> Texture2D:
+func _get_item_icon(item_snapshot: Variant, slot_ref: SlotRef) -> Texture2D:
 	if item_snapshot == null:
+		return null
+	var explicit_icon_path := String(item_snapshot.get("icon_path", ""))
+	if not explicit_icon_path.is_empty() and ResourceLoader.exists(explicit_icon_path):
+		return load(explicit_icon_path)
+	if slot_ref != null and slot_ref.section != &"weapons":
 		return null
 	var weapon_key := String(item_snapshot.get("weapon_key", ""))
 	if weapon_key.is_empty():
@@ -558,6 +632,114 @@ func _slot_label(slot_ref: SlotRef) -> String:
 			return "C%d" % (slot_ref.index + 1)
 		_:
 			return "Unknown"
+
+func _build_item_tooltip(item_snapshot: Dictionary) -> String:
+	var lines: Array[String] = []
+	lines.append(String(item_snapshot.get("display_name", "Item")))
+
+	var stats: Dictionary = item_snapshot.get("stats", {})
+	var rarity := String(stats.get("rarity", ""))
+	if not rarity.is_empty():
+		lines.append("Rarity: %s" % rarity)
+
+	var category := String(item_snapshot.get("category", ""))
+	if category == "armor":
+		var equipment_slot := StringName(item_snapshot.get("equipment_slot", ""))
+		if equipment_slot != StringName(""):
+			lines.append("Slot: %s" % EQUIPMENT_LABELS.get(equipment_slot, String(equipment_slot).capitalize()))
+	elif category == "weapon":
+		var weapon_key := String(item_snapshot.get("weapon_key", ""))
+		if not weapon_key.is_empty():
+			lines.append("Weapon: %s" % weapon_key.capitalize())
+
+	var stat_lines := _build_stat_lines(stats)
+	if not stat_lines.is_empty():
+		lines.append("")
+		lines.append_array(stat_lines)
+
+	return "\n".join(lines)
+
+func _build_stat_lines(stats: Dictionary) -> Array[String]:
+	var ordered_keys := [
+		"health_add",
+		"health_mult",
+		"move_speed_add",
+		"move_speed_mult",
+		"sprint_multiplier",
+		"damage_reduction",
+		"weapon_damage_add",
+		"weapon_damage_mult",
+		"mag_size_add",
+		"mag_size_mult",
+		"reload_speed_mult",
+		"recoil_recovery_mult",
+		"spread_reduction",
+		"fov_kick_reduction",
+		"light_damage_add",
+		"light_damage_mult",
+		"light_mag_size_add",
+		"light_mag_size_mult",
+		"shells_damage_add",
+		"shells_damage_mult",
+		"shells_mag_size_add",
+		"shells_mag_size_mult",
+		"arrows_damage_add",
+		"arrows_damage_mult",
+		"arrows_mag_size_add",
+		"arrows_mag_size_mult",
+		"energy_damage_add",
+		"energy_damage_mult",
+		"energy_mag_size_add",
+		"energy_mag_size_mult",
+		"rifle_damage_add",
+		"rifle_damage_mult",
+		"rifle_mag_size_add",
+		"rifle_mag_size_mult",
+		"shotgun_damage_add",
+		"shotgun_damage_mult",
+		"shotgun_mag_size_add",
+		"shotgun_mag_size_mult",
+		"crossbow_damage_add",
+		"crossbow_damage_mult",
+		"crossbow_mag_size_add",
+		"crossbow_mag_size_mult",
+		"fireball_damage_add",
+		"fireball_damage_mult",
+		"fireball_mag_size_add",
+		"fireball_mag_size_mult"
+	]
+	var lines: Array[String] = []
+	for stat_key in ordered_keys:
+		if not stats.has(stat_key):
+			continue
+		lines.append("%s: %s" % [_get_stat_label(stat_key), _format_stat_value(stat_key, float(stats.get(stat_key, 0.0)))])
+	return lines
+
+func _get_stat_label(stat_key: String) -> String:
+	if STAT_LABELS.has(stat_key):
+		return String(STAT_LABELS[stat_key])
+	return stat_key.replace("_", " ").capitalize()
+
+func _format_stat_value(stat_key: String, value: float) -> String:
+	if stat_key.ends_with("_mult") or stat_key == "spread_reduction" or stat_key == "fov_kick_reduction":
+		return "%+.0f%%" % (value * 100.0)
+	if stat_key == "sprint_multiplier":
+		return "%+.2f" % value
+	if is_equal_approx(value, roundf(value)):
+		return "%+d" % int(round(value))
+	return "%+.2f" % value
+
+func _get_rarity_border_color(item_snapshot: Variant) -> Color:
+	if item_snapshot == null:
+		return Color("525863")
+	var stats: Dictionary = item_snapshot.get("stats", {})
+	var rarity := String(stats.get("rarity", ""))
+	if RARITY_BORDER_COLORS.has(rarity):
+		return RARITY_BORDER_COLORS[rarity]
+	var category := String(item_snapshot.get("category", ""))
+	if category == "weapon":
+		return Color("d7dce5")
+	return Color("7f8793")
 
 func _get_slot_item_snapshot(slot_ref: SlotRef) -> Variant:
 	if _latest_snapshot.is_empty():
@@ -642,6 +824,19 @@ func _try_quick_transfer_to_player_inventory(from_slot: SlotRef, item_snapshot: 
 		if _inventory_system.try_move_item(from_slot, slot_ref):
 			return true
 	return false
+
+func _try_auto_equip_item(from_slot: SlotRef, item_snapshot: Dictionary) -> bool:
+	if from_slot == null:
+		return false
+	if from_slot.section != &"storage" and from_slot.section != &"chest":
+		return false
+	var category := StringName(item_snapshot.get("category", "misc"))
+	if category != &"armor":
+		return false
+	var equipment_slot := StringName(item_snapshot.get("equipment_slot", ""))
+	if equipment_slot == StringName(""):
+		return false
+	return _inventory_system.try_move_item(from_slot, SlotRef.equipment(equipment_slot))
 
 func _make_tinted_panel_style(tint: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

@@ -13,3 +13,11 @@ func get_variant_by_rarity(rarity: String) -> InventoryItemData:
 		if String(item.stats.get("rarity", "")) == rarity:
 			return item
 	return null
+
+func get_variants() -> Array[InventoryItemData]:
+	var results: Array[InventoryItemData] = []
+	for item in variants:
+		if item == null:
+			continue
+		results.append(item)
+	return results

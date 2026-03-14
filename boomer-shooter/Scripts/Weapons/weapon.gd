@@ -41,6 +41,13 @@ var fire_timer: float = 0.0
 var _next_fire_ready_time: float = 0.0
 var sprite_origin_z: float = 0.0
 var weapon_manager: WeaponManager = null
+var _equipment_stats: Dictionary = {}
+var _base_damage: int = 0
+var _base_reload_time: float = 0.0
+var _base_spread_angle: float = 0.0
+var _base_fov_kick_amount: float = 0.0
+var _base_recoil_pitch: float = 0.0
+var _base_recoil_yaw: float = 0.0
 
 var _cached_player: CharacterBody3D = null
 
@@ -60,9 +67,10 @@ const BLOOD_PARTICLES_SCENE = preload("res://Scenes/Effects/blood_particles.tscn
 const CASING_SCENE = preload("res://Scenes/Effects/shell_casing.tscn")
 
 func _ready() -> void:
+	_capture_base_stats()
 	muzzle_flash.visible = false
 	tracer.visible = false
-	current_mag = mag_size
+	current_mag = _get_effective_mag_size()
 	if sprite:
 		_setup_2d_viewmodel()
 	set_viewmodel_enabled(_viewmodel_enabled)
@@ -179,8 +187,20 @@ func set_viewmodel_enabled(enabled: bool) -> void:
 	if flash_sprite:
 		flash_sprite.visible = (not _viewmodel_enabled) or _muzzle_2d == null
 
+func set_equipment_stats(stats: Dictionary) -> void:
+	_equipment_stats = stats.duplicate(true)
+	current_mag = mini(current_mag, _get_effective_mag_size())
+
+func _capture_base_stats() -> void:
+	_base_damage = damage
+	_base_reload_time = reload_time
+	_base_spread_angle = spread_angle
+	_base_fov_kick_amount = fov_kick_amount
+	_base_recoil_pitch = recoil_pitch
+	_base_recoil_yaw = recoil_yaw
+
 func can_reload() -> bool:
-	if ammo_type == "none" or is_reloading or current_mag == mag_size:
+	if ammo_type == "none" or is_reloading or current_mag >= _get_effective_mag_size():
 		return false
 	if weapon_manager and weapon_manager.get_ammo(ammo_type) <= 0:
 		return false
@@ -214,11 +234,11 @@ func reload(request_authority: bool = true) -> void:
 		tween.tween_property(_viewmodel_2d, "position:y", hidden_y, 0.2)
 
 		# Wait
-		tween.tween_interval(max(0.1, reload_time - 0.4))
+		tween.tween_interval(max(0.1, _get_effective_reload_time() - 0.4))
 
 		# Perform ammo math
 		tween.tween_callback(func():
-			var ammo_needed = mag_size - current_mag
+			var ammo_needed = _get_effective_mag_size() - current_mag
 			var reserve = weapon_manager.get_ammo(ammo_type)
 			var ammo_to_take = min(ammo_needed, reserve)
 
@@ -241,7 +261,7 @@ func perform_authoritative_reload() -> bool:
 	if not can_reload():
 		return false
 	is_reloading = false
-	var ammo_needed = mag_size - current_mag
+	var ammo_needed = _get_effective_mag_size() - current_mag
 	var reserve = weapon_manager.get_ammo(ammo_type)
 	var ammo_to_take = min(ammo_needed, reserve)
 	weapon_manager.consume_ammo(ammo_type, ammo_to_take)
@@ -338,12 +358,14 @@ func _fire_with_aim(cam_origin: Vector3, cam_forward: Vector3, play_local_feedba
 		_show_muzzle_flash()
 		return
 
+	var shot_damage := _get_effective_damage()
+	var effective_spread_angle := _get_effective_spread_angle()
 	var cam_basis := _basis_from_forward(cam_forward)
 
 	for _i in range(pellet_count):
 		var final_dir = cam_forward
-		if spread_angle > 0.0:
-			var spread_rad = deg_to_rad(spread_angle)
+		if effective_spread_angle > 0.0:
+			var spread_rad = deg_to_rad(effective_spread_angle)
 			var right = cam_basis.x
 			var up = cam_basis.y
 			var dx = randf_range(-1.0, 1.0)
@@ -354,7 +376,7 @@ func _fire_with_aim(cam_origin: Vector3, cam_forward: Vector3, play_local_feedba
 				dx = cos(angle) * rad
 				dy = sin(angle) * rad
 			final_dir = (cam_forward + right * dx * spread_rad + up * dy * spread_rad).normalized()
-		_fire_hitscan(cam_origin, final_dir, player_rid)
+		_fire_hitscan(cam_origin, final_dir, player_rid, shot_damage)
 	_show_muzzle_flash()
 
 func _update_fire_cooldown_gate() -> void:
@@ -404,10 +426,10 @@ func _play_local_feedback(shooter_node: Node3D) -> void:
 		shooter = _get_player()
 	if shooter:
 		if shooter.has_method("apply_fov_kick"):
-			shooter.apply_fov_kick(fov_kick_amount)
+			shooter.apply_fov_kick(_base_fov_kick_amount)
 		if shooter.has_method("add_camera_recoil"):
-			var r_yaw = recoil_yaw * randf_range(-1.0, 1.0)
-			shooter.add_camera_recoil(recoil_pitch, r_yaw)
+			var r_yaw = _base_recoil_yaw * randf_range(-1.0, 1.0)
+			shooter.add_camera_recoil(_base_recoil_pitch, r_yaw)
 
 func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3, shooter_node: Node) -> void:
 	var proj = projectile_scene.instantiate() as Node3D
@@ -417,7 +439,7 @@ func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3, shooter_node: N
 
 	if proj is Projectile:
 		proj.direction = cam_forward
-		proj.damage = damage
+		proj.damage = _get_effective_damage()
 		if shooter_node is Node3D:
 			proj.shooter = shooter_node
 
@@ -440,7 +462,7 @@ func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3, shooter_node: N
 		if dungeon_manager != null and dungeon_manager.has_method("broadcast_projectile_visual"):
 			dungeon_manager.call("broadcast_projectile_visual", projectile_scene.resource_path, cam_origin, cam_forward)
 
-func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3, player_rid: RID) -> void:
+func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3, player_rid: RID, shot_damage: int) -> void:
 	var space_state = get_world_3d().direct_space_state
 	var ray_end = cam_origin + cam_forward * ray_range
 
@@ -460,8 +482,8 @@ func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3, player_rid: RID) -
 		var hitbox = _find_hitbox(hit_collider)
 		
 		if hitbox:
-			hitbox.take_damage(damage)
-			hit_target.emit(hitbox, damage)
+			hitbox.take_damage(shot_damage)
+			hit_target.emit(hitbox, shot_damage)
 			_splash_blood(hit_pos, cam_forward, hit_collider)
 		else:
 			_place_bullet_hole(hit_pos, result.normal, hit_collider)
@@ -473,6 +495,59 @@ func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3, player_rid: RID) -
 		var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
 		if dungeon_manager != null and dungeon_manager.has_method("broadcast_hitscan_visual"):
 			dungeon_manager.call("broadcast_hitscan_visual", muzzle_flash.global_position, hit_pos)
+
+func _get_effective_damage() -> int:
+	var exact_key := _get_exact_weapon_key()
+	var family_key := _get_damage_family_key(exact_key)
+	var additive_bonus := float(_equipment_stats.get("weapon_damage_add", 0.0))
+	var multiplicative_bonus := float(_equipment_stats.get("weapon_damage_mult", 0.0))
+
+	if not family_key.is_empty():
+		additive_bonus += float(_equipment_stats.get("%s_damage_add" % family_key, 0.0))
+		multiplicative_bonus += float(_equipment_stats.get("%s_damage_mult" % family_key, 0.0))
+	if not exact_key.is_empty():
+		additive_bonus += float(_equipment_stats.get("%s_damage_add" % exact_key, 0.0))
+		multiplicative_bonus += float(_equipment_stats.get("%s_damage_mult" % exact_key, 0.0))
+
+	return maxi(1, int(round((float(_base_damage) + additive_bonus) * (1.0 + multiplicative_bonus))))
+
+func _get_effective_reload_time() -> float:
+	var speed_bonus := maxf(0.0, float(_equipment_stats.get("reload_speed_mult", 0.0)))
+	return maxf(0.1, _base_reload_time / (1.0 + speed_bonus))
+
+func _get_effective_spread_angle() -> float:
+	var spread_reduction := clampf(float(_equipment_stats.get("spread_reduction", 0.0)), 0.0, 0.95)
+	return maxf(0.0, _base_spread_angle * (1.0 - spread_reduction))
+
+func get_effective_mag_size() -> int:
+	return _get_effective_mag_size()
+
+func _get_effective_mag_size() -> int:
+	var exact_key := _get_exact_weapon_key()
+	var family_key := _get_damage_family_key(exact_key)
+	var additive_bonus := float(_equipment_stats.get("mag_size_add", 0.0))
+	var multiplicative_bonus := float(_equipment_stats.get("mag_size_mult", 0.0))
+
+	if not family_key.is_empty():
+		additive_bonus += float(_equipment_stats.get("%s_mag_size_add" % family_key, 0.0))
+		multiplicative_bonus += float(_equipment_stats.get("%s_mag_size_mult" % family_key, 0.0))
+	if not exact_key.is_empty():
+		additive_bonus += float(_equipment_stats.get("%s_mag_size_add" % exact_key, 0.0))
+		multiplicative_bonus += float(_equipment_stats.get("%s_mag_size_mult" % exact_key, 0.0))
+
+	return maxi(1, int(round((float(mag_size) + additive_bonus) * (1.0 + multiplicative_bonus))))
+
+func _get_exact_weapon_key() -> String:
+	if weapon_manager != null:
+		return weapon_manager.get_weapon_key_for_weapon(self)
+	return weapon_name.strip_edges().to_lower().replace(" ", "_")
+
+func _get_damage_family_key(exact_key: String) -> String:
+	if ammo_type != "none":
+		return ammo_type
+	if exact_key == "rifle":
+		return "light"
+	return ""
 
 func _eject_shell() -> void:
 	var casing = CASING_SCENE.instantiate()

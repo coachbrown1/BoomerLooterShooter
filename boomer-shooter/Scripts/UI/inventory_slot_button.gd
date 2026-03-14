@@ -8,9 +8,13 @@ signal slot_drop_requested(from_slot: SlotRef, to_slot: SlotRef)
 var slot_ref: SlotRef = null
 var has_item: bool = false
 var _suppress_next_pressed: bool = false
+var _base_fill_color := Color(0.13, 0.15, 0.18, 0.95)
+var _empty_border_color := Color(0.28, 0.31, 0.36, 0.85)
+var _rarity_border_color := Color(0.52, 0.55, 0.60, 1.0)
 
 func _ready() -> void:
 	pressed.connect(_on_pressed)
+	_refresh_styles()
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
@@ -25,6 +29,11 @@ func set_slot_ref(value: SlotRef) -> void:
 
 func set_has_item(value: bool) -> void:
 	has_item = value
+	_refresh_styles()
+
+func set_rarity_border_color(color: Color) -> void:
+	_rarity_border_color = color
+	_refresh_styles()
 
 func _on_pressed() -> void:
 	if _suppress_next_pressed:
@@ -70,3 +79,35 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	if from_slot == null:
 		return
 	slot_drop_requested.emit(from_slot, slot_ref)
+
+func _refresh_styles() -> void:
+	var normal := _make_stylebox(_base_fill_color, _get_current_border_color())
+	var hover := _make_stylebox(_base_fill_color.lightened(0.06), _get_current_border_color().lightened(0.12))
+	var pressed := _make_stylebox(_base_fill_color.darkened(0.08), _get_current_border_color().lightened(0.2))
+	var focus := _make_stylebox(_base_fill_color.lightened(0.04), _get_current_border_color().lightened(0.25), 3)
+	add_theme_stylebox_override("normal", normal)
+	add_theme_stylebox_override("hover", hover)
+	add_theme_stylebox_override("pressed", pressed)
+	add_theme_stylebox_override("focus", focus)
+	add_theme_stylebox_override("disabled", normal)
+
+func _get_current_border_color() -> Color:
+	return _rarity_border_color if has_item else _empty_border_color
+
+func _make_stylebox(fill_color: Color, border_color: Color, border_width: int = 2) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill_color
+	style.border_color = border_color
+	style.border_width_left = border_width
+	style.border_width_top = border_width
+	style.border_width_right = border_width
+	style.border_width_bottom = border_width
+	style.corner_radius_top_left = 6
+	style.corner_radius_top_right = 6
+	style.corner_radius_bottom_right = 6
+	style.corner_radius_bottom_left = 6
+	style.content_margin_left = 4
+	style.content_margin_top = 4
+	style.content_margin_right = 4
+	style.content_margin_bottom = 4
+	return style

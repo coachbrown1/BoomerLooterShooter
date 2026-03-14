@@ -45,9 +45,16 @@ const REMOTE_PLAYER_VISUAL_LAYER: int = 1
 
 @export var max_health: int = 100
 var current_health: int = max_health
+var _base_move_speed: float = 0.0
+var _base_sprint_multiplier: float = 0.0
+var _base_max_health: int = 0
+var _base_recoil_recovery_speed: float = 0.0
+var _fov_kick_reduction: float = 0.0
+var _damage_reduction: float = 0.0
 
 func _ready() -> void:
 	add_to_group("player")
+	_capture_base_stats()
 	_ensure_inventory_input_action()
 	current_health = max_health
 	if camera:
@@ -57,8 +64,12 @@ func _ready() -> void:
 
 	if inventory_system:
 		inventory_system.initialize_with_weapon_manager(weapon_manager)
+		if not inventory_system.equipment_stats_changed.is_connected(_on_equipment_stats_changed):
+			inventory_system.equipment_stats_changed.connect(_on_equipment_stats_changed)
 	if weapon_manager:
 		weapon_manager.set_inventory_system(inventory_system)
+	if inventory_system:
+		_on_equipment_stats_changed(inventory_system.get_equipped_stats())
 
 func _init_hud() -> void:
 	var hud = _get_hud()
@@ -107,10 +118,40 @@ func _ensure_local_setup() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	call_deferred("_init_hud")
 
+func _capture_base_stats() -> void:
+	_base_move_speed = move_speed
+	_base_sprint_multiplier = sprint_multiplier
+	_base_max_health = max_health
+	_base_recoil_recovery_speed = recoil_recovery_speed
+
+func _on_equipment_stats_changed(stats: Dictionary) -> void:
+	move_speed = _apply_add_mult(_base_move_speed, float(stats.get("move_speed_add", 0.0)), float(stats.get("move_speed_mult", 0.0)))
+	sprint_multiplier = _base_sprint_multiplier + float(stats.get("sprint_multiplier", 0.0))
+	recoil_recovery_speed = _base_recoil_recovery_speed * (1.0 + float(stats.get("recoil_recovery_mult", 0.0)))
+	_fov_kick_reduction = float(stats.get("fov_kick_reduction", 0.0))
+	_damage_reduction = clampf(float(stats.get("damage_reduction", 0.0)), 0.0, 0.9)
+
+	var previous_max_health := max_health
+	max_health = maxi(1, int(round(_apply_add_mult(float(_base_max_health), float(stats.get("health_add", 0.0)), float(stats.get("health_mult", 0.0))))))
+	if max_health != previous_max_health:
+		if max_health > previous_max_health:
+			current_health += max_health - previous_max_health
+		current_health = clampi(current_health, 0, max_health)
+		var hud = _get_hud()
+		if hud:
+			hud.update_health(current_health)
+
+	if weapon_manager and weapon_manager.has_method("apply_equipment_stats"):
+		weapon_manager.apply_equipment_stats(stats)
+
+func _apply_add_mult(base_value: float, additive_bonus: float, multiplicative_bonus: float) -> float:
+	return (base_value + additive_bonus) * (1.0 + multiplicative_bonus)
+
 func take_damage(amount: int) -> void:
 	if current_health <= 0:
 		return
-	current_health -= amount
+	var reduced_amount := maxi(0, int(round(float(amount) * (1.0 - _damage_reduction))))
+	current_health -= reduced_amount
 	current_health = max(0, current_health)
 	if _is_local_controlled:
 		var hud = _get_hud()
@@ -217,7 +258,7 @@ func _update_fov(delta: float, is_sprinting: bool) -> void:
 	camera.fov = _target_fov + _fov_kick
 
 func apply_fov_kick(amount: float) -> void:
-	_fov_kick = amount
+	_fov_kick = amount * (1.0 - clampf(_fov_kick_reduction, 0.0, 0.9))
 
 func add_camera_recoil(pitch: float, yaw: float) -> void:
 	target_recoil += Vector2(yaw, pitch)

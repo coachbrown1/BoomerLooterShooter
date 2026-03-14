@@ -14,6 +14,7 @@ var _weapon_key_to_weapon: Dictionary = {}
 var _cached_huds: Array[Node] = []
 var _input_enabled: bool = true
 var _viewmodel_enabled: bool = true
+var _equipment_stats: Dictionary = {}
 
 # Inventory of ammo
 # "light" is bullets
@@ -134,9 +135,12 @@ func _update_hud() -> void:
 
 	for hud in _cached_huds:
 		if is_instance_valid(hud) and hud.has_method("update_ammo_display"):
+			var displayed_mag_size := current_weapon.mag_size
+			if current_weapon.has_method("get_effective_mag_size"):
+				displayed_mag_size = int(current_weapon.call("get_effective_mag_size"))
 			hud.update_ammo_display(
 				current_weapon.current_mag,
-				current_weapon.mag_size,
+				displayed_mag_size,
 				get_ammo(current_weapon.ammo_type),
 				current_weapon.ammo_type == "none"
 			)
@@ -150,6 +154,7 @@ func set_inventory_system(inventory: InventorySystem) -> void:
 		if not inventory_system.weapon_slots_changed.is_connected(_on_weapon_slots_changed):
 			inventory_system.weapon_slots_changed.connect(_on_weapon_slots_changed)
 		_on_weapon_slots_changed(inventory_system.weapons)
+		apply_equipment_stats(inventory_system.get_equipped_stats())
 	else:
 		_sync_default_slot_weapons()
 		_select_first_available_weapon()
@@ -180,6 +185,14 @@ func set_viewmodel_enabled(enabled: bool) -> void:
 		if weapon == null:
 			continue
 		weapon.set_viewmodel_enabled(enabled)
+
+func apply_equipment_stats(stats: Dictionary) -> void:
+	_equipment_stats = stats.duplicate(true)
+	for weapon in weapons:
+		if weapon == null:
+			continue
+		if weapon.has_method("set_equipment_stats"):
+			weapon.set_equipment_stats(_equipment_stats)
 
 func get_current_weapon_slot() -> int:
 	return current_weapon_index
@@ -225,7 +238,10 @@ func apply_authoritative_weapon_state(slot_index: int, current_mag_value: int, a
 		switch_to_weapon(slot_index)
 
 	if current_weapon != null:
-		current_weapon.current_mag = max(0, min(current_weapon.mag_size, current_mag_value))
+		var effective_mag_size := current_weapon.mag_size
+		if current_weapon.has_method("get_effective_mag_size"):
+			effective_mag_size = int(current_weapon.call("get_effective_mag_size"))
+		current_weapon.current_mag = max(0, min(effective_mag_size, current_mag_value))
 
 	_update_hud()
 

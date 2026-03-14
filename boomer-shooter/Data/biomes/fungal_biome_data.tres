@@ -23,10 +23,10 @@
 [ext_resource type="PackedScene" path="res://Scenes/Props/Fungal/propfungalvines.tscn" id="18_bprop2"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Fungal/propfungalpods.tscn" id="19_bprop3"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Fungal/propfungalmossrock.tscn" id="20_bprop4"]
-[ext_resource type="PackedScene" uid="uid://r1a2n3g4e5d6" path="res://Scenes/Enemies/goblin_archer.tscn" id="22_enemy2"]
+[ext_resource type="PackedScene" uid="uid://gobarc483377" path="res://Scenes/Enemies/goblin_archer.tscn" id="22_enemy2"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/orc.tscn" id="23_enemy3"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/fungal_cube.tscn" id="24_enemy4"]
-[ext_resource type="PackedScene" uid="uid://c1m2e3l4e5e6" path="res://Scenes/Enemies/spore_husk.tscn" id="25_enemy5"]
+[ext_resource type="PackedScene" uid="uid://sphksp0r3333" path="res://Scenes/Enemies/spore_husk.tscn" id="25_enemy5"]
 
 [resource]
 script = ExtResource("1_biome_data")

@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://r1a2n3g4e5d6"]
+[gd_scene format=3 uid="uid://erng3dtmplat"]
 
 [ext_resource type="Script" path="res://Scripts/Enemies/enemy_ranged.gd" id="1_a"]
 [ext_resource type="Script" path="res://Scripts/Components/health_component.gd" id="2_b"]

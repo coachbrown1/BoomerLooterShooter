@@ -11,10 +11,18 @@ const EQUIPMENT_SLOT_NAMES: Array[StringName] = [
 const WEAPON_SLOT_COUNT: int = 4
 const STORAGE_SLOT_COUNT: int = 10
 const DEFAULT_CHEST_SLOT_COUNT: int = 16
+const STARTER_GEAR_IDS: Array[StringName] = [
+	&"helmet_scout_visor_common",
+	&"chest_bruiser_plate_common",
+	&"arms_loader_bracers_common",
+	&"legs_raider_greaves_common",
+	&"feet_strider_boots_common"
+]
 
 signal inventory_changed(snapshot: Dictionary)
 signal weapon_slots_changed(weapon_items: Array)
 signal inventory_opened_changed(is_open: bool)
+signal equipment_stats_changed(stats: Dictionary)
 
 var equipment: Dictionary = {}
 var weapons: Array = []
@@ -24,11 +32,13 @@ var is_open: bool = false
 var _active_chest: InteractableChest = null
 
 var _weapon_manager: WeaponManager
+@export var gear_catalog: GearCatalogData = preload("res://Data/gear/gear_catalog.tres")
 
 func _ready() -> void:
 	_init_slots()
 	_emit_inventory_changed()
 	_emit_weapon_slots_changed()
+	_emit_equipment_stats_changed()
 
 func _init_slots() -> void:
 	equipment.clear()
@@ -60,8 +70,11 @@ func initialize_with_weapon_manager(manager: WeaponManager) -> void:
 		item.weapon_key = StringName(_weapon_manager.get_weapon_key_for_weapon(weapon))
 		weapons[i] = item
 
+	_seed_starter_gear_if_needed()
+
 	_emit_inventory_changed()
 	_emit_weapon_slots_changed()
+	_emit_equipment_stats_changed()
 
 func get_slot_snapshot() -> Dictionary:
 	var equipment_snapshot := {}
@@ -110,6 +123,8 @@ func try_move_item(from_slot: SlotRef, to_slot: SlotRef) -> bool:
 	_emit_inventory_changed()
 	if from_slot.section == &"weapons" or to_slot.section == &"weapons":
 		_emit_weapon_slots_changed()
+	if from_slot.section == &"equipment" or to_slot.section == &"equipment":
+		_emit_equipment_stats_changed()
 	return true
 
 func set_weapon_slot_active(index: int) -> void:
@@ -147,6 +162,26 @@ func open_chest(chest: InteractableChest) -> void:
 			chest_storage[i] = null
 	set_inventory_open(true)
 	_emit_inventory_changed()
+
+func get_equipped_items() -> Array[InventoryItemData]:
+	var results: Array[InventoryItemData] = []
+	for slot_name in EQUIPMENT_SLOT_NAMES:
+		var item: InventoryItemData = equipment.get(slot_name)
+		if item == null:
+			continue
+		results.append(item)
+	return results
+
+func get_equipped_stats() -> Dictionary:
+	var combined: Dictionary = {}
+	for item in get_equipped_items():
+		for key_variant in item.stats.keys():
+			var key := StringName(key_variant)
+			if key == &"rarity":
+				continue
+			var current_value := float(combined.get(key, 0.0))
+			combined[key] = current_value + float(item.stats.get(key_variant, 0.0))
+	return combined
 
 func get_active_chest_name() -> String:
 	if _active_chest == null:
@@ -231,6 +266,9 @@ func _emit_inventory_changed() -> void:
 func _emit_weapon_slots_changed() -> void:
 	weapon_slots_changed.emit(weapons.duplicate())
 
+func _emit_equipment_stats_changed() -> void:
+	equipment_stats_changed.emit(get_equipped_stats())
+
 func _item_to_snapshot(item: InventoryItemData) -> Variant:
 	if item == null:
 		return null
@@ -238,3 +276,19 @@ func _item_to_snapshot(item: InventoryItemData) -> Variant:
 
 func _normalize_weapon_name(raw_name: String) -> String:
 	return raw_name.strip_edges().to_lower().replace(" ", "_")
+
+func _seed_starter_gear_if_needed() -> void:
+	if gear_catalog == null:
+		return
+	for slot_name in EQUIPMENT_SLOT_NAMES:
+		if equipment.get(slot_name) != null:
+			return
+	for item in storage:
+		if item != null:
+			return
+
+	for i in range(min(STORAGE_SLOT_COUNT, STARTER_GEAR_IDS.size())):
+		var starter_item := gear_catalog.create_item_by_id(STARTER_GEAR_IDS[i])
+		if starter_item == null:
+			continue
+		storage[i] = starter_item

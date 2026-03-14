@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://c1m2e3l4e5e6"]
+[gd_scene format=3 uid="uid://eml33ttmplat"]
 
 [ext_resource type="Script" path="res://Scripts/Enemies/enemy_melee.gd" id="1_a"]
 [ext_resource type="Script" path="res://Scripts/Components/health_component.gd" id="2_b"]

@@ -7,7 +7,7 @@ const OUTLINE_MAT = preload("res://Materials/prop_outline_material.tres")
 @export var texture_path: String = ""
 @export var pixel_size: float = 0.015
 @export var sprite_y_offset: float = 1.0
-@export var billboard_mode: int = BaseMaterial3D.BILLBOARD_FIXED_Y
+@export var billboard_mode: BaseMaterial3D.BillboardMode = BaseMaterial3D.BILLBOARD_FIXED_Y
 @export var use_outline_material: bool = true
 @export var sprite_modulate: Color = Color(1, 1, 1, 1)
 

@@ -4,6 +4,9 @@ class_name InteractableChest
 @export var interact_prompt: String = "Open Chest"
 @export var chest_name: String = "Chest"
 @export var slot_count: int = 16
+@export var gear_catalog: GearCatalogData = preload("res://Data/gear/gear_catalog.tres")
+@export var min_gear_items: int = 3
+@export var max_gear_items: int = 5
 var is_open: bool = false
 var _stored_items: Array = []
 var _lid_tween: Tween = null
@@ -20,6 +23,7 @@ func _ready() -> void:
 		_stored_items[i] = null
 
 func interact(interactor: Node = null) -> void:
+	_populate_default_loot_if_needed()
 	_open_lid()
 
 	var inventory_system := _get_player_inventory_system(interactor)
@@ -77,3 +81,16 @@ func _kill_lid_tween_if_active() -> void:
 	if _lid_tween != null and _lid_tween.is_valid():
 		_lid_tween.kill()
 	_lid_tween = null
+
+func _populate_default_loot_if_needed() -> void:
+	if gear_catalog == null:
+		return
+	for item in _stored_items:
+		if item != null:
+			return
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("%s|%s|%d" % [String(get_path()), chest_name, slot_count])
+	var desired_count := clampi(rng.randi_range(min_gear_items, max_gear_items), 1, slot_count)
+	var loot := gear_catalog.create_random_items(desired_count, int(rng.randi()))
+	set_storage_items(loot)

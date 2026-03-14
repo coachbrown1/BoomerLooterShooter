@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://c1m2e3l4e5e6"]
+[gd_scene format=3 uid="uid://gobm31l33777"]
 
 [ext_resource type="Script" uid="uid://ctr7tft27najg" path="res://Scripts/Enemies/goblin_melee.gd" id="1_a"]
 [ext_resource type="Script" uid="uid://cjjywi22247q4" path="res://Scripts/Components/health_component.gd" id="2_b"]

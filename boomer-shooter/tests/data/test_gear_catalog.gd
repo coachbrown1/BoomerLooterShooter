@@ -25,6 +25,7 @@ func test_every_item_uses_valid_slot_and_armor_category() -> void:
 		assert_eq(item.category, &"armor")
 		assert_true(valid_slots.has(item.equipment_slot), "Unexpected slot on %s" % item.display_name)
 		assert_true(item.stats.has("rarity"), "Missing rarity on %s" % item.display_name)
+		assert_ne(String(item.to_dict().get("icon_path", "")), "", "Missing icon path on %s" % item.display_name)
 
 func test_each_lineage_has_five_rarity_variants_with_non_decreasing_stats() -> void:
 	var catalog = load(CATALOG_PATH)
@@ -103,3 +104,18 @@ func test_catalog_supports_generic_and_targeted_build_paths() -> void:
 		assert_true(exact_weapon_hits[weapon_key], "Missing exact-weapon support for %s" % weapon_key)
 	for ammo_key in EXPECTED_AMMO_KEYS:
 		assert_true(ammo_family_hits[ammo_key], "Missing ammo-family support for %s" % ammo_key)
+
+func test_catalog_can_duplicate_specific_and_random_items() -> void:
+	var catalog = load(CATALOG_PATH)
+	var starter_item = catalog.create_item_by_id(&"helmet_scout_visor_common")
+	assert_not_null(starter_item)
+	assert_eq(starter_item.item_id, &"helmet_scout_visor_common")
+	assert_ne(String(starter_item.to_dict().get("icon_path", "")), "")
+
+	var loot: Array = catalog.create_random_items(4, 1337)
+	assert_eq(loot.size(), 4)
+	var ids := {}
+	for item in loot:
+		assert_not_null(item)
+		assert_false(ids.has(item.item_id), "Duplicate loot item %s" % item.item_id)
+		ids[item.item_id] = true

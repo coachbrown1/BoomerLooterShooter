@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://cq6447502rd7b" path="res://Scripts/Data/enemy_roster_data.gd" id="1_enemy_roster_data"]
 [ext_resource type="PackedScene" uid="uid://dprxvxrny58r5" path="res://Scenes/Enemies/skeleton.tscn" id="2_skeleton"]
-[ext_resource type="PackedScene" uid="uid://r1a2n3g4e5d6" path="res://Scenes/Enemies/goblin_archer.tscn" id="4_goblin_archer"]
+[ext_resource type="PackedScene" uid="uid://gobarc483377" path="res://Scenes/Enemies/goblin_archer.tscn" id="4_goblin_archer"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/kobold.tscn" id="5_kobold"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/orc.tscn" id="6_orc"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/cultist.tscn" id="7_cultist"]
@@ -10,7 +10,7 @@
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/death_knight.tscn" id="9_death_knight"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/gargoyle.tscn" id="10_gargoyle"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/fungal_cube.tscn" id="11_fungal_cube"]
-[ext_resource type="PackedScene" uid="uid://c1m2e3l4e5e6" path="res://Scenes/Enemies/spore_husk.tscn" id="12_spore_husk"]
+[ext_resource type="PackedScene" uid="uid://sphksp0r3333" path="res://Scenes/Enemies/spore_husk.tscn" id="12_spore_husk"]
 
 [resource]
 script = ExtResource("1_enemy_roster_data")
