@@ -25,7 +25,7 @@ func _ready() -> void:
 			light_node = p
 		elif p.get_parent() is Light3D:
 			light_node = p.get_parent()
-			
+
 	if not sprite_node:
 		# Look for a sprite sibling or parent
 		var p = get_parent()
@@ -33,6 +33,13 @@ func _ready() -> void:
 			sprite_node = p
 		else:
 			sprite_node = _find_sprite_recursive(p)
+
+	if light_node:
+		base_energy = light_node.light_energy
+	if sprite_node:
+		_base_modulate = sprite_node.modulate
+
+	_offset = randf() * 100.0
 
 func _find_sprite_recursive(node: Node) -> Sprite3D:
 	for child in node.get_children():
@@ -42,13 +49,6 @@ func _find_sprite_recursive(node: Node) -> Sprite3D:
 		if res:
 			return res
 	return null
-	
-	if light_node:
-		base_energy = light_node.light_energy
-	if sprite_node:
-		_base_modulate = sprite_node.modulate
-	
-	_offset = randf() * 100.0
 
 func _process(delta: float) -> void:
 	_timer += delta * speed

@@ -77,7 +77,7 @@ func update_ammo(ammo: int, max_ammo: int) -> void:
 	if ammo_label:
 		ammo_label.text = "Ammo: " + str(ammo) + " / " + str(max_ammo)
 
-func update_ammo_display(current_mag: int, mag_size: int, reserve: int, is_infinite: bool) -> void:
+func update_ammo_display(current_mag: int, _mag_size: int, reserve: int, is_infinite: bool) -> void:
 	if not is_node_ready():
 		await ready
 	if ammo_label:

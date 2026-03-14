@@ -34,7 +34,6 @@ var _session_host: bool = false
 var _local_peer_id: int = 1
 var _snapshot_timer: float = 0.0
 var _local_player_state_timer: float = 0.0
-var _last_client_state_by_peer: Dictionary = {}
 var _player_by_peer_id: Dictionary = {}
 var _enemy_by_network_id: Dictionary = {}
 var _enemy_network_id_by_instance_id: Dictionary = {}

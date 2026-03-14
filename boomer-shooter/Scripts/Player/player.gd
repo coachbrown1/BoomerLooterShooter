@@ -191,7 +191,7 @@ func _physics_process(delta: float) -> void:
 	_update_visuals(delta, input_dir, current_speed)
 	move_and_slide()
 
-func _update_visuals(delta: float, input_dir: Vector2, speed: float) -> void:
+func _update_visuals(delta: float, input_dir: Vector2, _speed: float) -> void:
 	if not visuals: return
 	
 	# Idle breathing/pulse

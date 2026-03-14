@@ -545,10 +545,75 @@ func _make_biome_section(title: String) -> VBoxContainer:
 func _make_form_label(text: String) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.custom_minimum_size.x = 130
 	label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	return label
+
+# Opens a compact searchable popup. The button shows the current filename; clicking
+# it opens a filtered list. Selecting an item calls on_path_selected(path).
+func _make_searchable_picker(options: Array[String], initial_path: String, on_path_selected: Callable) -> Button:
+	var state := {"path": initial_path}
+	var btn := Button.new()
+	btn.text = initial_path.get_file() if initial_path != "" else "(None)"
+	btn.clip_text = true
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	btn.pressed.connect(func() -> void:
+		_show_search_popup(btn, options, state.path, func(path: String) -> void:
+			state.path = path
+			btn.text = path.get_file() if path != "" else "(None)"
+			on_path_selected.call(path)
+		)
+	)
+	return btn
+
+func _show_search_popup(anchor: Control, options: Array[String], current_path: String, on_selected: Callable) -> void:
+	var popup := PopupPanel.new()
+	var vbox := VBoxContainer.new()
+	vbox.custom_minimum_size = Vector2(300, 0)
+	popup.add_child(vbox)
+
+	var search := LineEdit.new()
+	search.placeholder_text = "Search…"
+	vbox.add_child(search)
+
+	var list := ItemList.new()
+	list.custom_minimum_size = Vector2(300, 240)
+	list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(list)
+
+	var fill := func(filter: String) -> void:
+		list.clear()
+		list.add_item("(None)")
+		list.set_item_metadata(0, "")
+		var sel := 0
+		for path in options:
+			var fname := path.get_file()
+			if filter == "" or fname.to_lower().contains(filter.to_lower()):
+				var idx := list.get_item_count()
+				list.add_item(fname)
+				list.set_item_metadata(idx, path)
+				if path == current_path:
+					sel = idx
+		if list.get_item_count() > 0:
+			list.select(sel)
+			list.ensure_current_is_visible()
+	fill.call("")
+
+	search.text_changed.connect(func(text: String) -> void: fill.call(text))
+	list.item_selected.connect(func(idx: int) -> void:
+		var path: String = str(list.get_item_metadata(idx))
+		on_selected.call(path)
+		popup.hide()
+	)
+	popup.popup_hide.connect(popup.queue_free)
+
+	add_child(popup)
+	var screen_pos := anchor.get_screen_position() + Vector2(0.0, anchor.size.y)
+	popup.popup(Rect2i(int(screen_pos.x), int(screen_pos.y), 300, 280))
+	search.grab_focus()
 
 func _add_bool_row(container: VBoxContainer, label_text: String, property_name: String) -> void:
 	var row := HBoxContainer.new()
@@ -564,6 +629,7 @@ func _add_bool_row(container: VBoxContainer, label_text: String, property_name: 
 func _add_float_row(container: VBoxContainer, label_text: String, property_name: String, min_value: float, max_value: float, step: float, integer_only: bool = false) -> void:
 	var row := HBoxContainer.new()
 	var label := _make_form_label(label_text)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
 	var spin := SpinBox.new()
 	spin.min_value = min_value
@@ -571,7 +637,8 @@ func _add_float_row(container: VBoxContainer, label_text: String, property_name:
 	spin.step = step
 	spin.value = float(_selected_biome.get(property_name))
 	spin.rounded = integer_only
-	spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spin.custom_minimum_size.x = 80
+	spin.size_flags_horizontal = Control.SIZE_SHRINK_END
 	spin.value_changed.connect(func(value: float) -> void:
 		if integer_only:
 			_set_biome_property(property_name, int(value))
@@ -584,8 +651,11 @@ func _add_float_row(container: VBoxContainer, label_text: String, property_name:
 func _add_color_row(container: VBoxContainer, label_text: String, property_name: String) -> void:
 	var row := HBoxContainer.new()
 	var label := _make_form_label(label_text)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
 	var picker := ColorPickerButton.new()
+	picker.custom_minimum_size.x = 80
+	picker.size_flags_horizontal = Control.SIZE_SHRINK_END
 	var current: Variant = _selected_biome.get(property_name)
 	if current is Color:
 		picker.color = current
@@ -598,30 +668,19 @@ func _add_color_row(container: VBoxContainer, label_text: String, property_name:
 func _add_resource_picker_row(container: VBoxContainer, label_text: String, property_name: String, options: Array[String], kind: String) -> void:
 	var row := HBoxContainer.new()
 	var label := _make_form_label(label_text)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
 
-	var picker := OptionButton.new()
-	picker.fit_to_longest_item = false
-	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	picker.add_item("(None)")
-	picker.set_item_metadata(0, "")
 	var current_path := _resource_path_from_variant(_selected_biome.get(property_name))
-	var selected := 0
-	for path in options:
-		var index := picker.get_item_count()
-		picker.add_item(path.get_file())
-		picker.set_item_metadata(index, path)
-		if path == current_path:
-			selected = index
-	picker.select(selected)
-	picker.item_selected.connect(func(index: int) -> void:
-		var path: String = str(picker.get_item_metadata(index))
+	var picker := _make_searchable_picker(options, current_path, func(path: String) -> void:
 		if path == "":
 			_set_biome_property(property_name, null)
 			return
 		var loaded := load(path)
 		_set_biome_property(property_name, loaded)
 	)
+	picker.custom_minimum_size.x = 130
+	picker.size_flags_horizontal = Control.SIZE_SHRINK_END
 	row.add_child(picker)
 
 	var open_button := Button.new()
@@ -647,7 +706,7 @@ func _add_resource_array_editor(container: VBoxContainer, title: String, propert
 
 	var list := ItemList.new()
 	list.select_mode = ItemList.SELECT_SINGLE
-	list.custom_minimum_size = Vector2(0, 48)
+	list.custom_minimum_size = Vector2(0, 80)
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	container.add_child(list)
 
@@ -658,31 +717,32 @@ func _add_resource_array_editor(container: VBoxContainer, title: String, propert
 			if value is Resource:
 				var resource: Resource = value
 				var path := resource.resource_path
-				list.add_item(path if path != "" else str(resource))
+				var display := path.get_file() if path != "" else str(resource)
+				var item_idx := list.get_item_count()
+				list.add_item(display)
+				if path != "":
+					list.set_item_tooltip(item_idx, path)
 		if list.get_item_count() > 0:
 			list.select(0)
 	refresh.call()
 
-	var controls := HFlowContainer.new()
-	controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	container.add_child(controls)
+	# Add row: searchable picker (fill) + Add button
+	var add_row := HBoxContainer.new()
+	add_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	container.add_child(add_row)
 
-	var picker := OptionButton.new()
-	picker.fit_to_longest_item = false
-	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for path in options:
-		var index := picker.get_item_count()
-		picker.add_item(path.get_file())
-		picker.set_item_metadata(index, path)
-	controls.add_child(picker)
+	var picker_state := {"path": options[0] if not options.is_empty() else ""}
+	var picker := _make_searchable_picker(options, picker_state.path, func(path: String) -> void:
+		picker_state.path = path
+	)
+	add_row.add_child(picker)
 
 	var add_button := Button.new()
 	add_button.text = "Add"
 	add_button.pressed.connect(func() -> void:
-		if picker.get_item_count() == 0:
+		if picker_state.path == "":
 			return
-		var path := str(picker.get_item_metadata(picker.selected))
-		var loaded := load(path)
+		var loaded := load(picker_state.path)
 		if not (loaded is Resource):
 			return
 		var values := _get_resource_array(property_name)
@@ -690,10 +750,16 @@ func _add_resource_array_editor(container: VBoxContainer, title: String, propert
 		_set_biome_property(property_name, values)
 		refresh.call()
 	)
-	controls.add_child(add_button)
+	add_row.add_child(add_button)
+
+	# Action row: Remove | ↑ | ↓ | Open
+	var action_row := HBoxContainer.new()
+	action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	container.add_child(action_row)
 
 	var remove_button := Button.new()
 	remove_button.text = "Remove"
+	remove_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	remove_button.pressed.connect(func() -> void:
 		var selected := list.get_selected_items()
 		if selected.is_empty():
@@ -703,10 +769,10 @@ func _add_resource_array_editor(container: VBoxContainer, title: String, propert
 		_set_biome_property(property_name, values)
 		refresh.call()
 	)
-	controls.add_child(remove_button)
+	action_row.add_child(remove_button)
 
 	var up_button := Button.new()
-	up_button.text = "Up"
+	up_button.text = "↑"
 	up_button.pressed.connect(func() -> void:
 		var selected := list.get_selected_items()
 		if selected.is_empty():
@@ -715,17 +781,17 @@ func _add_resource_array_editor(container: VBoxContainer, title: String, propert
 		if idx <= 0:
 			return
 		var values := _get_resource_array(property_name)
-		var tmp_up: Variant = values[idx - 1]
+		var tmp: Variant = values[idx - 1]
 		values[idx - 1] = values[idx]
-		values[idx] = tmp_up
+		values[idx] = tmp
 		_set_biome_property(property_name, values)
 		refresh.call()
 		list.select(idx - 1)
 	)
-	controls.add_child(up_button)
+	action_row.add_child(up_button)
 
 	var down_button := Button.new()
-	down_button.text = "Down"
+	down_button.text = "↓"
 	down_button.pressed.connect(func() -> void:
 		var selected := list.get_selected_items()
 		if selected.is_empty():
@@ -734,17 +800,18 @@ func _add_resource_array_editor(container: VBoxContainer, title: String, propert
 		var values := _get_resource_array(property_name)
 		if idx >= values.size() - 1:
 			return
-		var tmp_down: Variant = values[idx + 1]
+		var tmp: Variant = values[idx + 1]
 		values[idx + 1] = values[idx]
-		values[idx] = tmp_down
+		values[idx] = tmp
 		_set_biome_property(property_name, values)
 		refresh.call()
 		list.select(idx + 1)
 	)
-	controls.add_child(down_button)
+	action_row.add_child(down_button)
 
 	var open_button := Button.new()
 	open_button.text = "Open"
+	open_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	open_button.pressed.connect(func() -> void:
 		if plugin == null:
 			return
@@ -752,10 +819,10 @@ func _add_resource_array_editor(container: VBoxContainer, title: String, propert
 		if selected.is_empty():
 			return
 		var values := _get_resource_array(property_name)
-		var idx := int(selected[0])
-		if idx < 0 or idx >= values.size():
+		var sel_idx := int(selected[0])
+		if sel_idx < 0 or sel_idx >= values.size():
 			return
-		var value: Variant = values[idx]
+		var value: Variant = values[sel_idx]
 		if kind == "scene" and value is PackedScene:
 			var packed: PackedScene = value
 			if packed.resource_path != "":
@@ -763,7 +830,7 @@ func _add_resource_array_editor(container: VBoxContainer, title: String, propert
 		elif value is Resource:
 			plugin.get_editor_interface().edit_resource(value)
 	)
-	controls.add_child(open_button)
+	action_row.add_child(open_button)
 
 func _set_biome_property(property_name: String, value: Variant) -> void:
 	if _selected_biome == null:

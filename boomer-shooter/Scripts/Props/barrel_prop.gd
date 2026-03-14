@@ -1,3 +1,4 @@
+@tool
 extends PropBase
 class_name BarrelProp
 

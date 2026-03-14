@@ -53,15 +53,15 @@ func _ready() -> void:
 func switch_to_weapon(index: int) -> void:
 	if index < 0 or index >= _slot_weapons.size() or index == current_weapon_index:
 		return
-	var next_weapon: Weapon = _slot_weapons[index]
-	if next_weapon == null:
+	var weapon_to_switch: Weapon = _slot_weapons[index]
+	if weapon_to_switch == null:
 		return
 
 	if current_weapon:
 		current_weapon.hide_weapon()
 
 	current_weapon_index = index
-	current_weapon = next_weapon
+	current_weapon = weapon_to_switch
 	current_weapon.show_weapon()
 	weapon_changed.emit(current_weapon)
 	_update_hud()

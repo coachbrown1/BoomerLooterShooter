@@ -431,13 +431,13 @@ func _corridor_width_offsets() -> Array:
 	var width := _effective_corridor_width()
 	var offsets: Array = []
 	if width % 2 == 1:
-		var half := width / 2
+		var half: int = width / 2
 		for v in range(-half, half + 1):
 			offsets.append(v)
 	else:
 		# Even widths are centered between two tiles (doorway center at +0.5).
-		var left := (width / 2) - 1
-		var right := width / 2
+		var left: int = (width / 2) - 1
+		var right: int = width / 2
 		for v in range(-left, right + 1):
 			offsets.append(v)
 	return offsets

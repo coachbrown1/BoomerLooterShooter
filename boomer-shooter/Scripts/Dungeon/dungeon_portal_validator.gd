@@ -73,7 +73,7 @@ func build_opening_offsets(span_tiles: int) -> Array[int]:
 	var span := maxi(1, span_tiles)
 	var offsets: Array[int] = []
 	if span % 2 == 1:
-		var half := span / 2
+		var half: int = span / 2
 		for i in range(-half, half + 1):
 			offsets.append(i)
 	else:

@@ -6,8 +6,10 @@
 [ext_resource type="Texture2D" uid="uid://dlbtwdyatlw7a" path="res://Assets/Environment/Castle/castle_floor_v1.png" id="3_floor1"]
 [ext_resource type="Texture2D" uid="uid://wx0bgblb0n6d" path="res://Assets/Environment/Castle/castle_floor_v2.png" id="4_floor2"]
 [ext_resource type="Texture2D" uid="uid://biymt3uulxjb4" path="res://Assets/Environment/Castle/castle_floor_v3.png" id="5_floor3"]
+[ext_resource type="PackedScene" uid="uid://r1a2n3g4e5d6" path="res://Scenes/Enemies/goblin_archer.tscn" id="6_gelep"]
 [ext_resource type="Texture2D" uid="uid://sbfcrpaqlvac" path="res://Assets/Environment/exit_portal.png" id="6_nd585"]
 [ext_resource type="Texture2D" uid="uid://0kace7w8fmmd" path="res://Assets/Environment/Castle/castle_wall_v1.png" id="6_wall1"]
+[ext_resource type="PackedScene" uid="uid://c1m2e3l4e5e6" path="res://Scenes/Enemies/goblin_melee.tscn" id="7_hpmr7"]
 [ext_resource type="Texture2D" uid="uid://woal05aua40s" path="res://Assets/Environment/Castle/castle_wall_v2.png" id="7_wall2"]
 [ext_resource type="Texture2D" uid="uid://bu8fu100sems" path="res://Assets/Environment/Castle/castle_wall_v3.png" id="8_wall3"]
 [ext_resource type="Texture2D" uid="uid://cclufjw2yr6ga" path="res://Assets/Environment/Castle/castle_ceiling_v1.png" id="9_ceil1"]
@@ -30,8 +32,6 @@ ceiling_textures = [ExtResource("9_ceil1"), ExtResource("10_ceil2")]
 tile_emission_color = Color(0.1, 0.1, 0.1, 1)
 tile_emission_energy = 0.2
 tile_emission_operator = 0
-tile_uv_scale = 2.0
-tile_texture_filter = 0
 doorway_assembly_scene = ExtResource("11_castle_doorway")
 handcrafted_start_room_scene = ExtResource("2_castle_start")
 room_light_color = Color(1, 0.8, 0.4, 1)
@@ -47,11 +47,10 @@ wall_light_color = Color(1, 0.6, 0.2, 1)
 wall_light_energy = 1.5
 wall_light_range = 10.0
 wall_light_height = 1.2
-floor_light_scene = null
 floor_light_color = Color(1, 0.6, 0.2, 1)
 floor_light_energy = 1.5
 floor_light_range = 10.0
 floor_light_height = 1.2
 fog_light_color = Color(0.09985284, 0.09985284, 0.15170373, 0.27100003)
 universal_prop_scenes = [ExtResource("13_uprop1"), ExtResource("14_uprop2"), ExtResource("15_uprop3"), ExtResource("16_uprop4")]
-enemy_scenes = [ExtResource("17_enemy1")]
+enemy_scenes = [ExtResource("17_enemy1"), ExtResource("6_gelep"), ExtResource("7_hpmr7")]

@@ -1,3 +1,4 @@
+@tool
 extends SpriteProp
 class_name VineProp
 

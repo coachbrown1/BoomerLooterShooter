@@ -25,8 +25,8 @@ func populate(
 		if room.has_handcrafted_layout or room.handcrafted_scene != null or room.handcrafted_scene_path != "":
 			continue
 
-		var area = room.grid_rect.size.x * room.grid_rect.size.y
-		var prop_count = mini(8, max(3, area / 15))
+		var area: int = room.grid_rect.size.x * room.grid_rect.size.y
+		var prop_count: int = mini(8, max(3, area / 15))
 
 		var pool: Array = _get_universal_prop_scenes(biome_data)
 		var biome_pool: Array = _get_biome_prop_scenes(biome_data)
