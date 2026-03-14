@@ -117,8 +117,15 @@ func _populate_default_loot_if_needed() -> void:
 		if item != null:
 			return
 
+	# Mix the chest's stable identity hash with the dungeon's per-run seed so
+	# loot varies each playthrough while remaining deterministic within a run.
+	var dungeon_seed: int = 0
+	var dm := get_tree().get_first_node_in_group("dungeon_manager")
+	if dm and "generation_seed" in dm:
+		dungeon_seed = int(dm.generation_seed)
+
 	var rng := RandomNumberGenerator.new()
-	rng.seed = hash("%s|%s|%d" % [String(get_path()), chest_name, slot_count])
+	rng.seed = hash("%s|%s|%d" % [String(get_path()), chest_name, slot_count]) ^ dungeon_seed
 	var desired_count := clampi(rng.randi_range(min_gear_items, max_gear_items), 1, slot_count)
 	var loot := gear_catalog.create_random_items(desired_count, int(rng.randi()))
 	set_storage_items(loot)
