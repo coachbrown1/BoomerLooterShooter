@@ -1,0 +1,26 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Texture2D" path="res://Assets/Environment/Castle/castle_wall_v2.png" id="1_wall_tex"]
+
+[sub_resource type="StandardMaterial3D" id="1_wall_mat"]
+albedo_color = Color(0.88, 0.88, 0.9, 1)
+albedo_texture = ExtResource("1_wall_tex")
+roughness = 1.0
+texture_filter = 0
+
+[sub_resource type="BoxShape3D" id="2_wall_shape"]
+size = Vector3(3, 4, 0.6)
+
+[sub_resource type="BoxMesh" id="3_wall_mesh"]
+material = SubResource("1_wall_mat")
+size = Vector3(3, 4, 0.6)
+
+[node name="DungeonWallTile" type="StaticBody3D"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+shape = SubResource("2_wall_shape")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+mesh = SubResource("3_wall_mesh")

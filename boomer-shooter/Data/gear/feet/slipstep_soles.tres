@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="GearLineData" format=3]
+[gd_resource type="Resource" script_class="GearLineData" format=3 uid="uid://cv76t6smwyigh"]
 
-[ext_resource type="Script" path="res://Scripts/Data/gear_line_data.gd" id="1_line"]
-[ext_resource type="Script" path="res://Scripts/Inventory/inventory_item_data.gd" id="2_item"]
+[ext_resource type="Script" uid="uid://cmwmeyjokkuok" path="res://Scripts/Data/gear_line_data.gd" id="1_line"]
+[ext_resource type="Script" uid="uid://b45i5wy8vioam" path="res://Scripts/Inventory/inventory_item_data.gd" id="2_item"]
 
 [sub_resource type="Resource" id="Item_001"]
 script = ExtResource("2_item")
@@ -9,7 +9,10 @@ item_id = &"feet_slipstep_soles_common"
 display_name = "Common Slipstep Soles"
 category = &"armor"
 equipment_slot = &"feet"
-stats = {"rarity": "Common", "spread_reduction": 0.04}
+stats = {
+"rarity": "Common",
+"spread_reduction": 0.04
+}
 
 [sub_resource type="Resource" id="Item_002"]
 script = ExtResource("2_item")
@@ -17,7 +20,11 @@ item_id = &"feet_slipstep_soles_uncommon"
 display_name = "Uncommon Slipstep Soles"
 category = &"armor"
 equipment_slot = &"feet"
-stats = {"move_speed_add": 0.15, "rarity": "Uncommon", "spread_reduction": 0.06}
+stats = {
+"move_speed_add": 0.15,
+"rarity": "Uncommon",
+"spread_reduction": 0.06
+}
 
 [sub_resource type="Resource" id="Item_003"]
 script = ExtResource("2_item")
@@ -25,7 +32,12 @@ item_id = &"feet_slipstep_soles_rare"
 display_name = "Rare Slipstep Soles"
 category = &"armor"
 equipment_slot = &"feet"
-stats = {"arrows_damage_mult": 0.05, "move_speed_add": 0.20, "rarity": "Rare", "spread_reduction": 0.08}
+stats = {
+"arrows_damage_mult": 0.05,
+"move_speed_add": 0.2,
+"rarity": "Rare",
+"spread_reduction": 0.08
+}
 
 [sub_resource type="Resource" id="Item_004"]
 script = ExtResource("2_item")
@@ -33,7 +45,14 @@ item_id = &"feet_slipstep_soles_epic"
 display_name = "Epic Slipstep Soles"
 category = &"armor"
 equipment_slot = &"feet"
-stats = {"arrows_damage_mult": 0.07, "crossbow_damage_mult": 0.08, "move_speed_add": 0.25, "move_speed_mult": 0.04, "rarity": "Epic", "spread_reduction": 0.10}
+stats = {
+"arrows_damage_mult": 0.07,
+"crossbow_damage_mult": 0.08,
+"move_speed_add": 0.25,
+"move_speed_mult": 0.04,
+"rarity": "Epic",
+"spread_reduction": 0.1
+}
 
 [sub_resource type="Resource" id="Item_005"]
 script = ExtResource("2_item")
@@ -41,11 +60,19 @@ item_id = &"feet_slipstep_soles_legendary"
 display_name = "Legendary Slipstep Soles"
 category = &"armor"
 equipment_slot = &"feet"
-stats = {"arrows_damage_mult": 0.09, "crossbow_damage_add": 4, "crossbow_damage_mult": 0.10, "move_speed_add": 0.30, "move_speed_mult": 0.06, "rarity": "Legendary", "spread_reduction": 0.12}
+stats = {
+"arrows_damage_mult": 0.09,
+"crossbow_damage_add": 4,
+"crossbow_damage_mult": 0.1,
+"move_speed_add": 0.3,
+"move_speed_mult": 0.06,
+"rarity": "Legendary",
+"spread_reduction": 0.12
+}
 
 [resource]
 script = ExtResource("1_line")
 slot_name = &"feet"
 piece_name = "Slipstep Soles"
 build_theme = "Crossbow mobility"
-variants = [SubResource("Item_001"), SubResource("Item_002"), SubResource("Item_003"), SubResource("Item_004"), SubResource("Item_005")]
+variants = Array[ExtResource("2_item")]([SubResource("Item_001"), SubResource("Item_002"), SubResource("Item_003"), SubResource("Item_004"), SubResource("Item_005")])

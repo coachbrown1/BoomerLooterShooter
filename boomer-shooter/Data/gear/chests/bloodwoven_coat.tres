@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="GearLineData" format=3]
+[gd_resource type="Resource" script_class="GearLineData" format=3 uid="uid://brg0v4o7ygkt5"]
 
-[ext_resource type="Script" path="res://Scripts/Data/gear_line_data.gd" id="1_line"]
-[ext_resource type="Script" path="res://Scripts/Inventory/inventory_item_data.gd" id="2_item"]
+[ext_resource type="Script" uid="uid://cmwmeyjokkuok" path="res://Scripts/Data/gear_line_data.gd" id="1_line"]
+[ext_resource type="Script" uid="uid://b45i5wy8vioam" path="res://Scripts/Inventory/inventory_item_data.gd" id="2_item"]
 
 [sub_resource type="Resource" id="Item_001"]
 script = ExtResource("2_item")
@@ -9,7 +9,10 @@ item_id = &"chest_bloodwoven_coat_common"
 display_name = "Common Bloodwoven Coat"
 category = &"armor"
 equipment_slot = &"chest"
-stats = {"health_add": 10, "rarity": "Common"}
+stats = {
+"health_add": 10,
+"rarity": "Common"
+}
 
 [sub_resource type="Resource" id="Item_002"]
 script = ExtResource("2_item")
@@ -17,7 +20,11 @@ item_id = &"chest_bloodwoven_coat_uncommon"
 display_name = "Uncommon Bloodwoven Coat"
 category = &"armor"
 equipment_slot = &"chest"
-stats = {"health_add": 18, "health_mult": 0.04, "rarity": "Uncommon"}
+stats = {
+"health_add": 18,
+"health_mult": 0.04,
+"rarity": "Uncommon"
+}
 
 [sub_resource type="Resource" id="Item_003"]
 script = ExtResource("2_item")
@@ -25,7 +32,12 @@ item_id = &"chest_bloodwoven_coat_rare"
 display_name = "Rare Bloodwoven Coat"
 category = &"armor"
 equipment_slot = &"chest"
-stats = {"health_add": 26, "health_mult": 0.07, "rarity": "Rare", "reload_speed_mult": 0.04}
+stats = {
+"health_add": 26,
+"health_mult": 0.07,
+"rarity": "Rare",
+"reload_speed_mult": 0.04
+}
 
 [sub_resource type="Resource" id="Item_004"]
 script = ExtResource("2_item")
@@ -33,7 +45,12 @@ item_id = &"chest_bloodwoven_coat_epic"
 display_name = "Epic Bloodwoven Coat"
 category = &"armor"
 equipment_slot = &"chest"
-stats = {"health_add": 36, "health_mult": 0.09, "rarity": "Epic", "reload_speed_mult": 0.06}
+stats = {
+"health_add": 36,
+"health_mult": 0.09,
+"rarity": "Epic",
+"reload_speed_mult": 0.06
+}
 
 [sub_resource type="Resource" id="Item_005"]
 script = ExtResource("2_item")
@@ -41,11 +58,17 @@ item_id = &"chest_bloodwoven_coat_legendary"
 display_name = "Legendary Bloodwoven Coat"
 category = &"armor"
 equipment_slot = &"chest"
-stats = {"health_add": 48, "health_mult": 0.11, "rarity": "Legendary", "reload_speed_mult": 0.08, "weapon_damage_add": 2}
+stats = {
+"health_add": 48,
+"health_mult": 0.11,
+"rarity": "Legendary",
+"reload_speed_mult": 0.08,
+"weapon_damage_add": 2
+}
 
 [resource]
 script = ExtResource("1_line")
 slot_name = &"chest"
 piece_name = "Bloodwoven Coat"
 build_theme = "Sustain and tempo"
-variants = [SubResource("Item_001"), SubResource("Item_002"), SubResource("Item_003"), SubResource("Item_004"), SubResource("Item_005")]
+variants = Array[ExtResource("2_item")]([SubResource("Item_001"), SubResource("Item_002"), SubResource("Item_003"), SubResource("Item_004"), SubResource("Item_005")])

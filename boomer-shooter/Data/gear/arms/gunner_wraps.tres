@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="GearLineData" format=3]
+[gd_resource type="Resource" script_class="GearLineData" format=3 uid="uid://bmka63yr0xgkj"]
 
-[ext_resource type="Script" path="res://Scripts/Data/gear_line_data.gd" id="1_line"]
-[ext_resource type="Script" path="res://Scripts/Inventory/inventory_item_data.gd" id="2_item"]
+[ext_resource type="Script" uid="uid://cmwmeyjokkuok" path="res://Scripts/Data/gear_line_data.gd" id="1_line"]
+[ext_resource type="Script" uid="uid://b45i5wy8vioam" path="res://Scripts/Inventory/inventory_item_data.gd" id="2_item"]
 
 [sub_resource type="Resource" id="Item_001"]
 script = ExtResource("2_item")
@@ -9,7 +9,10 @@ item_id = &"arms_gunner_wraps_common"
 display_name = "Common Gunner Wraps"
 category = &"armor"
 equipment_slot = &"arms"
-stats = {"rarity": "Common", "weapon_damage_add": 1}
+stats = {
+"rarity": "Common",
+"weapon_damage_add": 1
+}
 
 [sub_resource type="Resource" id="Item_002"]
 script = ExtResource("2_item")
@@ -17,7 +20,11 @@ item_id = &"arms_gunner_wraps_uncommon"
 display_name = "Uncommon Gunner Wraps"
 category = &"armor"
 equipment_slot = &"arms"
-stats = {"rarity": "Uncommon", "weapon_damage_add": 2, "weapon_damage_mult": 0.03}
+stats = {
+"rarity": "Uncommon",
+"weapon_damage_add": 2,
+"weapon_damage_mult": 0.03
+}
 
 [sub_resource type="Resource" id="Item_003"]
 script = ExtResource("2_item")
@@ -25,7 +32,13 @@ item_id = &"arms_gunner_wraps_rare"
 display_name = "Rare Gunner Wraps"
 category = &"armor"
 equipment_slot = &"arms"
-stats = {"rarity": "Rare", "shells_damage_mult": 0.06, "shells_mag_size_add": 1, "weapon_damage_add": 3, "weapon_damage_mult": 0.05}
+stats = {
+"rarity": "Rare",
+"shells_damage_mult": 0.06,
+"shells_mag_size_add": 1,
+"weapon_damage_add": 3,
+"weapon_damage_mult": 0.05
+}
 
 [sub_resource type="Resource" id="Item_004"]
 script = ExtResource("2_item")
@@ -33,7 +46,14 @@ item_id = &"arms_gunner_wraps_epic"
 display_name = "Epic Gunner Wraps"
 category = &"armor"
 equipment_slot = &"arms"
-stats = {"rarity": "Epic", "shells_damage_mult": 0.08, "shells_mag_size_add": 2, "shotgun_damage_mult": 0.08, "weapon_damage_add": 4, "weapon_damage_mult": 0.06}
+stats = {
+"rarity": "Epic",
+"shells_damage_mult": 0.08,
+"shells_mag_size_add": 2,
+"shotgun_damage_mult": 0.08,
+"weapon_damage_add": 4,
+"weapon_damage_mult": 0.06
+}
 
 [sub_resource type="Resource" id="Item_005"]
 script = ExtResource("2_item")
@@ -41,11 +61,21 @@ item_id = &"arms_gunner_wraps_legendary"
 display_name = "Legendary Gunner Wraps"
 category = &"armor"
 equipment_slot = &"arms"
-stats = {"rarity": "Legendary", "shells_damage_mult": 0.10, "shells_mag_size_add": 3, "shotgun_damage_add": 5, "shotgun_damage_mult": 0.10, "shotgun_mag_size_add": 2, "shotgun_mag_size_mult": 0.10, "weapon_damage_add": 6, "weapon_damage_mult": 0.08}
+stats = {
+"rarity": "Legendary",
+"shells_damage_mult": 0.1,
+"shells_mag_size_add": 3,
+"shotgun_damage_add": 5,
+"shotgun_damage_mult": 0.1,
+"shotgun_mag_size_add": 2,
+"shotgun_mag_size_mult": 0.1,
+"weapon_damage_add": 6,
+"weapon_damage_mult": 0.08
+}
 
 [resource]
 script = ExtResource("1_line")
 slot_name = &"arms"
 piece_name = "Gunner Wraps"
 build_theme = "Generic gun damage into shotgun focus"
-variants = [SubResource("Item_001"), SubResource("Item_002"), SubResource("Item_003"), SubResource("Item_004"), SubResource("Item_005")]
+variants = Array[ExtResource("2_item")]([SubResource("Item_001"), SubResource("Item_002"), SubResource("Item_003"), SubResource("Item_004"), SubResource("Item_005")])
