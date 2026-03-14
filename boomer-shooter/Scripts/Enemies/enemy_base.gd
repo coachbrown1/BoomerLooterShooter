@@ -252,14 +252,16 @@ func _update_proxy_visual_state() -> void:
 	if billboard_sprite == null:
 		return
 	if _network_proxy_mode:
-		var frame_limit := maxi(0, billboard_sprite.hframes - 1)
+		# Use total frame count (hframes * vframes) so multi-row spritesheets
+		# (vframes > 1) don't have their upper rows clamped away on clients.
+		var frame_limit := maxi(0, billboard_sprite.hframes * billboard_sprite.vframes - 1)
 		if billboard_sprite.animate != _proxy_visual_animate:
 			billboard_sprite.animate = _proxy_visual_animate
 		billboard_sprite.frame = clampi(_proxy_visual_frame, 0, frame_limit)
 		return
 	if current_state == State.DEAD:
 		billboard_sprite.animate = false
-		billboard_sprite.frame = maxi(0, billboard_sprite.hframes - 1)
+		billboard_sprite.frame = maxi(0, billboard_sprite.hframes * billboard_sprite.vframes - 1)
 		return
 	if current_state == State.CHASE:
 		if not billboard_sprite.animate:
@@ -287,7 +289,7 @@ func force_network_dead_visual() -> void:
 	current_state = State.DEAD
 	_proxy_visual_animate = false
 	if billboard_sprite:
-		_proxy_visual_frame = maxi(0, billboard_sprite.hframes - 1)
+		_proxy_visual_frame = maxi(0, billboard_sprite.hframes * billboard_sprite.vframes - 1)
 	_update_proxy_visual_state()
 
 func _refresh_target_player() -> void:
@@ -433,7 +435,7 @@ func _on_died() -> void:
 	# Set to death frame (last index) and stop animation
 	if billboard_sprite:
 		billboard_sprite.animate = false
-		billboard_sprite.frame = billboard_sprite.hframes - 1
+		billboard_sprite.frame = billboard_sprite.hframes * billboard_sprite.vframes - 1
 	
 	var tween = create_tween()
 	tween.tween_property(billboard_sprite, "modulate", Color(1, 0, 0, 0), 0.5)

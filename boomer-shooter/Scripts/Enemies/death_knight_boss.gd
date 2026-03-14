@@ -48,6 +48,11 @@ var _walk_anim_timer:  float    = 0.0
 var _walk_frame_idx:   int      = 0
 var _sprite_base_x:    float    = 0.0   # Neutral X of the Sprite3D (restored after shake)
 
+# ── Client-proxy state (used only when _network_proxy_mode == true) ────────
+# Received via snapshot; drive the shake/tell effect on remote clients.
+var _proxy_is_beam_windup:    bool  = false
+var _proxy_windup_progress:   float = 0.0
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  INIT
@@ -81,6 +86,58 @@ func _process(delta: float) -> void:
 
 		_:
 			pass  # WINDUP / ATTACK / COOLDOWN handled by their own paths
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MULTIPLAYER SNAPSHOT OVERRIDES
+# ══════════════════════════════════════════════════════════════════════════════
+
+func get_network_state_snapshot() -> Dictionary:
+	var snap: Dictionary = super.get_network_state_snapshot()
+	# Ship the beam windup progress so clients can replicate the shake tell.
+	snap["dk_beam_windup"]     = _is_beam_windup
+	snap["dk_windup_progress"] = clampf(
+		_attack_timer / windup_time if current_state == State.WINDUP else 0.0,
+		0.0, 1.0)
+	return snap
+
+
+func apply_network_state_snapshot(snapshot: Dictionary) -> void:
+	super.apply_network_state_snapshot(snapshot)
+	_proxy_is_beam_windup  = snapshot.get("dk_beam_windup",      false)
+	_proxy_windup_progress = snapshot.get("dk_windup_progress",  0.0)
+
+
+## Overrides the base class to:
+##  1. Use hframes * vframes for the frame limit (fixes multi-row spritesheet clamping).
+##  2. Replicate the beam-windup shake/tint on client proxies using wall-clock time
+##     so clients see the tell even though their _attack_timer is frozen.
+func _update_proxy_visual_state() -> void:
+	if not _network_proxy_mode:
+		return  # Non-proxy visuals are driven by _process() and attack overrides.
+
+	# Apply the received animation frame (full range 0..hframes*vframes-1).
+	var frame_limit := billboard_sprite.hframes * billboard_sprite.vframes - 1
+	billboard_sprite.frame = clampi(_proxy_visual_frame, 0, frame_limit)
+	if billboard_sprite.animate != _proxy_visual_animate:
+		billboard_sprite.animate = _proxy_visual_animate
+
+	if current_state == State.WINDUP and _proxy_is_beam_windup:
+		# Drive shake with wall-clock time so it animates continuously even
+		# though the proxy's _attack_timer doesn't advance.
+		var t := Time.get_ticks_msec() * 0.001 * shake_speed * TAU
+		var intensity := 1.0 + maxf(0.0, (_proxy_windup_progress - 0.6) / 0.4) * 3.0
+		billboard_sprite.position.x = _sprite_base_x + sin(t) * shake_x_amp * intensity
+		var pulse := 1.0 + sin(t * 0.7) * shake_scale_amp * intensity
+		billboard_sprite.scale = Vector3(pulse, pulse, 1.0)
+		var blue := lerpf(1.5, 3.0, _proxy_windup_progress)
+		billboard_sprite.modulate = Color(0.7, 0.8, blue, 1.0)
+	else:
+		# Restore neutral sprite state once windup ends.
+		billboard_sprite.position.x = _sprite_base_x
+		billboard_sprite.scale      = Vector3(1.0, 1.0, 1.0)
+		if current_state != State.DEAD:
+			billboard_sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -232,6 +289,12 @@ func _fire_beam() -> void:
 	beam.global_position = spawn_pos
 	# look_at requires being in the tree (done after add_child)
 	beam.look_at(spawn_pos + dir, Vector3.UP)
+
+	# ── Broadcast beam visual to all remote clients ────────────────────────
+	# The host already has the beam above; rpc_spawn_enemy_beam_visual uses
+	# call_remote so only clients execute the spawn, avoiding a duplicate.
+	if _dungeon_manager and _dungeon_manager.has_method("rpc_spawn_enemy_beam_visual"):
+		_dungeon_manager.rpc("rpc_spawn_enemy_beam_visual", spawn_pos, dir, maxf(0.5, beam_length))
 
 	# Brief bright flash on the boss sprite at the fire moment
 	billboard_sprite.modulate = Color(0.5, 0.7, 2.5, 1.0)

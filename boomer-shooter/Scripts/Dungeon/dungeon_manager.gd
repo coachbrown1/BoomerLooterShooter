@@ -312,7 +312,9 @@ func _place_player() -> void:
 	var start_room := _get_room_by_type(RoomData.RoomType.START)
 	if start_room == null:
 		return
-	var base_pos := start_room.get_world_center(DungeonBuilder.TILE_SIZE)
+	var spawn_data := _get_start_player_spawn_data(start_room)
+	var base_pos: Vector3 = spawn_data.get("position", start_room.get_world_center(DungeonBuilder.TILE_SIZE)) as Vector3
+	var look_target: Vector3 = spawn_data.get("look_target", base_pos + Vector3(0.0, 0.0, 1.0)) as Vector3
 	base_pos.y = 1.0
 
 	if not _session_multiplayer:
@@ -320,6 +322,7 @@ func _place_player() -> void:
 			_cached_player = get_tree().get_first_node_in_group("player") as Node3D
 		if is_instance_valid(_cached_player):
 			_cached_player.global_position = base_pos
+			_orient_player_toward(_cached_player, look_target)
 		return
 
 	if not _session_host:
@@ -336,8 +339,40 @@ func _place_player() -> void:
 			continue
 		var spawn_pos := _offset_spawn_position(base_pos, index)
 		player_node.global_position = spawn_pos
+		_orient_player_toward(player_node, look_target)
 		_player_spawn_points_by_peer[peer_id] = spawn_pos
 		index += 1
+
+func _get_start_player_spawn_data(start_room: RoomData) -> Dictionary:
+	var fallback_pos := start_room.get_world_center(DungeonBuilder.TILE_SIZE)
+	var fallback_look_target := fallback_pos + Vector3(0.0, 0.0, 1.0)
+	var room_overlay = _handcrafted_room_overlays_by_id.get(start_room.id, null)
+	if not is_instance_valid(room_overlay):
+		return {
+			"position": fallback_pos,
+			"look_target": fallback_look_target,
+		}
+	var player_spawn := room_overlay.get_node_or_null("PlayerSpawn") as Node3D
+	if player_spawn == null:
+		return {
+			"position": fallback_pos,
+			"look_target": fallback_look_target,
+		}
+	var spawn_pos: Vector3 = player_spawn.global_position
+	var look_target: Vector3 = spawn_pos + room_overlay.global_basis * Vector3(0.0, 0.0, 1.0)
+	return {
+		"position": spawn_pos,
+		"look_target": look_target,
+	}
+
+func _orient_player_toward(player_node: Node3D, look_target: Vector3) -> void:
+	if player_node == null:
+		return
+	player_node.look_at(look_target, Vector3.UP)
+	if player_node.has_node("Head"):
+		var head := player_node.get_node("Head") as Node3D
+		if head != null:
+			head.rotation.x = 0.0
 
 func _place_exit(biome_data: Resource = null) -> void:
 	var exit_room := _get_room_by_type(RoomData.RoomType.EXIT)
@@ -500,7 +535,8 @@ func _spawn_handcrafted_room_overlays(parent: Node3D) -> void:
 		var room_overlay: Node3D = inst
 		room_overlay.position = room.get_world_center(DungeonBuilder.TILE_SIZE)
 		room_overlay.position.y = 0.0
-		_apply_handcrafted_room_orientation(room_overlay)
+		_apply_handcrafted_room_orientation(room, room_overlay)
+		_apply_handcrafted_room_position_offset(room, room_overlay)
 		room_overlay.set_meta("room_id", room.id)
 		room_overlay.set_meta("room_type", room.room_type)
 		room_overlay.set_meta("lattice_coord", room.lattice_coord)
@@ -508,12 +544,64 @@ func _spawn_handcrafted_room_overlays(parent: Node3D) -> void:
 		_handcrafted_room_overlays_by_id[room.id] = room_overlay
 		_configure_handcrafted_room_overlay(room, room_overlay)
 
-func _apply_handcrafted_room_orientation(room_overlay: Node3D) -> void:
-	if room_overlay == null:
+func _apply_handcrafted_room_orientation(room: RoomData, room_overlay: Node3D) -> void:
+	if room == null or room_overlay == null:
 		return
+	if room.room_type == RoomData.RoomType.START:
+		var doorway_side := _get_room_primary_doorway_side(room)
+		if doorway_side != "":
+			room_overlay.rotation_degrees.y = _rotation_for_start_room_doorway_side(doorway_side)
+			return
 	if room_overlay is HandcraftedRoomLayout:
 		var handcrafted_layout: HandcraftedRoomLayout = room_overlay
 		handcrafted_layout.rotation.y = handcrafted_layout.get_random_y_rotation_radians(_generator.rng)
+
+func _get_room_primary_doorway_side(room: RoomData) -> String:
+	if room == null:
+		return ""
+	var rect := room.grid_rect
+	for doorway_id_variant in room.doorway_ids:
+		var doorway_id := int(doorway_id_variant)
+		for doorway_variant in _generator.doorways:
+			if typeof(doorway_variant) != TYPE_DICTIONARY:
+				continue
+			var doorway: Dictionary = doorway_variant
+			if int(doorway.get("id", -1)) != doorway_id:
+				continue
+			var tile: Vector2i = doorway.get("tile", Vector2i(-1, -1))
+			if tile.x == rect.position.x:
+				return "west"
+			if tile.x == rect.position.x + rect.size.x - 1:
+				return "east"
+			if tile.y == rect.position.y:
+				return "north"
+			if tile.y == rect.position.y + rect.size.y - 1:
+				return "south"
+	return ""
+
+func _rotation_for_start_room_doorway_side(doorway_side: String) -> float:
+	match doorway_side:
+		"east":
+			return 90.0
+		"north":
+			return 180.0
+		"west":
+			return -90.0
+		_:
+			return 0.0
+
+func _apply_handcrafted_room_position_offset(room: RoomData, room_overlay: Node3D) -> void:
+	if room == null or room_overlay == null:
+		return
+	if room.room_type != RoomData.RoomType.START:
+		return
+	var doorway_side := _get_room_primary_doorway_side(room)
+	if doorway_side == "":
+		return
+	# Compact start layouts are authored with their doorway on the local +Z edge.
+	# Shift the whole overlay toward the procedural doorway so the room opening
+	# lines up with the actual room exit instead of using an internal corridor.
+	room_overlay.position += room_overlay.basis * Vector3(0.0, 0.0, 20.0)
 
 func _resource_has_property(resource: Resource, property_name: String) -> bool:
 	if resource == null:
@@ -1650,6 +1738,27 @@ func rpc_spawn_hitscan_visual(from: Vector3, to: Vector3) -> void:
 	await get_tree().create_timer(0.05).timeout
 	if is_instance_valid(temp_tracer):
 		temp_tracer.queue_free()
+
+## Spawns the Death Knight beam visual on all remote clients.
+## The host already spawns it inside death_knight_boss._fire_beam(), so
+## this RPC uses call_remote (skips host) to avoid a duplicate beam.
+@rpc("authority", "call_remote", "reliable")
+func rpc_spawn_enemy_beam_visual(spawn_pos: Vector3, direction: Vector3, beam_length: float) -> void:
+	if _session_host:
+		return
+	var beam_scene: PackedScene = load("res://Scenes/Projectiles/death_knight_beam.tscn")
+	if beam_scene == null:
+		return
+	var beam: Node3D = beam_scene.instantiate()
+	beam.set("beam_length", maxf(0.5, beam_length))
+	var scene_root := get_tree().current_scene
+	if scene_root == null:
+		beam.queue_free()
+		return
+	scene_root.add_child(beam)
+	beam.global_position = spawn_pos
+	if not direction.is_zero_approx():
+		beam.look_at(spawn_pos + direction, Vector3.UP)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_despawn_enemy(enemy_id: int) -> void:
