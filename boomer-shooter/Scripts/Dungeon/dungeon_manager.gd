@@ -41,6 +41,9 @@ var _next_enemy_network_id: int = 1
 var _player_spawn_points_by_peer: Dictionary = {}
 var _chest_viewers_by_path: Dictionary = {}
 var _leave_session_ui: CanvasLayer = null
+var _floor_sync_in_progress := false
+var _pending_player_roster: Array = []
+var _pending_enemy_spawns: Array = []
 
 func _ready() -> void:
 	add_to_group("dungeon_manager")
@@ -99,6 +102,7 @@ func _process(delta: float) -> void:
 
 func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 	floor_number = floor_num
+	_floor_sync_in_progress = true
 
 	# Clear old geometry + entities under nav region.
 	for child in nav_region.get_children():
@@ -156,10 +160,12 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 	# Wait a frame for physics to settle before baking
 	await get_tree().process_frame
 	nav_region.bake_navigation_mesh(false)
+	await get_tree().physics_frame
 
 	if preview_mode:
 		_build_room_lookup()
 		_encounter = null
+		_floor_sync_in_progress = false
 		print(
 			"DungeonManager: Preview generated for floor %d with %d rooms (grid=%dx%d seed=%d)." % [
 				floor_num,
@@ -201,6 +207,8 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 			generation_seed,
 		]
 	)
+	_floor_sync_in_progress = false
+	_apply_pending_network_sync()
 
 func clear_editor_preview() -> void:
 	for child in nav_region.get_children():
@@ -620,6 +628,9 @@ func _remove_non_local_player_nodes() -> void:
 
 func _request_host_sync() -> void:
 	if _session_multiplayer and not _session_host:
+		_floor_sync_in_progress = true
+		_pending_player_roster.clear()
+		_pending_enemy_spawns.clear()
 		rpc_id(1, "rpc_client_ready_for_sync", _local_peer_id)
 
 func _register_player_node(peer_id: int, player_node: Node3D) -> void:
@@ -682,6 +693,81 @@ func _sync_player_roster_to_clients() -> void:
 			"position": player_node.global_position,
 		})
 	rpc("rpc_sync_player_roster", roster)
+
+func _apply_pending_network_sync() -> void:
+	if _floor_sync_in_progress:
+		return
+	if not _pending_player_roster.is_empty():
+		var roster := _pending_player_roster.duplicate(true)
+		_pending_player_roster.clear()
+		_apply_remote_player_roster(roster)
+	if _pending_enemy_spawns.is_empty():
+		return
+	var pending_spawns := _pending_enemy_spawns.duplicate(true)
+	_pending_enemy_spawns.clear()
+	for entry_variant in pending_spawns:
+		if typeof(entry_variant) != TYPE_DICTIONARY:
+			continue
+		var entry: Dictionary = entry_variant
+		_spawn_enemy_proxy(
+			int(entry.get("enemy_id", -1)),
+			String(entry.get("scene_path", "")),
+			entry.get("enemy_position", Vector3.ZERO)
+		)
+
+func _apply_remote_player_roster(roster: Array) -> void:
+	var roster_peer_ids := {}
+	for entry_variant in roster:
+		if typeof(entry_variant) != TYPE_DICTIONARY:
+			continue
+		var entry: Dictionary = entry_variant
+		var peer_id := int(entry.get("peer_id", -1))
+		if peer_id < 0:
+			continue
+		roster_peer_ids[peer_id] = true
+		var spawn_pos: Vector3 = entry.get("position", Vector3.ZERO)
+		var player_node = _spawn_player_for_peer(peer_id, spawn_pos)
+		if player_node != null and player_node.has_method("set_network_peer_id"):
+			player_node.call("set_network_peer_id", peer_id)
+
+	var to_remove: Array = []
+	for peer_key in _player_by_peer_id.keys():
+		var peer_id := int(peer_key)
+		if peer_id == _local_peer_id:
+			# Avoid transient roster packets despawning the local client avatar.
+			continue
+		if roster_peer_ids.has(peer_id):
+			continue
+		var node = _player_by_peer_id[peer_id]
+		if is_instance_valid(node):
+			node.queue_free()
+		to_remove.append(peer_id)
+	for peer_id_variant in to_remove:
+		_player_by_peer_id.erase(int(peer_id_variant))
+
+func _spawn_enemy_proxy(enemy_id: int, scene_path: String, enemy_position: Vector3) -> void:
+	if enemy_id < 0:
+		return
+	if _enemy_by_network_id.has(enemy_id):
+		var existing_enemy = _enemy_by_network_id[enemy_id]
+		if is_instance_valid(existing_enemy):
+			existing_enemy.global_position = enemy_position
+		return
+	var packed := load(scene_path)
+	if not (packed is PackedScene):
+		return
+	var enemy_scene: PackedScene = packed
+	var enemy_variant: Variant = enemy_scene.instantiate()
+	if not (enemy_variant is EnemyBase):
+		if enemy_variant is Node:
+			var cleanup: Node = enemy_variant
+			cleanup.free()
+		return
+	var enemy: EnemyBase = enemy_variant
+	nav_region.add_child(enemy)
+	enemy.global_position = enemy_position
+	enemy.set_network_proxy_mode(true)
+	_enemy_by_network_id[enemy_id] = enemy
 
 func _get_authoritative_progress_player() -> Node3D:
 	if _session_multiplayer:
@@ -1161,41 +1247,18 @@ func rpc_sync_floor_state(remote_floor: int, remote_seed: int) -> void:
 		return
 	floor_number = remote_floor
 	generation_seed = remote_seed
-	generate_floor(floor_number)
+	_pending_player_roster.clear()
+	_pending_enemy_spawns.clear()
+	await generate_floor(floor_number)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_sync_player_roster(roster: Array) -> void:
 	if _session_host:
 		return
-
-	var roster_peer_ids := {}
-	for entry_variant in roster:
-		if typeof(entry_variant) != TYPE_DICTIONARY:
-			continue
-		var entry: Dictionary = entry_variant
-		var peer_id := int(entry.get("peer_id", -1))
-		if peer_id < 0:
-			continue
-		roster_peer_ids[peer_id] = true
-		var spawn_pos: Vector3 = entry.get("position", Vector3.ZERO)
-		var player_node = _spawn_player_for_peer(peer_id, spawn_pos)
-		if player_node != null and player_node.has_method("set_network_peer_id"):
-			player_node.call("set_network_peer_id", peer_id)
-
-	var to_remove: Array = []
-	for peer_key in _player_by_peer_id.keys():
-		var peer_id := int(peer_key)
-		if peer_id == _local_peer_id:
-			# Avoid transient roster packets despawning the local client avatar.
-			continue
-		if roster_peer_ids.has(peer_id):
-			continue
-		var node = _player_by_peer_id[peer_id]
-		if is_instance_valid(node):
-			node.queue_free()
-		to_remove.append(peer_id)
-	for peer_id_variant in to_remove:
-		_player_by_peer_id.erase(int(peer_id_variant))
+	if _floor_sync_in_progress:
+		_pending_player_roster = roster.duplicate(true)
+		return
+	_apply_remote_player_roster(roster)
 
 @rpc("any_peer", "unreliable")
 func rpc_submit_client_player_state(peer_id: int, snapshot: Dictionary) -> void:
@@ -1355,26 +1418,14 @@ func rpc_sync_chest_contents(chest_path: String, items: Array, chest_pos: Vector
 func rpc_spawn_enemy(enemy_id: int, scene_path: String, enemy_position: Vector3) -> void:
 	if _session_host:
 		return
-	if _enemy_by_network_id.has(enemy_id):
-		var existing_enemy = _enemy_by_network_id[enemy_id]
-		if is_instance_valid(existing_enemy):
-			existing_enemy.global_position = enemy_position
+	if _floor_sync_in_progress:
+		_pending_enemy_spawns.append({
+			"enemy_id": enemy_id,
+			"scene_path": scene_path,
+			"enemy_position": enemy_position,
+		})
 		return
-	var packed := load(scene_path)
-	if not (packed is PackedScene):
-		return
-	var enemy_scene: PackedScene = packed
-	var enemy_variant: Variant = enemy_scene.instantiate()
-	if not (enemy_variant is EnemyBase):
-		if enemy_variant is Node:
-			var cleanup: Node = enemy_variant
-			cleanup.free()
-		return
-	var enemy: EnemyBase = enemy_variant
-	nav_region.add_child(enemy)
-	enemy.global_position = enemy_position
-	enemy.set_network_proxy_mode(true)
-	_enemy_by_network_id[enemy_id] = enemy
+	_spawn_enemy_proxy(enemy_id, scene_path, enemy_position)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_mark_enemy_dead(enemy_id: int) -> void:

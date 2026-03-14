@@ -15,7 +15,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="PanelContainer" type="PanelContainer" parent="CanvasLayer/CenterContainer"]
-custom_minimum_size = Vector2(560, 420)
+custom_minimum_size = Vector2(560, 300)
 
 [node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/CenterContainer/PanelContainer"]
 theme_override_constants/margin_left = 16
@@ -31,28 +31,24 @@ text = "BoomerShooter"
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 28
 
-[node name="VersionLabel" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
-text = "Version"
-horizontal_alignment = 1
+[node name="ConnectionFields" type="VBoxContainer" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+visible = false
+theme_override_constants/separation = 8
 
-[node name="Hint" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
-text = "Single-player works immediately. Co-op supports one host and one client."
+[node name="ConnectionPromptLabel" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ConnectionFields"]
+text = "Enter the host's IP and port, then click Join."
 horizontal_alignment = 1
+autowrap_mode = 3
 
-[node name="IpInput" type="LineEdit" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="IpInput" type="LineEdit" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ConnectionFields"]
 placeholder_text = "Host IP (example: 192.168.1.12)"
 
-[node name="PortInput" type="LineEdit" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+[node name="PortInput" type="LineEdit" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ConnectionFields"]
 placeholder_text = "Port"
 text = "7000"
 
 [node name="HostInfoLabel" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
-text = "Host LAN IPv4: not hosting yet"
-horizontal_alignment = 1
-autowrap_mode = 3
-
-[node name="InstructionsLabel" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
-text = "Host: click Host, share your LAN/public IP and port, then click Start Game after your friend joins.\nJoin: enter the host IP and matching port, then click Join.\nControls: WASD move, Space jump, Shift sprint, E interact, Tab inventory, F11 fullscreen."
+text = ""
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -81,8 +77,11 @@ visible = false
 text = "Quit"
 
 [node name="StatusLabel" type="Label" parent="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
-text = "Ready"
+visible = false
+text = ""
 horizontal_alignment = 1
+
+[node name="PublicIpRequest" type="HTTPRequest" parent="."]
 
 [connection signal="pressed" from="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/SingleButton" to="." method="_on_single_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/HostButton" to="." method="_on_host_button_pressed"]

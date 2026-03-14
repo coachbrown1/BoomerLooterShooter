@@ -7,11 +7,14 @@ const ARG_HOST := "--net-host"
 const ARG_PORT := "--net-port"
 const ARG_AUTO_START := "--net-auto-start"
 const VERSION_FALLBACK := "dev"
+const PUBLIC_IP_URL := "https://api.ipify.org"
 
 @onready var _status_label: Label = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/StatusLabel
-@onready var _ip_input: LineEdit = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/IpInput
-@onready var _port_input: LineEdit = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/PortInput
-@onready var _version_label: Label = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/VersionLabel
+@onready var _connection_fields: VBoxContainer = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ConnectionFields
+@onready var _connection_prompt_label: Label = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ConnectionFields/ConnectionPromptLabel
+@onready var _ip_input: LineEdit = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ConnectionFields/IpInput
+@onready var _port_input: LineEdit = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ConnectionFields/PortInput
+@onready var _title_label: Label = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Title
 @onready var _host_info_label: Label = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/HostInfoLabel
 @onready var _host_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/HostButton
 @onready var _join_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/JoinButton
@@ -19,13 +22,21 @@ const VERSION_FALLBACK := "dev"
 @onready var _start_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/StartButton
 @onready var _leave_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/LeaveButton
 @onready var _quit_button: Button = $CanvasLayer/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/Buttons/QuitButton
+@onready var _public_ip_request: HTTPRequest = $PublicIpRequest
 
 var _automation_cfg := {}
+var _join_mode := false
+var _public_ip_text := ""
+var _public_ip_pending := false
 
 func _ready() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	_apply_release_metadata()
-	_seed_default_ip_field()
+	if _public_ip_request != null:
+		var completed_cb := Callable(self, "_on_public_ip_request_completed")
+		if not _public_ip_request.is_connected("request_completed", completed_cb):
+			_public_ip_request.request_completed.connect(_on_public_ip_request_completed)
+	_seed_default_join_fields()
 	_automation_cfg = _parse_automation_args(OS.get_cmdline_user_args())
 	var session = _get_network_session()
 	if session == null:
@@ -62,21 +73,25 @@ func _on_single_button_pressed() -> void:
 	_change_to_dungeon()
 
 func _on_host_button_pressed() -> void:
-	_set_status("Hosting...")
+	_join_mode = false
 	var port := _parse_port()
-	var share_ip := _get_preferred_local_ipv4()
-	if not share_ip.is_empty():
-		_ip_input.text = share_ip
 	var session = _get_network_session()
 	if session == null:
 		_set_status("NetworkSession unavailable.")
 		return
 	if not bool(session.call("host_game", port)):
 		return
-	_set_status("Hosting on port %d. Waiting for client..." % port)
+	_fetch_public_ip()
+	_set_status("")
 	_update_ui_state()
+	_update_host_info_label()
 
 func _on_join_button_pressed() -> void:
+	if not _is_multiplayer_active() and not _join_mode:
+		_join_mode = true
+		_set_status("")
+		_update_ui_state()
+		return
 	var host := _ip_input.text.strip_edges()
 	if host.is_empty():
 		_set_status("Enter host IP.")
@@ -92,6 +107,9 @@ func _on_join_button_pressed() -> void:
 
 func _on_leave_button_pressed() -> void:
 	_leave_game()
+	_join_mode = false
+	_public_ip_pending = false
+	_public_ip_text = ""
 	_set_status("Session closed.")
 	_update_ui_state()
 	_update_leave_button()
@@ -112,19 +130,26 @@ func _on_start_button_pressed() -> void:
 
 func _on_session_started(is_host: bool) -> void:
 	if is_host:
-		_set_status("Hosting. Waiting for client...")
+		_join_mode = false
+		_fetch_public_ip()
+		_set_status("")
 	else:
-		_set_status("Connected. Waiting for host to start...")
+		_join_mode = false
+		_set_status("")
 	_update_ui_state()
 	_update_host_info_label()
 
 func _on_connection_failed(reason: String) -> void:
+	_public_ip_pending = false
 	_set_status(reason)
 	_update_ui_state()
 	_update_leave_button()
 	_update_host_info_label()
 
 func _on_session_ended(reason: String) -> void:
+	_join_mode = false
+	_public_ip_pending = false
+	_public_ip_text = ""
 	if reason == "server_disconnected":
 		_set_status("Host disconnected.")
 	else:
@@ -138,7 +163,6 @@ func _on_peer_joined(_peer_id: int) -> void:
 	if session == null:
 		return
 	if bool(session.call("is_host")) and not bool(session.call("is_match_started")):
-		_set_status("Client joined. Press Start Game.")
 		if bool(_automation_cfg.get("auto_start", false)):
 			call_deferred("_try_auto_start_match")
 	_update_ui_state()
@@ -149,7 +173,7 @@ func _on_peer_left(_peer_id: int) -> void:
 	if session == null:
 		return
 	if bool(session.call("is_host")) and not bool(session.call("is_match_started")):
-		_set_status("Client left. Waiting for client...")
+		_set_status("")
 	_update_ui_state()
 	_update_host_info_label()
 
@@ -163,18 +187,15 @@ func _change_to_dungeon() -> void:
 
 func _apply_release_metadata() -> void:
 	var version := String(ProjectSettings.get_setting("application/config/version", VERSION_FALLBACK))
-	if _version_label != null:
-		_version_label.text = "Version %s" % version
+	if _title_label != null:
+		_title_label.text = "BoomerShooter - %s" % version
 	DisplayServer.window_set_title("BoomerShooter %s" % version)
 
-func _seed_default_ip_field() -> void:
-	if _ip_input == null:
-		return
-	var share_ip := _get_preferred_local_ipv4()
-	if share_ip.is_empty():
-		_ip_input.text = "127.0.0.1"
-		return
-	_ip_input.text = share_ip
+func _seed_default_join_fields() -> void:
+	if _ip_input != null:
+		_ip_input.text = ""
+	if _port_input != null:
+		_port_input.text = str(DEFAULT_PORT_FALLBACK)
 
 func _parse_port() -> int:
 	var text := _port_input.text.strip_edges()
@@ -187,6 +208,7 @@ func _parse_port() -> int:
 
 func _set_status(text: String) -> void:
 	_status_label.text = text
+	_status_label.visible = not text.is_empty()
 
 func _update_leave_button() -> void:
 	_leave_button.visible = _is_multiplayer_active()
@@ -201,15 +223,22 @@ func _update_ui_state() -> void:
 	var started := bool(session.call("is_match_started"))
 	var peers: PackedInt32Array = session.call("get_connected_peer_ids")
 	var has_client := peers.size() > 0
+	var show_join_fields := not active and _join_mode
 
 	_single_button.disabled = active
 	_host_button.disabled = active
 	_join_button.disabled = active
-	_ip_input.editable = not active
-	_port_input.editable = not active
+	_join_button.text = "Connect" if show_join_fields and not active else "Join"
+	_connection_fields.visible = show_join_fields
+	_connection_prompt_label.visible = show_join_fields
+	_ip_input.editable = show_join_fields and not active
+	_port_input.editable = show_join_fields and not active
 	_start_button.visible = active and host and not started
 	_start_button.disabled = not has_client
 	_quit_button.visible = not active
+	_host_info_label.visible = active and host
+	if show_join_fields:
+		_connection_prompt_label.text = "Enter the host's IP and port, then click CONNECT."
 
 func _update_host_info_label() -> void:
 	if _host_info_label == null:
@@ -217,25 +246,49 @@ func _update_host_info_label() -> void:
 
 	var session = _get_network_session()
 	if session == null or not bool(session.call("is_multiplayer_active")):
-		var default_ip := _get_preferred_local_ipv4()
-		if default_ip.is_empty():
-			_host_info_label.text = "Host LAN IPv4: start hosting to show local addresses"
-		else:
-			_host_info_label.text = "Host LAN IPv4: %s" % default_ip
+		_host_info_label.text = ""
 		return
 
 	if not bool(session.call("is_host")):
-		_host_info_label.text = "Joining as client. Enter the host's IP and selected port."
+		_host_info_label.text = ""
 		return
 
 	var addresses := _get_local_ipv4_addresses()
 	var port := _parse_port()
-	if addresses.is_empty():
-		_host_info_label.text = "Hosting on port %d. No non-loopback IPv4 address detected on this machine." % port
+	var lan_text := "No non-loopback IPv4 address detected on this machine."
+	if not addresses.is_empty():
+		lan_text = ", ".join(addresses)
+	var public_text := "Fetching public IP..."
+	if not _public_ip_pending:
+		public_text = "Unavailable"
+	if not _public_ip_text.is_empty():
+		public_text = _public_ip_text
+	_host_info_label.text = "Share your LAN/public IP and port with your guest\nLAN IP: %s\nPublic IP: %s\nPort: %d" % [lan_text, public_text, port]
+
+func _fetch_public_ip() -> void:
+	if _public_ip_request == null:
 		return
-	var share_ip := addresses[0]
-	_ip_input.text = share_ip
-	_host_info_label.text = "Hosting on port %d. Share this IP with your guest: %s" % [port, share_ip]
+	if _public_ip_pending:
+		return
+	_public_ip_pending = true
+	_public_ip_text = ""
+	_update_host_info_label()
+	var err := _public_ip_request.request(PUBLIC_IP_URL)
+	if err != OK:
+		_public_ip_pending = false
+		_public_ip_text = "Unavailable"
+		_update_host_info_label()
+
+func _on_public_ip_request_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	_public_ip_pending = false
+	if result != HTTPRequest.RESULT_SUCCESS or response_code < 200 or response_code >= 300:
+		_public_ip_text = "Unavailable"
+		_update_host_info_label()
+		return
+	_public_ip_text = body.get_string_from_utf8().strip_edges()
+	if _public_ip_text.is_empty():
+		_public_ip_text = "Unavailable"
+	_update_host_info_label()
 
 func _get_local_ipv4_addresses() -> Array[String]:
 	var addresses: Array[String] = []
@@ -307,6 +360,7 @@ func _run_automation() -> void:
 		"client":
 			_ip_input.text = host
 			_port_input.text = str(port)
+			_join_mode = true
 			_on_join_button_pressed()
 
 func _try_auto_start_match() -> void:
