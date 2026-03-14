@@ -202,7 +202,8 @@ func _find_local_player() -> Node:
 		_cached_local_player = null
 
 	var local_peer_id := _get_local_peer_id()
-	for player_variant in get_tree().get_nodes_in_group("player"):
+	var player_nodes = get_tree().get_nodes_in_group("player")
+	for player_variant in player_nodes:
 		if not (player_variant is Node):
 			continue
 		var player: Node = player_variant
@@ -216,7 +217,7 @@ func _find_local_player() -> Node:
 		_cached_local_player = player
 		return player
 
-	for player_variant in get_tree().get_nodes_in_group("player"):
+	for player_variant in player_nodes:
 		if not (player_variant is Node):
 			continue
 		var player: Node = player_variant
@@ -233,7 +234,8 @@ func _find_teammate(local_player: Node) -> Node:
 			return _cached_teammate
 		_cached_teammate = null
 
-	for player_variant in get_tree().get_nodes_in_group("player"):
+	var player_nodes = get_tree().get_nodes_in_group("player")
+	for player_variant in player_nodes:
 		if not (player_variant is Node):
 			continue
 		var player: Node = player_variant

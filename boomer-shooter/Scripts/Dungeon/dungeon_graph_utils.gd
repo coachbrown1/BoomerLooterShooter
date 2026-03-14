@@ -107,7 +107,7 @@ func pick_closest_component_room_pair(components: Array, room_lookup: Dictionary
 	if components.size() < 2:
 		return {}
 	var best: Dictionary = {}
-	var best_dist: float = INF
+	var best_dist_sq: float = INF
 	for i in range(components.size()):
 		for j in range(i + 1, components.size()):
 			var comp_a: Array = components[i]
@@ -124,8 +124,8 @@ func pick_closest_component_room_pair(components: Array, room_lookup: Dictionary
 					if room_b == null:
 						continue
 					var b_center: Vector2i = room_b.get_center_tile()
-					var d: float = Vector2(a_center).distance_to(Vector2(b_center))
-					if d < best_dist:
-						best_dist = d
+					var d_sq: float = Vector2(a_center).distance_squared_to(Vector2(b_center))
+					if d_sq < best_dist_sq:
+						best_dist_sq = d_sq
 						best = {"a": room_a, "b": room_b}
 	return best
