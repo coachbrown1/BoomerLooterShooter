@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://Scripts/Components/health_component.gd" id="2_b"]
 [ext_resource type="Script" path="res://Scripts/Components/hitbox_component.gd" id="3_c"]
 [ext_resource type="Script" path="res://Scripts/Components/billboard_sprite.gd" id="4_d"]
-[ext_resource type="Texture" path="res://Assets/Enemies/DeathKnight/death_knight_spritesheet.png" id="5_e"]
+[ext_resource type="Texture2D" path="res://Assets/Enemies/DeathKnight/death_knight_spritesheet.png" id="5_e"]
 [ext_resource type="Material" path="res://Materials/enemy_outline_material.tres" id="6_mat"]
 
 [sub_resource type="CapsuleShape3D" id="1"]
@@ -43,8 +43,8 @@ shape = SubResource("2")
 [node name="Sprite3D" type="Sprite3D" parent="."]
 material_override = ExtResource("6_mat")
 texture = ExtResource("5_e")
-hframes = 8
-vframes = 2
+hframes = 6
+vframes = 3
 script = ExtResource("4_d")
 bounce_walk_mode = true
 
