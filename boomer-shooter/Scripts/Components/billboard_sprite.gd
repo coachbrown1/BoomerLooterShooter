@@ -1,3 +1,4 @@
+@tool
 extends Sprite3D
 class_name BillboardSprite
 
@@ -23,15 +24,28 @@ func _ready() -> void:
 	if hframes > 1:
 		total_frames = hframes
 	frame = 0
-	
-	if material_override:
-		material_override = material_override.duplicate()
-		material_override.set_shader_parameter("texture_albedo", texture)
-		
+
+	_sync_outline_material()
+
 	base_y = position.y
+
+func _sync_outline_material() -> void:
+	if material_override == null or texture == null:
+		return
+	if material_override is ShaderMaterial:
+		# Make the override local once so the shared material resource is not mutated
+		# across every enemy scene in the editor.
+		if not material_override.resource_local_to_scene:
+			material_override = material_override.duplicate()
+			material_override.resource_local_to_scene = true
+		material_override.set_shader_parameter("texture_albedo", texture)
 
 
 func _process(delta: float) -> void:
+	if Engine.is_editor_hint():
+		_sync_outline_material()
+		return
+
 	if not animate or total_frames <= 1:
 		if bounce_walk_mode:
 			frame = 0 # Idle pose
