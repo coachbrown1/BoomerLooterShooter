@@ -40,11 +40,11 @@ mesh = SubResource("QuadMesh_doorway")
 [node name="StaticBody3D" type="StaticBody3D" parent="." unique_id=1370475562]
 
 [node name="LeftJamb" type="CollisionShape3D" parent="StaticBody3D" unique_id=642064379]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.25, 2, 0)
+transform = Transform3D(2.6579652, 0, 0, 0, 1, 0, 0, 0, 1, -2.5299053, 2, 0)
 shape = SubResource("BoxShape3D_jamb")
 
 [node name="RightJamb" type="CollisionShape3D" parent="StaticBody3D" unique_id=1702758205]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.25, 2, 0)
+transform = Transform3D(2.930248, 0, 0, 0, 1, 0, 0, 0, 1, 2.5324826, 2, 0)
 shape = SubResource("BoxShape3D_jamb")
 
 [node name="TopJamb" type="CollisionShape3D" parent="StaticBody3D" unique_id=1815638779]

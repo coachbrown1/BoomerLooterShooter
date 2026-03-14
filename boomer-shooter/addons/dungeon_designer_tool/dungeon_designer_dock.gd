@@ -4,10 +4,12 @@ extends VBoxContainer
 const DUNGEON_SCENE_PATH := "res://Scenes/World/dungeon.tscn"
 const BIOME_DB_PATH := "res://Data/biomes/biome_dungeon_database.tres"
 const DUNGEON_MANAGER_SCRIPT_PATH := "res://Scripts/Dungeon/dungeon_manager.gd"
+const BIOME_TAB_INDEX := 1
 
 var plugin: EditorPlugin = null
 
 var _status_label: Label
+var _tabs: TabContainer
 var _biome_selector: OptionButton
 var _manager_inspector: EditorInspector
 var _biome_editor_scroll: ScrollContainer
@@ -38,6 +40,12 @@ func _ready() -> void:
 	_build_ui()
 	_refresh_all()
 
+func _notification(what: int) -> void:
+	if not Engine.is_editor_hint():
+		return
+	if what == NOTIFICATION_VISIBILITY_CHANGED and is_visible_in_tree():
+		_auto_refresh_biome_editor_options()
+
 func _build_ui() -> void:
 	for child in get_children():
 		child.queue_free()
@@ -59,15 +67,16 @@ func _build_ui() -> void:
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(_status_label)
 
-	var tabs := TabContainer.new()
-	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	add_child(tabs)
+	_tabs = TabContainer.new()
+	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tabs.tab_changed.connect(_on_tab_changed)
+	add_child(_tabs)
 
 	var layout_tab := VBoxContainer.new()
 	layout_tab.name = "Dungeon Layout"
 	layout_tab.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	tabs.add_child(layout_tab)
+	_tabs.add_child(layout_tab)
 
 	var layout_action_row := HFlowContainer.new()
 	layout_action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -131,7 +140,7 @@ func _build_ui() -> void:
 	var biome_tab := VBoxContainer.new()
 	biome_tab.name = "Biome Data"
 	biome_tab.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	tabs.add_child(biome_tab)
+	_tabs.add_child(biome_tab)
 
 	var biome_action_row := HFlowContainer.new()
 	biome_action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -240,6 +249,16 @@ func _refresh_biome_section() -> void:
 
 	_biome_selector.select(0)
 	_set_selected_biome(0)
+
+func _auto_refresh_biome_editor_options() -> void:
+	if _selected_biome == null:
+		return
+	_refresh_biome_option_lists()
+	_rebuild_biome_editor()
+
+func _on_tab_changed(tab_index: int) -> void:
+	if tab_index == BIOME_TAB_INDEX:
+		_auto_refresh_biome_editor_options()
 
 func _get_dungeon_manager_from_edited_scene() -> Node:
 	if plugin == null:
