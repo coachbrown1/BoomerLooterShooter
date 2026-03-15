@@ -67,6 +67,11 @@ func _ready() -> void:
 	if _session_multiplayer and not _session_host:
 		return
 
+	# Apply hub portal config overrides from GameState.
+	grid_size_min = GameState.dungeon_grid_min
+	grid_size_max = maxi(GameState.dungeon_grid_max, grid_size_min)
+	generation_seed = GameState.dungeon_seed
+
 	generate_floor(floor_number)
 	if _session_multiplayer and _session_host:
 		_sync_floor_to_clients()
@@ -117,6 +122,7 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 
 	# Generate tile layout
 	_generator = DungeonGenerator.new()
+	_generator.biome_override = GameState.dungeon_biome_override
 	_generator.grid_size_min = grid_size_min
 	_generator.grid_size_max = grid_size_max
 	_generator.min_start_end_distance_rooms = min_start_end_distance_rooms

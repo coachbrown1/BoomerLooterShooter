@@ -65,17 +65,35 @@ func _connect_portal() -> void:
 	if portal == null:
 		push_warning("HubManager: Portal node not found in NavigationRegion3D.")
 		return
-	portal.player_entered.connect(_on_portal_entered)
+	portal.player_interacted.connect(_on_portal_interacted)
 
-func _on_portal_entered(body: Node3D) -> void:
+func _on_portal_interacted(body: Node3D) -> void:
 	if not body.is_in_group("player") or _entering_dungeon:
 		return
-	# Host decides when everyone transitions.
+	# Only show the menu for the local player.
+	var local := NetworkPlayerManager.get_local_player()
+	if not is_instance_valid(local) or body != local:
+		return
+	_show_dungeon_config_menu()
+
+func _show_dungeon_config_menu() -> void:
+	var menu := DungeonConfigMenu.new()
+	add_child(menu)
+	menu.confirmed.connect(_on_dungeon_config_confirmed)
+
+func _on_dungeon_config_confirmed(biome: String, grid_min: int, grid_max: int, seed_val: int) -> void:
+	if _entering_dungeon:
+		return
+	GameState.dungeon_biome_override = biome
+	GameState.dungeon_grid_min = grid_min
+	GameState.dungeon_grid_max = grid_max
+	GameState.dungeon_seed = seed_val
+
 	if NetworkSession.is_multiplayer_active():
 		if NetworkSession.is_host():
 			_do_enter_dungeon()
 		else:
-			rpc_id(1, "rpc_hub_request_enter")
+			rpc_id(1, "rpc_hub_request_enter_with_config", biome, grid_min, grid_max, seed_val)
 	else:
 		_do_enter_dungeon()
 
@@ -94,9 +112,13 @@ func _do_enter_dungeon() -> void:
 		get_tree().change_scene_to_file("res://Scenes/World/dungeon.tscn")
 
 @rpc("any_peer", "reliable")
-func rpc_hub_request_enter() -> void:
+func rpc_hub_request_enter_with_config(biome: String, grid_min: int, grid_max: int, seed_val: int) -> void:
 	if not NetworkSession.is_host() or _entering_dungeon:
 		return
+	GameState.dungeon_biome_override = biome
+	GameState.dungeon_grid_min = grid_min
+	GameState.dungeon_grid_max = grid_max
+	GameState.dungeon_seed = seed_val
 	_do_enter_dungeon()
 
 @rpc("authority", "call_local", "reliable")

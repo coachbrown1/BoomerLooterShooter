@@ -11,3 +11,10 @@ static var hub_chest_snapshots: Array = [[], [], []]
 ## True once the player has left the hub at least once (prevents re-applying starter
 ## inventory on every hub visit).
 static var initialized: bool = false
+
+## Dungeon generation config set via the hub portal menu.
+## biome_override: "" = auto-select by floor number; otherwise "castle", "crypt", "fungal", "lava".
+static var dungeon_biome_override: String = ""
+static var dungeon_grid_min: int = 10
+static var dungeon_grid_max: int = 10
+static var dungeon_seed: int = 0
