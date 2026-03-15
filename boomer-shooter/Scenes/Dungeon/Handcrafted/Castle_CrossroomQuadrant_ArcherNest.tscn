@@ -1,0 +1,98 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://Scenes/Dungeon/DungeonWallTile.tscn" id="1_wall_tile"]
+[ext_resource type="PackedScene" uid="uid://bamyeedre1p87" path="res://Scenes/Dungeon/castle_doorway_assembly.tscn" id="2_doorway"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/propbrokenpillar.tscn" id="3_pillar"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_crate.tscn" id="4_crate"]
+[ext_resource type="PackedScene" path="res://Scenes/Dungeon/HandcraftedEnemySpawner.tscn" id="5_enemy_spawner"]
+[ext_resource type="PackedScene" uid="uid://gobarc483377" path="res://Scenes/Enemies/goblin_archer.tscn" id="6_enemy"]
+
+[node name="CastleCrossroomQuadrantArcherNest" type="Node3D"]
+
+[node name="RoomShell" type="Node3D" parent="."]
+
+[node name="EastWall01" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, -12)
+
+[node name="EastWall02" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, -9)
+
+[node name="EastWall03" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, -6)
+
+[node name="EastWall04" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, -3)
+
+[node name="EastWall05" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, 6)
+
+[node name="EastWall07" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, 9)
+
+[node name="EastWall08" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, 12)
+
+[node name="SouthWall01" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 13.5)
+
+[node name="SouthWall02" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, 0, 13.5)
+
+[node name="SouthWall03" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 13.5)
+
+[node name="SouthWall04" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 13.5)
+
+[node name="SouthWall05" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 13.5)
+
+[node name="SouthWall07" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, 13.5)
+
+[node name="SouthWall08" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 13.5)
+
+[node name="EastDoorway" parent="RoomShell" instance=ExtResource("2_doorway")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, 1.5)
+
+[node name="SouthDoorway" parent="RoomShell" instance=ExtResource("2_doorway")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 13.5)
+
+[node name="NorthwestPillar" parent="." instance=ExtResource("3_pillar")]
+transform = Transform3D(0.95, 0, 0, 0, 0.95, 0, 0, 0, 0.95, -10.5, 0, -10.5)
+
+[node name="WestCrate" parent="." instance=ExtResource("4_crate")]
+transform = Transform3D(0.82, 0, 0, 0, 0.82, 0, 0, 0, 0.82, -10.5, 0, 1.5)
+placement_kind = 1
+random_y_rotation_max = 270.0
+
+[node name="NorthCrate" parent="." instance=ExtResource("4_crate")]
+transform = Transform3D(0.82, 0, 0, 0, 0.82, 0, 0, 0, 0.82, 1.5, 0, -10.5)
+placement_kind = 1
+random_y_rotation_max = 180.0
+
+[node name="MidParapetA" parent="." instance=ExtResource("1_wall_tile")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0, -1.5)
+
+[node name="MidParapetB" parent="." instance=ExtResource("1_wall_tile")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -1.5, 0, 4.5)
+
+[node name="MidPillar" parent="." instance=ExtResource("3_pillar")]
+transform = Transform3D(0.88, 0, 0, 0, 0.88, 0, 0, 0, 0.88, -1.5, 0, -1.5)
+
+[node name="EastApproachCrate" parent="." instance=ExtResource("4_crate")]
+transform = Transform3D(0.76, 0, 0, 0, 0.76, 0, 0, 0, 0.76, 9, 0, -3)
+placement_kind = 1
+random_y_rotation_max = 270.0
+
+[node name="SouthApproachCrate" parent="." instance=ExtResource("4_crate")]
+transform = Transform3D(0.76, 0, 0, 0, 0.76, 0, 0, 0, 0.76, -3, 0, 9)
+placement_kind = 1
+random_y_rotation_max = 180.0
+
+[node name="ArcherSpawner" parent="." instance=ExtResource("5_enemy_spawner")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, 0, -4.5)
+enemy_scene = ExtResource("6_enemy")
+spawn_count = 2
+spawn_radius = 4.5

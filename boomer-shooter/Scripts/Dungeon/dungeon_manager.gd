@@ -241,9 +241,14 @@ func get_editor_preview_room_targets() -> Array:
 
 		var type_name := _room_type_name(room.room_type)
 		var handcrafted_tag := " [custom]" if room.has_handcrafted_layout else ""
-		var label := "%s%s | room %d | lattice (%d,%d)" % [
+		var scene_tag := ""
+		if room.has_handcrafted_layout and room.handcrafted_scene_path != "":
+			var scene_name := room.handcrafted_scene_path.get_file().get_basename()
+			scene_tag = " | %s" % scene_name
+		var label := "%s%s%s | room %d | lattice (%d,%d)" % [
 			type_name,
 			handcrafted_tag,
+			scene_tag,
 			room.id,
 			room.lattice_coord.x,
 			room.lattice_coord.y,
@@ -533,6 +538,7 @@ func _spawn_handcrafted_room_overlays(parent: Node3D) -> void:
 			continue
 
 		var room_overlay: Node3D = inst
+		_configure_runtime_handcrafted_room(room, room_overlay)
 		room_overlay.position = room.get_world_center(DungeonBuilder.TILE_SIZE)
 		room_overlay.position.y = 0.0
 		_apply_handcrafted_room_orientation(room, room_overlay)
@@ -543,6 +549,29 @@ func _spawn_handcrafted_room_overlays(parent: Node3D) -> void:
 		root.add_child(room_overlay)
 		_handcrafted_room_overlays_by_id[room.id] = room_overlay
 		_configure_handcrafted_room_overlay(room, room_overlay)
+
+func _configure_runtime_handcrafted_room(room: RoomData, room_overlay: Node3D) -> void:
+	if room == null or room_overlay == null:
+		return
+	if not (room_overlay is HandcraftedQuadrantCompositeRoom):
+		return
+	var quadrant_pool := _get_handcrafted_quadrant_scene_pool(_active_biome_data)
+	var composite_room: HandcraftedQuadrantCompositeRoom = room_overlay
+	composite_room.populate_quadrants(quadrant_pool, _generator.rng)
+
+func _get_handcrafted_quadrant_scene_pool(biome_data: Resource) -> Array[PackedScene]:
+	var quadrant_scene_pool: Array[PackedScene] = []
+	if biome_data == null:
+		return quadrant_scene_pool
+	if not _resource_has_property(biome_data, "handcrafted_quadrant_room_scenes"):
+		return quadrant_scene_pool
+	var pool_variant: Variant = biome_data.get("handcrafted_quadrant_room_scenes")
+	if typeof(pool_variant) != TYPE_ARRAY:
+		return quadrant_scene_pool
+	for scene_variant in pool_variant:
+		if scene_variant is PackedScene:
+			quadrant_scene_pool.append(scene_variant)
+	return quadrant_scene_pool
 
 func _apply_handcrafted_room_orientation(room: RoomData, room_overlay: Node3D) -> void:
 	if room == null or room_overlay == null:
