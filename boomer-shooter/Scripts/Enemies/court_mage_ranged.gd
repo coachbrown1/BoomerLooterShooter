@@ -24,11 +24,11 @@ func _execute_attack() -> void:
 		proj.shooter = self
 
 		# Aim upward to compensate for gravity so the orb arcs onto the target
-		var target_pos := player.global_position + Vector3(0, 1.0, 0)
-		var dist := proj.global_position.distance_to(target_pos)
-		var time_of_flight := dist / _ORB_SPEED
-		var arc_up := 0.5 * _ORB_GRAVITY * time_of_flight * time_of_flight
-		var aim_target := target_pos + Vector3(0, arc_up, 0)
+		var target_pos: Vector3 = player.global_position + Vector3(0, 1.0, 0)
+		var dist: float = proj.global_position.distance_to(target_pos)
+		var time_of_flight: float = dist / _ORB_SPEED
+		var arc_up: float = 0.5 * _ORB_GRAVITY * time_of_flight * time_of_flight
+		var aim_target: Vector3 = target_pos + Vector3(0, arc_up, 0)
 		proj.direction = (aim_target - proj.global_position).normalized()
 
 	billboard_sprite.modulate = Color(1, 1, 1, 1)
