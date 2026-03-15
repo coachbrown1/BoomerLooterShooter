@@ -1,0 +1,61 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/Enemies/court_mage_ranged.gd" id="1_mage"]
+[ext_resource type="Script" path="res://Scripts/Components/health_component.gd" id="2_health"]
+[ext_resource type="Script" path="res://Scripts/Components/hitbox_component.gd" id="3_hitbox"]
+[ext_resource type="Script" path="res://Scripts/Components/billboard_sprite.gd" id="4_sprite"]
+[ext_resource type="Texture2D" path="res://Assets/Enemies/CourtMage/court_mage_spritesheet.png" id="5_tex"]
+[ext_resource type="Material" path="res://Materials/enemy_outline_material.tres" id="6_mat"]
+[ext_resource type="PackedScene" path="res://Scenes/Projectiles/mage_energy_orb.tscn" id="7_orb"]
+
+[sub_resource type="CapsuleShape3D" id="body_shape"]
+radius = 0.5
+height = 2.4
+
+[sub_resource type="CapsuleShape3D" id="hbox_shape"]
+radius = 0.65
+height = 2.55
+
+[node name="CourtMage" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 7
+script = ExtResource("1_mage")
+move_speed = 2.0
+attack_damage = 12
+attack_range = 22.0
+windup_start_range = 22.0
+aggro_range = 24.0
+windup_time = 1.4
+cooldown_time = 2.8
+base_max_health = 70
+spawn_cost = 3.0
+spawn_min_floor = 1
+projectile_scene = ExtResource("7_orb")
+min_distance = 9.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+shape = SubResource("body_shape")
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("2_health")
+
+[node name="HitboxComponent" type="Area3D" parent="." node_paths=PackedStringArray("health_component")]
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("3_hitbox")
+health_component = NodePath("../HealthComponent")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="HitboxComponent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+shape = SubResource("hbox_shape")
+
+[node name="Sprite3D" type="Sprite3D" parent="."]
+material_override = ExtResource("6_mat")
+texture = ExtResource("5_tex")
+hframes = 6
+vframes = 4
+script = ExtResource("4_sprite")
+bounce_walk_mode = false
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]

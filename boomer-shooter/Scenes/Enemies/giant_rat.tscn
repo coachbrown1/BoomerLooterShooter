@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Scripts/Enemies/giant_rat_melee.gd" id="1_rat"]
+[ext_resource type="Script" path="res://Scripts/Components/health_component.gd" id="2_health"]
+[ext_resource type="Script" path="res://Scripts/Components/hitbox_component.gd" id="3_hitbox"]
+[ext_resource type="Script" path="res://Scripts/Components/billboard_sprite.gd" id="4_sprite"]
+[ext_resource type="Texture2D" path="res://Assets/Enemies/GiantRat/giant_rat_spritesheet.png" id="5_tex"]
+[ext_resource type="Material" path="res://Materials/enemy_outline_material.tres" id="6_mat"]
+
+[sub_resource type="CapsuleShape3D" id="body_shape"]
+radius = 0.4
+height = 1.2
+
+[sub_resource type="CapsuleShape3D" id="hbox_shape"]
+radius = 0.55
+height = 1.35
+
+[node name="GiantRat" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 7
+script = ExtResource("1_rat")
+move_speed = 5.5
+attack_damage = 8
+attack_range = 1.2
+aggro_range = 18.0
+windup_time = 0.15
+cooldown_time = 0.7
+base_max_health = 30
+spawn_cost = 1.5
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+shape = SubResource("body_shape")
+
+[node name="HealthComponent" type="Node" parent="."]
+script = ExtResource("2_health")
+
+[node name="HitboxComponent" type="Area3D" parent="." node_paths=PackedStringArray("health_component")]
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("3_hitbox")
+health_component = NodePath("../HealthComponent")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="HitboxComponent"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+shape = SubResource("hbox_shape")
+
+[node name="Sprite3D" type="Sprite3D" parent="."]
+material_override = ExtResource("6_mat")
+texture = ExtResource("5_tex")
+hframes = 3
+vframes = 4
+script = ExtResource("4_sprite")
+bounce_walk_mode = true
+
+[node name="NavigationAgent3D" type="NavigationAgent3D" parent="."]
