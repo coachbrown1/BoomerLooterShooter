@@ -39,27 +39,31 @@ func setup(spawn_positions: Array[Vector3]) -> void:
 	elif NetworkSession.is_host():
 		_setup_host(spawn_positions)
 	else:
-		_setup_client()
+		_setup_client(spawn_positions)
 
 ## Returns the locally-controlled player node, or null.
 func get_local_player() -> Node3D:
+	_prune_invalid_players()
 	var key := NetworkSession.get_local_peer_id() if NetworkSession.is_multiplayer_active() else 0
 	return _player_by_peer_id.get(key, null)
 
 ## Returns the player node for a specific peer, or null.
 func get_player(peer_id: int) -> Node3D:
+	_prune_invalid_players()
 	return _player_by_peer_id.get(peer_id, null)
 
 ## Returns a copy of the full peer_id → player dictionary.
 func get_all_players() -> Dictionary:
+	_prune_invalid_players()
 	return _player_by_peer_id.duplicate()
 
 ## Returns the current peer roster payload used by roster sync.
 func get_roster_payload() -> Array:
+	_prune_invalid_players()
 	var roster: Array = []
 	for pid in _player_by_peer_id.keys():
 		var player = _player_by_peer_id[pid]
-		if is_instance_valid(player):
+		if _is_live_player_node(player):
 			roster.append({ "peer_id": int(pid), "position": player.global_position })
 	return roster
 
@@ -87,6 +91,7 @@ func sync_roster_to_all() -> void:
 		sync_roster_to(peer_id)
 
 func apply_roster(roster: Array, preserve_local: bool = true) -> void:
+	_prune_invalid_players()
 	var roster_peer_ids := {}
 	for entry_variant in roster:
 		if typeof(entry_variant) != TYPE_DICTIONARY:
@@ -135,9 +140,13 @@ func _setup_host(spawn_positions: Array[Vector3]) -> void:
 	for peer_id in NetworkSession.get_connected_peer_ids():
 		sync_roster_to(peer_id)
 
-func _setup_client() -> void:
+func _setup_client(spawn_positions: Array[Vector3]) -> void:
+	var local_id := NetworkSession.get_local_peer_id()
+	var local_index := 1 if spawn_positions.size() > 1 else 0
+	_spawn_for_peer(local_id, _get_pos(spawn_positions, local_index))
+	_emit_players_ready()
 	await get_tree().process_frame
-	rpc_id(1, "rpc_npm_client_ready", NetworkSession.get_local_peer_id())
+	rpc_id(1, "rpc_npm_client_ready", local_id)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -145,9 +154,11 @@ func _setup_client() -> void:
 
 func _spawn_for_peer(peer_id: int, pos: Vector3) -> Node3D:
 	var existing = _player_by_peer_id.get(peer_id, null)
-	if existing is Node3D and is_instance_valid(existing):
+	if _is_live_player_node(existing) and existing is Node3D:
 		existing.global_position = pos
 		return existing
+	if existing != null:
+		_player_by_peer_id.erase(peer_id)
 	var player := _find_existing_scene_player(peer_id)
 	if not (player is Node3D):
 		player = PLAYER_SCENE.instantiate()
@@ -174,6 +185,7 @@ func _send_roster_to(peer_id: int) -> void:
 # ─────────────────────────────────────────────────────────────────────────────
 
 func _process(_delta: float) -> void:
+	_prune_invalid_players()
 	if not NetworkSession.is_multiplayer_active() or _player_by_peer_id.is_empty():
 		return
 	if NetworkSession.is_host():
@@ -184,7 +196,7 @@ func _process(_delta: float) -> void:
 func _send_local_snapshot() -> void:
 	var local_id := NetworkSession.get_local_peer_id()
 	var player = _player_by_peer_id.get(local_id, null)
-	if not is_instance_valid(player) or not player.is_inside_tree() or not player.has_method("build_network_snapshot"):
+	if not _is_live_player_node(player) or not player.has_method("build_network_snapshot"):
 		return
 	rpc_id(1, "rpc_npm_submit_state", local_id, player.call("build_network_snapshot"))
 
@@ -192,7 +204,7 @@ func _broadcast_snapshots() -> void:
 	var snapshots: Array = []
 	for peer_id in _player_by_peer_id.keys():
 		var player = _player_by_peer_id[peer_id]
-		if is_instance_valid(player) and player.is_inside_tree() and player.has_method("build_network_snapshot"):
+		if _is_live_player_node(player) and player.has_method("build_network_snapshot"):
 			snapshots.append({ "peer_id": int(peer_id), "state": player.call("build_network_snapshot") })
 	if snapshots.is_empty():
 		return
@@ -220,7 +232,7 @@ func rpc_npm_submit_state(peer_id: int, snapshot: Dictionary) -> void:
 	if not NetworkSession.is_host() or multiplayer.get_remote_sender_id() != peer_id:
 		return
 	var player = _player_by_peer_id.get(peer_id, null)
-	if is_instance_valid(player) and player.has_method("apply_network_snapshot"):
+	if _is_live_player_node(player) and player.has_method("apply_network_snapshot"):
 		var s := snapshot.duplicate(true)
 		s.erase("health")  # host owns health authority
 		player.call("apply_network_snapshot", s)
@@ -232,7 +244,7 @@ func rpc_npm_receive_snapshots(snapshots: Array) -> void:
 		var entry: Dictionary = entry_variant
 		var peer_id := int(entry.get("peer_id", -1))
 		var player = _player_by_peer_id.get(peer_id, null)
-		if not is_instance_valid(player):
+		if not _is_live_player_node(player):
 			continue
 		var state: Dictionary = entry.get("state", {})
 		if peer_id == local_id:
@@ -257,6 +269,8 @@ func _find_existing_scene_player(peer_id: int) -> Node3D:
 		var player: Node3D = player_variant
 		if _player_by_peer_id.values().has(player):
 			continue
+		if not _is_live_player_node(player):
+			continue
 		return player
 	return null
 
@@ -272,7 +286,7 @@ func _prune_invalid_players() -> void:
 	for peer_id_variant in _player_by_peer_id.keys():
 		var peer_id := int(peer_id_variant)
 		var player = _player_by_peer_id.get(peer_id, null)
-		if not is_instance_valid(player):
+		if not _is_live_player_node(player):
 			stale_peer_ids.append(peer_id)
 	for peer_id in stale_peer_ids:
 		_player_by_peer_id.erase(peer_id)
@@ -286,9 +300,22 @@ func _remove_players_except(peer_ids: Array[int]) -> void:
 		to_remove.append(peer_id)
 	for peer_id in to_remove:
 		var player = _player_by_peer_id.get(peer_id, null)
-		if is_instance_valid(player):
+		if _is_live_player_node(player):
 			player.queue_free()
 		_player_by_peer_id.erase(peer_id)
+
+func _is_live_player_node(player: Variant) -> bool:
+	if not (player is Node3D):
+		return false
+	var node: Node3D = player
+	if not is_instance_valid(node):
+		return false
+	if not node.is_inside_tree():
+		return false
+	var current_scene := get_tree().current_scene
+	if current_scene == null:
+		return false
+	return node == current_scene or current_scene.is_ancestor_of(node)
 
 func _emit_players_ready() -> void:
 	players_ready.emit(get_all_players())

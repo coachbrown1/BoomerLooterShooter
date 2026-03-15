@@ -180,6 +180,7 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 		return
 
 	_build_room_lookup()
+	_place_player()
 	var host_authoritative_world := not _session_multiplayer or _session_host
 	if host_authoritative_world:
 		_encounter = EncounterSystem.new()
@@ -187,9 +188,6 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 			_enemy_by_network_id.clear()
 			_enemy_network_id_by_instance_id.clear()
 			_next_enemy_network_id = 1
-
-		# Place player at start room
-		_place_player()
 
 		# Place exit portal in exit room
 		_place_exit(biome_data)
@@ -326,9 +324,9 @@ func _place_player() -> void:
 	base_pos.y = 1.0
 
 	var spawn_positions: Array[Vector3] = [base_pos]
-	if _session_multiplayer and _session_host:
-		var remote_peers := _get_network_connected_peer_ids()
-		for i in range(remote_peers.size()):
+	if _session_multiplayer:
+		var remote_slot_count := _get_network_connected_peer_ids().size()
+		for i in range(remote_slot_count):
 			spawn_positions.append(_offset_spawn_position(base_pos, i + 1))
 
 	if _players_ready_callback.is_valid() and NetworkPlayerManager.players_ready.is_connected(_players_ready_callback):
