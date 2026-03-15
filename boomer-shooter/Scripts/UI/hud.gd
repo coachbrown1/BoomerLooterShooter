@@ -91,6 +91,8 @@ var _session_role_label: Label = null
 var _teammate_refresh_timer: float = 0.0
 var _cached_local_player: Node = null
 var _cached_teammate: Node = null
+var _world_item_tooltip: PanelContainer = null
+var _world_item_tooltip_label: Label = null
 
 func _ready() -> void:
 	# Print out a message so the user knows about the debug key
@@ -101,6 +103,7 @@ func _ready() -> void:
 	if not get_viewport().size_changed.is_connected(_configure_bottom_hud_layout):
 		get_viewport().size_changed.connect(_configure_bottom_hud_layout)
 	_build_inventory_ui()
+	_build_world_item_tooltip()
 	_update_session_role_label()
 	_update_teammate_health_label()
 	set_process(true)
@@ -633,6 +636,51 @@ func _slot_label(slot_ref: SlotRef) -> String:
 			return "C%d" % (slot_ref.index + 1)
 		_:
 			return "Unknown"
+
+func _build_world_item_tooltip() -> void:
+	_world_item_tooltip = PanelContainer.new()
+	_world_item_tooltip.visible = false
+	_world_item_tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Anchor centered, grow upward from 80px above center
+	_world_item_tooltip.anchor_left = 0.5
+	_world_item_tooltip.anchor_right = 0.5
+	_world_item_tooltip.anchor_top = 0.5
+	_world_item_tooltip.anchor_bottom = 0.5
+	_world_item_tooltip.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_world_item_tooltip.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_world_item_tooltip.offset_left = 0.0
+	_world_item_tooltip.offset_right = 0.0
+	_world_item_tooltip.offset_top = -80.0
+	_world_item_tooltip.offset_bottom = -80.0
+	add_child(_world_item_tooltip)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	_world_item_tooltip.add_child(margin)
+
+	_world_item_tooltip_label = Label.new()
+	_world_item_tooltip_label.add_theme_font_size_override("font_size", 13)
+	margin.add_child(_world_item_tooltip_label)
+
+func show_world_item_tooltip(item_snapshot: Dictionary) -> void:
+	if _world_item_tooltip == null or _world_item_tooltip_label == null:
+		return
+	_world_item_tooltip_label.text = _build_item_tooltip(item_snapshot)
+	var border_color := _get_rarity_border_color(item_snapshot)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.05, 0.1, 0.88)
+	style.border_color = border_color
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(4)
+	_world_item_tooltip.add_theme_stylebox_override("panel", style)
+	_world_item_tooltip.visible = true
+
+func hide_world_item_tooltip() -> void:
+	if _world_item_tooltip != null:
+		_world_item_tooltip.visible = false
 
 func _build_item_tooltip(item_snapshot: Dictionary) -> String:
 	var lines: Array[String] = []

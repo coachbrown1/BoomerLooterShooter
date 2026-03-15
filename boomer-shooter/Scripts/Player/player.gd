@@ -204,6 +204,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_handle_recoil(delta)
+	_update_loot_tooltip()
 
 	if not is_on_floor():
 		velocity.y -= gravity * delta
@@ -335,6 +336,28 @@ func _apply_remote_motion(delta: float) -> void:
 	rotation.y = lerp_angle(rotation.y, _network_target_yaw, min(1.0, delta * 14.0))
 	head.rotation.x = lerp_angle(head.rotation.x, _network_target_pitch, min(1.0, delta * 14.0))
 
+func _update_loot_tooltip() -> void:
+	if _is_inventory_open() or camera == null:
+		var hud := _get_hud()
+		if hud and hud.has_method("hide_world_item_tooltip"):
+			hud.hide_world_item_tooltip()
+		return
+	var space_state := get_world_3d().direct_space_state
+	var origin := camera.global_position
+	var forward := -camera.global_transform.basis.z.normalized()
+	var query := PhysicsRayQueryParameters3D.create(origin, origin + forward * 3.5)
+	query.exclude = [self.get_rid()]
+	query.collide_with_areas = true
+	query.collide_with_bodies = false
+	var result := space_state.intersect_ray(query)
+	var hud := _get_hud()
+	if hud == null:
+		return
+	if result and result.collider.has_method("get_item_snapshot"):
+		hud.show_world_item_tooltip(result.collider.get_item_snapshot())
+	elif hud.has_method("hide_world_item_tooltip"):
+		hud.hide_world_item_tooltip()
+
 func _try_interact() -> void:
 	var space_state = get_world_3d().direct_space_state
 	var origin = camera.global_position
@@ -343,6 +366,7 @@ func _try_interact() -> void:
 
 	var query = PhysicsRayQueryParameters3D.create(origin, ray_end)
 	query.exclude = [self.get_rid()]
+	query.collide_with_areas = true
 
 	var result = space_state.intersect_ray(query)
 	if result:

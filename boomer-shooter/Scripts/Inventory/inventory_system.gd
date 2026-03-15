@@ -306,6 +306,14 @@ func _item_to_snapshot(item: InventoryItemData) -> Variant:
 		return null
 	return item.to_dict()
 
+func try_add_to_storage(item: InventoryItemData) -> bool:
+	for i in range(STORAGE_SLOT_COUNT):
+		if storage[i] == null:
+			storage[i] = item
+			_emit_inventory_changed()
+			return true
+	return false
+
 func _normalize_weapon_name(raw_name: String) -> String:
 	return raw_name.strip_edges().to_lower().replace(" ", "_")
 

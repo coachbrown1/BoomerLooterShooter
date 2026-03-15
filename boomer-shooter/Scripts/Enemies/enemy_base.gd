@@ -422,6 +422,9 @@ func background_damage_flash() -> void:
 
 const BLOOD_PARTICLES_SCENE = preload("res://Scenes/Effects/blood_particles.tscn")
 const ENEMY_GIB_SCENE = preload("res://Scenes/Effects/enemy_gib.tscn")
+const LOOT_PICKUP_SCENE = preload("res://Scenes/Props/loot_pickup.tscn")
+
+@export var loot_drop_chance: float = 0.35
 
 func _on_died() -> void:
 	current_state = State.DEAD
@@ -431,6 +434,7 @@ func _on_died() -> void:
 	
 	# Spawn messy debris
 	_spawn_death_effects()
+	_maybe_spawn_loot()
 	
 	# Set to death frame (last index) and stop animation
 	if billboard_sprite:
@@ -457,3 +461,19 @@ func _spawn_death_effects() -> void:
 		var gib = ENEMY_GIB_SCENE.instantiate()
 		get_tree().current_scene.add_child(gib)
 		gib.global_position = spawn_pos + Vector3(randf_range(-0.3, 0.3), randf_range(0.1, 0.5), randf_range(-0.3, 0.3))
+
+func _maybe_spawn_loot() -> void:
+	if randf() > loot_drop_chance:
+		return
+	var catalog := load("res://Data/gear/gear_catalog.tres") as GearCatalogData
+	if catalog == null:
+		return
+	var seed_val := hash(str(global_position) + str(Time.get_ticks_msec()))
+	var items := catalog.create_random_items(1, seed_val)
+	if items.is_empty():
+		return
+	var pickup := LOOT_PICKUP_SCENE.instantiate()
+	pickup.set("item_data", items[0])
+	get_tree().current_scene.add_child(pickup)
+	var dir := Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0)).normalized()
+	pickup.call("launch", global_position + Vector3.UP * (actual_height * 0.5), dir)

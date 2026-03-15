@@ -135,7 +135,10 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 	_generator.room_size_tiles = room_size_tiles
 	_generator.corridor_width_tiles = corridor_width_tiles
 	_generator.corridor_length_tiles = corridor_length_tiles
-	_generator.generate(floor_num, generation_seed)
+	var requested_seed := generation_seed
+	if _should_use_packaged_runtime_random_seed(preview_mode):
+		requested_seed = 0
+	_generator.generate(floor_num, requested_seed)
 	generation_seed = int(_generator.rng.seed)
 	_rooms = _generator.rooms
 
@@ -220,6 +223,13 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 	)
 	_floor_sync_in_progress = false
 	_apply_pending_network_sync()
+
+func _should_use_packaged_runtime_random_seed(preview_mode: bool) -> bool:
+	if preview_mode:
+		return false
+	if OS.has_feature("editor"):
+		return false
+	return not _session_multiplayer or _session_host
 
 func clear_editor_preview() -> void:
 	for child in nav_region.get_children():
