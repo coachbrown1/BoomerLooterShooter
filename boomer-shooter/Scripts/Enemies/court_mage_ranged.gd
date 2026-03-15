@@ -19,17 +19,23 @@ func _process_windup_effect() -> void:
 func _execute_attack() -> void:
 	if player and projectile_scene:
 		var proj := projectile_scene.instantiate()
-		get_parent().add_child(proj)
-		proj.global_position = global_position + Vector3(0, actual_height * 0.75, 0)
-		proj.shooter = self
 
 		# Aim upward to compensate for gravity so the orb arcs onto the target
+		var spawn_pos: Vector3 = global_position + Vector3(0, actual_height * 0.75, 0)
 		var target_pos: Vector3 = player.global_position + Vector3(0, 1.0, 0)
-		var dist: float = proj.global_position.distance_to(target_pos)
+		var dist: float = spawn_pos.distance_to(target_pos)
 		var time_of_flight: float = dist / _ORB_SPEED
 		var arc_up: float = 0.5 * _ORB_GRAVITY * time_of_flight * time_of_flight
 		var aim_target: Vector3 = target_pos + Vector3(0, arc_up, 0)
-		proj.direction = (aim_target - proj.global_position).normalized()
+		var dir: Vector3 = (aim_target - spawn_pos).normalized()
+
+		# Projectile._ready() derives velocity from direction, so set launch state
+		# before adding it to the tree.
+		proj.direction = dir
+		proj.shooter = self
+		get_parent().add_child(proj)
+		proj.global_position = spawn_pos
+		proj.look_at(spawn_pos + dir)
 
 	billboard_sprite.modulate = Color(1, 1, 1, 1)
 	# Replicate EnemyBase._execute_attack state transition (skip EnemyRanged super
