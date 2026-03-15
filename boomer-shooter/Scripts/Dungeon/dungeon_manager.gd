@@ -1498,6 +1498,29 @@ func _reset_debug_network_visual_counts() -> void:
 func get_debug_network_visual_counts() -> Dictionary:
 	return _debug_network_visual_counts.duplicate(true)
 
+func get_debug_network_enemy_states() -> Array:
+	var result: Array = []
+	for enemy_id_variant in _enemy_by_network_id.keys():
+		var enemy_id := int(enemy_id_variant)
+		var enemy = _enemy_by_network_id.get(enemy_id, null)
+		if not is_instance_valid(enemy):
+			continue
+		var snapshot: Dictionary = {}
+		if enemy.has_method("get_network_state_snapshot"):
+			snapshot = enemy.call("get_network_state_snapshot")
+		result.append({
+			"id": enemy_id,
+			"position": snapshot.get("position", enemy.global_position),
+			"health": int(snapshot.get("health", 0)),
+			"state": int(snapshot.get("state", 0)),
+			"is_proxy": enemy.has_method("is_network_proxy_mode") and bool(enemy.call("is_network_proxy_mode")),
+			"path": String(enemy.get_path()),
+		})
+	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.get("id", 0)) < int(b.get("id", 0))
+	)
+	return result
+
 @rpc("any_peer", "reliable")
 func rpc_client_ready_for_sync(peer_id: int) -> void:
 	if not _session_host:

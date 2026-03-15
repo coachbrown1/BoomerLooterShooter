@@ -231,6 +231,25 @@ switch ($scenarioKey) {
             throw "Client did not observe both replicated weapon visuals. Output dir: $verifyDir"
         }
     }
+    "enemy-damage-replication" {
+        $hostEnemyPath = Join-Path $verifyDir "host_enemy_damage.json"
+        $clientEnemyPath = Join-Path $verifyDir "client_enemy_damage.json"
+        foreach ($path in @($hostEnemyPath, $clientEnemyPath)) {
+            if (-not (Test-Path $path)) {
+                throw "Expected verifier output missing: $path"
+            }
+        }
+
+        $hostEnemy = Get-Content $hostEnemyPath -Raw | ConvertFrom-Json
+        $clientEnemy = Get-Content $clientEnemyPath -Raw | ConvertFrom-Json
+
+        if (-not $hostEnemy.passed) {
+            throw "Host did not observe authoritative enemy damage. Output dir: $verifyDir"
+        }
+        if (-not $clientEnemy.passed) {
+            throw "Client did not converge on replicated enemy damage. Output dir: $verifyDir"
+        }
+    }
     default {
         throw "Unsupported scenario: $scenarioKey"
     }
@@ -266,6 +285,7 @@ $label = switch ($scenarioKey) {
     "door-replication" { "Multiplayer door replication verification PASS" }
     "weapon-state-sync" { "Multiplayer weapon state sync verification PASS" }
     "weapon-visual-replication" { "Multiplayer weapon visual replication verification PASS" }
+    "enemy-damage-replication" { "Multiplayer enemy damage replication verification PASS" }
     default { "Multiplayer verification PASS" }
 }
 

@@ -80,6 +80,7 @@ This file is the canonical instruction set for any AI agent working in this repo
   - `door-replication`
   - `weapon-state-sync`
   - `weapon-visual-replication`
+  - `enemy-damage-replication`
   - `shared-chest`
 - For multiplayer chest/inventory sync work, prefer the local automated harness before relying on reasoning alone.
 - Run the harness from the workspace root with:
@@ -141,6 +142,15 @@ This file is the canonical instruction set for any AI agent working in this repo
   - has the host fire a hitscan weapon and then a projectile weapon
   - confirms the client observes the replicated hitscan visual spawn
   - confirms the client observes the replicated projectile visual spawn
+- For authoritative enemy damage replication, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'enemy-damage-replication'
+  ```
+- What `enemy-damage-replication` does:
+  - launches a local headless host and client
+  - has the client send a host-authoritative rifle fire request against a live networked enemy
+  - confirms the host observes enemy health drop from that fire request
+  - confirms the client proxy converges on the same replicated enemy health result
 - Harness artifacts are written under `boomer-shooter/.tmp/mp_verify_*`.
 - If the harness fails, inspect `launcher.log`, `host.log`, `host.err.log`, `client.log`, `client.err.log`, and any `*_error.json` files in that run directory.
-- Current automated coverage includes client spawn/floor stability, player roster/snapshot replication, door interaction replication, weapon fire/reload state sync, replicated weapon visual effects, and shared chest loot/chest sync behavior. It does not validate all multiplayer systems.
+- Current automated coverage includes client spawn/floor stability, player roster/snapshot replication, door interaction replication, weapon fire/reload state sync, replicated weapon visual effects, authoritative enemy damage replication, and shared chest loot/chest sync behavior. It does not validate all multiplayer systems.
