@@ -269,6 +269,23 @@ switch ($scenarioKey) {
             throw "Client did not observe both replicated weapon visuals. Output dir: $verifyDir"
         }
     }
+    "projectile-damage-replication" {
+        $hostProjectilePath = Join-Path $verifyDir "host_projectile_damage.json"
+        $clientProjectilePath = Join-Path $verifyDir "client_projectile_damage.json"
+        foreach ($path in @($hostProjectilePath, $clientProjectilePath)) {
+            if (-not (Test-Path $path)) {
+                throw "Expected verifier output missing: $path"
+            }
+        }
+        $hostProjectile = Get-Content $hostProjectilePath -Raw | ConvertFrom-Json
+        $clientProjectile = Get-Content $clientProjectilePath -Raw | ConvertFrom-Json
+        if (-not $hostProjectile.passed) {
+            throw "Host did not observe authoritative projectile damage. Output dir: $verifyDir"
+        }
+        if (-not $clientProjectile.passed) {
+            throw "Client did not converge on replicated projectile damage. Output dir: $verifyDir"
+        }
+    }
     "enemy-damage-replication" {
         $hostEnemyPath = Join-Path $verifyDir "host_enemy_damage.json"
         $clientEnemyPath = Join-Path $verifyDir "client_enemy_damage.json"
@@ -305,6 +322,40 @@ switch ($scenarioKey) {
         }
         if (-not $clientEnemyDeath.passed) {
             throw "Client did not observe replicated enemy death/despawn. Output dir: $verifyDir"
+        }
+    }
+    "enemy-animation-replication" {
+        $hostEnemyAnimationPath = Join-Path $verifyDir "host_enemy_animation.json"
+        $clientEnemyAnimationPath = Join-Path $verifyDir "client_enemy_animation.json"
+        foreach ($path in @($hostEnemyAnimationPath, $clientEnemyAnimationPath)) {
+            if (-not (Test-Path $path)) {
+                throw "Expected verifier output missing: $path"
+            }
+        }
+        $hostEnemyAnimation = Get-Content $hostEnemyAnimationPath -Raw | ConvertFrom-Json
+        $clientEnemyAnimation = Get-Content $clientEnemyAnimationPath -Raw | ConvertFrom-Json
+        if (-not $hostEnemyAnimation.passed) {
+            throw "Host enemy did not exhibit a moving/animating sample window. Output dir: $verifyDir"
+        }
+        if (-not $clientEnemyAnimation.passed) {
+            throw "Client proxy did not exhibit replicated enemy animation while moving. Output dir: $verifyDir"
+        }
+    }
+    "long-run-soak" {
+        $hostSoakPath = Join-Path $verifyDir "host_soak.json"
+        $clientSoakPath = Join-Path $verifyDir "client_soak.json"
+        foreach ($path in @($hostSoakPath, $clientSoakPath)) {
+            if (-not (Test-Path $path)) {
+                throw "Expected verifier output missing: $path"
+            }
+        }
+        $hostSoak = Get-Content $hostSoakPath -Raw | ConvertFrom-Json
+        $clientSoak = Get-Content $clientSoakPath -Raw | ConvertFrom-Json
+        if (-not $hostSoak.passed) {
+            throw "Host failed the long-run soak. Output dir: $verifyDir"
+        }
+        if (-not $clientSoak.passed) {
+            throw "Client failed the long-run soak. Output dir: $verifyDir"
         }
     }
     default {
@@ -344,8 +395,11 @@ $label = switch ($scenarioKey) {
     "door-replication" { "Multiplayer door replication verification PASS" }
     "weapon-state-sync" { "Multiplayer weapon state sync verification PASS" }
     "weapon-visual-replication" { "Multiplayer weapon visual replication verification PASS" }
+    "projectile-damage-replication" { "Multiplayer projectile damage replication verification PASS" }
     "enemy-damage-replication" { "Multiplayer enemy damage replication verification PASS" }
     "enemy-death-replication" { "Multiplayer enemy death replication verification PASS" }
+    "enemy-animation-replication" { "Multiplayer enemy animation replication verification PASS" }
+    "long-run-soak" { "Multiplayer long-run soak verification PASS" }
     default { "Multiplayer verification PASS" }
 }
 

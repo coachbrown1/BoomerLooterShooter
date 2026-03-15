@@ -49,10 +49,16 @@ func _run_verification() -> void:
 			await _run_weapon_state_sync_verification()
 		"weapon-visual-replication":
 			await _run_weapon_visual_replication_verification()
+		"projectile-damage-replication":
+			await _run_projectile_damage_replication_verification()
 		"enemy-damage-replication":
 			await _run_enemy_damage_replication_verification()
 		"enemy-death-replication":
 			await _run_enemy_death_replication_verification()
+		"enemy-animation-replication":
+			await _run_enemy_animation_replication_verification()
+		"long-run-soak":
+			await _run_long_run_soak_verification()
 		_:
 			_write_json_file(_path_in_dir("error.json"), {"role": _get_role(), "error": "invalid_scenario", "scenario": scenario})
 			get_tree().quit(5)
@@ -648,6 +654,40 @@ func _run_weapon_visual_replication_verification() -> void:
 		return
 	get_tree().quit(77)
 
+func _run_projectile_damage_replication_verification() -> void:
+	var role := _get_role()
+	var timeout_sec := _get_timeout_sec()
+	var local_player: Node = await _wait_for_local_player(timeout_sec)
+	if local_player == null:
+		_write_json_file(_path_in_dir("%s_projectile_damage_error.json" % role), {"role": role, "error": "local_player_not_found"})
+		get_tree().quit(124)
+		return
+	var dungeon_manager := get_parent()
+	if dungeon_manager == null:
+		_write_json_file(_path_in_dir("%s_projectile_damage_error.json" % role), {"role": role, "error": "dungeon_manager_missing"})
+		get_tree().quit(125)
+		return
+	var manager: WeaponManager = local_player.get("weapon_manager")
+	if manager == null:
+		_write_json_file(_path_in_dir("%s_projectile_damage_error.json" % role), {"role": role, "error": "weapon_manager_missing"})
+		get_tree().quit(126)
+		return
+	_touch_file(_path_in_dir("%s_projectile_damage_ready.flag" % role))
+	var other_role := "client" if role == "host" else "host"
+	if not await _wait_for_file(_path_in_dir("%s_projectile_damage_ready.flag" % other_role), timeout_sec):
+		_write_json_file(_path_in_dir("%s_projectile_damage_error.json" % role), {"role": role, "error": "peer_ready_missing"})
+		get_tree().quit(127)
+		return
+
+	match role:
+		"client":
+			await _run_projectile_damage_replication_client(local_player, manager, dungeon_manager, timeout_sec)
+		"host":
+			await _run_projectile_damage_replication_host(dungeon_manager, timeout_sec)
+		_:
+			_write_json_file(_path_in_dir("error.json"), {"role": role, "error": "invalid_role"})
+			get_tree().quit(5)
+
 func _run_enemy_damage_replication_verification() -> void:
 	var role := _get_role()
 	var timeout_sec := _get_timeout_sec()
@@ -678,6 +718,70 @@ func _run_enemy_damage_replication_verification() -> void:
 			await _run_enemy_damage_replication_client(local_player, manager, dungeon_manager, timeout_sec)
 		"host":
 			await _run_enemy_damage_replication_host(dungeon_manager, timeout_sec)
+		_:
+			_write_json_file(_path_in_dir("error.json"), {"role": role, "error": "invalid_role"})
+			get_tree().quit(5)
+
+func _run_enemy_animation_replication_verification() -> void:
+	var role := _get_role()
+	var timeout_sec := _get_timeout_sec()
+	var local_player: Node = await _wait_for_local_player(timeout_sec)
+	if local_player == null:
+		_write_json_file(_path_in_dir("%s_enemy_animation_error.json" % role), {"role": role, "error": "local_player_not_found"})
+		get_tree().quit(128)
+		return
+	var dungeon_manager := get_parent()
+	if dungeon_manager == null:
+		_write_json_file(_path_in_dir("%s_enemy_animation_error.json" % role), {"role": role, "error": "dungeon_manager_missing"})
+		get_tree().quit(129)
+		return
+	_touch_file(_path_in_dir("%s_enemy_animation_ready.flag" % role))
+	var other_role := "client" if role == "host" else "host"
+	if not await _wait_for_file(_path_in_dir("%s_enemy_animation_ready.flag" % other_role), timeout_sec):
+		_write_json_file(_path_in_dir("%s_enemy_animation_error.json" % role), {"role": role, "error": "peer_ready_missing"})
+		get_tree().quit(130)
+		return
+
+	match role:
+		"host":
+			await _run_enemy_animation_replication_host(local_player, dungeon_manager, timeout_sec)
+		"client":
+			await _run_enemy_animation_replication_client(dungeon_manager, timeout_sec)
+		_:
+			_write_json_file(_path_in_dir("error.json"), {"role": role, "error": "invalid_role"})
+			get_tree().quit(5)
+
+func _run_long_run_soak_verification() -> void:
+	var role := _get_role()
+	var timeout_sec := _get_timeout_sec()
+	var local_player: Node = await _wait_for_local_player(timeout_sec)
+	if local_player == null:
+		_write_json_file(_path_in_dir("%s_soak_error.json" % role), {"role": role, "error": "local_player_not_found"})
+		get_tree().quit(131)
+		return
+	var dungeon_manager := get_parent()
+	if dungeon_manager == null:
+		_write_json_file(_path_in_dir("%s_soak_error.json" % role), {"role": role, "error": "dungeon_manager_missing"})
+		get_tree().quit(132)
+		return
+	if not await _wait_for_condition(func() -> bool:
+		return _find_remote_player() != null and _get_debug_network_enemy_states(dungeon_manager).size() > 0
+	, timeout_sec):
+		_write_json_file(_path_in_dir("%s_soak_error.json" % role), {"role": role, "error": "initial_replication_not_ready"})
+		get_tree().quit(133)
+		return
+	_touch_file(_path_in_dir("%s_soak_ready.flag" % role))
+	var other_role := "client" if role == "host" else "host"
+	if not await _wait_for_file(_path_in_dir("%s_soak_ready.flag" % other_role), timeout_sec):
+		_write_json_file(_path_in_dir("%s_soak_error.json" % role), {"role": role, "error": "peer_ready_missing"})
+		get_tree().quit(134)
+		return
+
+	match role:
+		"host":
+			await _run_long_run_soak_host(local_player, dungeon_manager, timeout_sec)
+		"client":
+			await _run_long_run_soak_client(local_player, dungeon_manager, timeout_sec)
 		_:
 			_write_json_file(_path_in_dir("error.json"), {"role": role, "error": "invalid_role"})
 			get_tree().quit(5)
@@ -819,6 +923,76 @@ func _run_enemy_damage_replication_client(local_player: Node, manager: WeaponMan
 		return
 	get_tree().quit(88)
 
+func _run_projectile_damage_replication_client(local_player: Node, manager: WeaponManager, dungeon_manager: Node, timeout_sec: float) -> void:
+	if not _switch_weapon_by_key(manager, "fireball"):
+		_write_json_file(_path_in_dir("client_projectile_damage_error.json"), {"role": "client", "error": "fireball_missing"})
+		get_tree().quit(135)
+		return
+	var weapon: Weapon = manager.get_current_weapon()
+	if weapon == null:
+		_write_json_file(_path_in_dir("client_projectile_damage_error.json"), {"role": "client", "error": "weapon_missing_after_switch"})
+		get_tree().quit(136)
+		return
+	var shot_damage := weapon.damage
+	if weapon.has_method("_get_effective_damage"):
+		shot_damage = int(weapon.call("_get_effective_damage"))
+	_write_json_file(_path_in_dir("client_projectile_damage_weapon.json"), {
+		"role": "client",
+		"weapon_key": manager.get_current_weapon_key(),
+		"weapon_slot": manager.get_current_weapon_slot(),
+		"shot_damage": shot_damage,
+	})
+	_touch_file(_path_in_dir("client_projectile_damage_weapon.flag"))
+
+	if not await _wait_for_file(_path_in_dir("host_projectile_target.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("client_projectile_damage_error.json"), {"role": "client", "error": "host_target_missing"})
+		get_tree().quit(137)
+		return
+	var target := _read_json_file(_path_in_dir("host_projectile_target.json"))
+	var enemy_id := int(target.get("enemy_id", -1))
+	var expected_initial_health := int(target.get("initial_health", -1))
+	if enemy_id < 0:
+		_write_json_file(_path_in_dir("client_projectile_damage_error.json"), {"role": "client", "error": "invalid_enemy_id"})
+		get_tree().quit(138)
+		return
+	if not await _wait_for_condition(func() -> bool:
+		var enemy_state := _get_debug_network_enemy_state(dungeon_manager, enemy_id)
+		return not enemy_state.is_empty() and int(enemy_state.get("health", -1)) == expected_initial_health
+	, timeout_sec):
+		_write_json_file(_path_in_dir("client_projectile_damage_error.json"), {"role": "client", "error": "enemy_proxy_not_ready", "enemy_id": enemy_id})
+		get_tree().quit(139)
+		return
+	var aim_target := _dict_to_vec3(target.get("aim_target", {}))
+	await _fire_network_weapon_requests(dungeon_manager, local_player, manager, aim_target, 1, 3000)
+	_touch_file(_path_in_dir("client_projectile_damage_sent.flag"))
+	if not await _wait_for_file(_path_in_dir("host_projectile_damage.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("client_projectile_damage_error.json"), {"role": "client", "error": "host_result_missing", "enemy_id": enemy_id})
+		get_tree().quit(140)
+		return
+	var host_result := _read_json_file(_path_in_dir("host_projectile_damage.json"))
+	var expected_health := int(host_result.get("final_health", expected_initial_health))
+	var expected_dead := bool(host_result.get("enemy_missing", false)) or expected_health <= 0
+	var client_converged := await _wait_for_condition(func() -> bool:
+		var enemy_state := _get_debug_network_enemy_state(dungeon_manager, enemy_id)
+		if expected_dead:
+			return enemy_state.is_empty() or int(enemy_state.get("health", 1)) <= 0
+		return not enemy_state.is_empty() and int(enemy_state.get("health", expected_initial_health)) == expected_health
+	, timeout_sec)
+	var final_state := _get_debug_network_enemy_state(dungeon_manager, enemy_id)
+	_write_json_file(_path_in_dir("client_projectile_damage.json"), {
+		"role": "client",
+		"passed": bool(host_result.get("passed", false)) and client_converged,
+		"enemy_id": enemy_id,
+		"expected_health": expected_health,
+		"observed_health": -1 if final_state.is_empty() else int(final_state.get("health", -1)),
+		"enemy_missing": final_state.is_empty(),
+	})
+	_touch_file(_path_in_dir("client_projectile_damage_done.flag"))
+	if bool(host_result.get("passed", false)) and client_converged:
+		get_tree().quit(0)
+		return
+	get_tree().quit(141)
+
 func _run_enemy_damage_replication_host(dungeon_manager: Node, timeout_sec: float) -> void:
 	if not await _wait_for_file(_path_in_dir("client_enemy_damage_weapon.flag"), timeout_sec):
 		_write_json_file(_path_in_dir("host_enemy_damage_error.json"), {"role": "host", "error": "client_weapon_missing"})
@@ -878,6 +1052,55 @@ func _run_enemy_damage_replication_host(dungeon_manager: Node, timeout_sec: floa
 		get_tree().quit(0)
 		return
 	get_tree().quit(93)
+
+func _run_projectile_damage_replication_host(dungeon_manager: Node, timeout_sec: float) -> void:
+	if not await _wait_for_file(_path_in_dir("client_projectile_damage_weapon.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("host_projectile_damage_error.json"), {"role": "host", "error": "client_weapon_missing"})
+		get_tree().quit(142)
+		return
+	var target_state := await _wait_for_enemy_state(dungeon_manager, func(state: Dictionary) -> bool:
+		return not bool(state.get("is_proxy", true)) and int(state.get("health", 0)) > 0
+	, timeout_sec)
+	if target_state.is_empty():
+		_write_json_file(_path_in_dir("host_projectile_damage_error.json"), {"role": "host", "error": "target_enemy_missing"})
+		get_tree().quit(143)
+		return
+	var enemy_id := int(target_state.get("id", -1))
+	var target_position: Vector3 = target_state.get("position", Vector3.ZERO)
+	var aim_target := target_position + Vector3(0.0, 0.9, 0.0)
+	_write_json_file(_path_in_dir("host_projectile_target.json"), {
+		"role": "host",
+		"enemy_id": enemy_id,
+		"initial_health": int(target_state.get("health", 0)),
+		"aim_target": _vec3_to_dict(aim_target),
+	})
+	_touch_file(_path_in_dir("host_projectile_target.flag"))
+	if not await _wait_for_file(_path_in_dir("client_projectile_damage_sent.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("host_projectile_damage_error.json"), {"role": "host", "error": "client_fire_missing", "enemy_id": enemy_id})
+		get_tree().quit(144)
+		return
+	var initial_health := int(target_state.get("health", 0))
+	var damaged := await _wait_for_condition(func() -> bool:
+		var enemy_state := _get_debug_network_enemy_state(dungeon_manager, enemy_id)
+		return enemy_state.is_empty() or int(enemy_state.get("health", initial_health)) < initial_health
+	, timeout_sec)
+	var final_state := _get_debug_network_enemy_state(dungeon_manager, enemy_id)
+	var enemy_missing := final_state.is_empty()
+	var final_health := 0 if enemy_missing else int(final_state.get("health", initial_health))
+	_write_json_file(_path_in_dir("host_projectile_damage.json"), {
+		"role": "host",
+		"passed": damaged and (enemy_missing or final_health < initial_health),
+		"enemy_id": enemy_id,
+		"initial_health": initial_health,
+		"final_health": final_health,
+		"enemy_missing": enemy_missing,
+	})
+	_touch_file(_path_in_dir("host_projectile_damage.flag"))
+	await _wait_for_file(_path_in_dir("client_projectile_damage_done.flag"), minf(timeout_sec, 8.0))
+	if damaged:
+		get_tree().quit(0)
+		return
+	get_tree().quit(145)
 
 func _run_enemy_death_replication_client(local_player: Node, manager: WeaponManager, dungeon_manager: Node, timeout_sec: float) -> void:
 	if not _switch_weapon_by_key(manager, "rifle"):
@@ -1018,6 +1241,136 @@ func _run_enemy_death_replication_host(dungeon_manager: Node, timeout_sec: float
 		get_tree().quit(0)
 		return
 	get_tree().quit(109)
+
+func _run_enemy_animation_replication_host(local_player: Node, dungeon_manager: Node, timeout_sec: float) -> void:
+	var target_state := await _wait_for_enemy_state(dungeon_manager, func(state: Dictionary) -> bool:
+		return not bool(state.get("is_proxy", true)) and int(state.get("state", 0)) != 5
+	, timeout_sec)
+	if target_state.is_empty():
+		_write_json_file(_path_in_dir("host_enemy_animation_error.json"), {"role": "host", "error": "target_enemy_missing"})
+		get_tree().quit(146)
+		return
+	var enemy_id := int(target_state.get("id", -1))
+	var target_position: Vector3 = target_state.get("position", Vector3.ZERO)
+	_force_player_position(local_player, target_position + Vector3(2.5, 0.0, 0.0))
+	_write_json_file(_path_in_dir("host_enemy_animation_target.json"), {
+		"role": "host",
+		"enemy_id": enemy_id,
+	})
+	_touch_file(_path_in_dir("host_enemy_animation_target.flag"))
+	var host_sample := await _sample_enemy_animation(dungeon_manager, enemy_id, 4.0)
+	host_sample["role"] = "host"
+	host_sample["passed"] = bool(host_sample.get("frame_changed", false)) or bool(host_sample.get("animating_seen", false))
+	_write_json_file(_path_in_dir("host_enemy_animation.json"), host_sample)
+	_touch_file(_path_in_dir("host_enemy_animation_done.flag"))
+	await _wait_for_file(_path_in_dir("client_enemy_animation_done.flag"), minf(timeout_sec, 8.0))
+	if bool(host_sample.get("passed", false)):
+		get_tree().quit(0)
+		return
+	get_tree().quit(147)
+
+func _run_enemy_animation_replication_client(dungeon_manager: Node, timeout_sec: float) -> void:
+	if not await _wait_for_file(_path_in_dir("host_enemy_animation_target.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("client_enemy_animation_error.json"), {"role": "client", "error": "host_target_missing"})
+		get_tree().quit(148)
+		return
+	var target := _read_json_file(_path_in_dir("host_enemy_animation_target.json"))
+	var enemy_id := int(target.get("enemy_id", -1))
+	if enemy_id < 0:
+		_write_json_file(_path_in_dir("client_enemy_animation_error.json"), {"role": "client", "error": "invalid_enemy_id"})
+		get_tree().quit(149)
+		return
+	if not await _wait_for_condition(func() -> bool:
+		return not _get_debug_network_enemy_state(dungeon_manager, enemy_id).is_empty()
+	, timeout_sec):
+		_write_json_file(_path_in_dir("client_enemy_animation_error.json"), {"role": "client", "error": "enemy_proxy_missing", "enemy_id": enemy_id})
+		get_tree().quit(150)
+		return
+	var client_sample := await _sample_enemy_animation(dungeon_manager, enemy_id, 4.0)
+	client_sample["role"] = "client"
+	if not await _wait_for_file(_path_in_dir("host_enemy_animation_done.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("client_enemy_animation_error.json"), {"role": "client", "error": "host_result_missing"})
+		get_tree().quit(151)
+		return
+	var host_sample := _read_json_file(_path_in_dir("host_enemy_animation.json"))
+	client_sample["host_passed"] = bool(host_sample.get("passed", false))
+	client_sample["passed"] = bool(host_sample.get("passed", false)) and (bool(client_sample.get("frame_changed", false)) or bool(client_sample.get("animating_seen", false)))
+	_write_json_file(_path_in_dir("client_enemy_animation.json"), client_sample)
+	_touch_file(_path_in_dir("client_enemy_animation_done.flag"))
+	if bool(client_sample.get("passed", false)):
+		get_tree().quit(0)
+		return
+	get_tree().quit(152)
+
+func _run_long_run_soak_host(local_player: Node, dungeon_manager: Node, timeout_sec: float) -> void:
+	var soak_duration := minf(30.0, maxf(12.0, timeout_sec - 20.0))
+	var start_ms := Time.get_ticks_msec()
+	var remote_updates := 0
+	var last_remote_pos := Vector3.ZERO
+	var remote_initialized := false
+	var enemy_samples := 0
+	while float(Time.get_ticks_msec() - start_ms) * 0.001 <= soak_duration:
+		var remote_player: Node = _find_remote_player()
+		if remote_player == null or not is_instance_valid(local_player):
+			_write_json_file(_path_in_dir("host_soak.json"), {"role": "host", "passed": false, "error": "player_missing_during_soak"})
+			get_tree().quit(153)
+			return
+		if not remote_initialized:
+			last_remote_pos = remote_player.global_position
+			remote_initialized = true
+		elif remote_player.global_position.distance_to(last_remote_pos) > 0.1:
+			remote_updates += 1
+			last_remote_pos = remote_player.global_position
+		if _get_debug_network_enemy_states(dungeon_manager).size() > 0:
+			enemy_samples += 1
+		await get_tree().create_timer(1.0).timeout
+	if not await _wait_for_file(_path_in_dir("client_soak_done.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("host_soak.json"), {"role": "host", "passed": false, "error": "client_result_missing"})
+		get_tree().quit(154)
+		return
+	_write_json_file(_path_in_dir("host_soak.json"), {
+		"role": "host",
+		"passed": remote_updates >= 3 and enemy_samples >= 3,
+		"remote_updates": remote_updates,
+		"enemy_samples": enemy_samples,
+		"duration_sec": soak_duration,
+	})
+	if remote_updates >= 3 and enemy_samples >= 3:
+		get_tree().quit(0)
+		return
+	get_tree().quit(155)
+
+func _run_long_run_soak_client(local_player: Node, dungeon_manager: Node, timeout_sec: float) -> void:
+	var soak_duration := minf(30.0, maxf(12.0, timeout_sec - 20.0))
+	var start_ms := Time.get_ticks_msec()
+	var toggle := false
+	var movement_updates := 0
+	var enemy_samples := 0
+	var base_pos: Vector3 = local_player.global_position
+	while float(Time.get_ticks_msec() - start_ms) * 0.001 <= soak_duration:
+		if not is_instance_valid(local_player) or _find_remote_player() == null:
+			_write_json_file(_path_in_dir("client_soak.json"), {"role": "client", "passed": false, "error": "player_missing_during_soak"})
+			get_tree().quit(156)
+			return
+		var offset := Vector3(0.4 if toggle else -0.4, 0.0, 0.25 if toggle else -0.25)
+		toggle = not toggle
+		_force_player_position(local_player, base_pos + offset)
+		movement_updates += 1
+		if _get_debug_network_enemy_states(dungeon_manager).size() > 0:
+			enemy_samples += 1
+		await get_tree().create_timer(1.0).timeout
+	_touch_file(_path_in_dir("client_soak_done.flag"))
+	_write_json_file(_path_in_dir("client_soak.json"), {
+		"role": "client",
+		"passed": movement_updates >= 3 and enemy_samples >= 3,
+		"movement_updates": movement_updates,
+		"enemy_samples": enemy_samples,
+		"duration_sec": soak_duration,
+	})
+	if movement_updates >= 3 and enemy_samples >= 3:
+		get_tree().quit(0)
+		return
+	get_tree().quit(157)
 
 func _run_weapon_state_sync_client(local_player: Node, manager: WeaponManager, timeout_sec: float) -> void:
 	var local_weapon: Weapon = _select_finite_ammo_weapon(manager)
@@ -1332,6 +1685,37 @@ func _wait_for_network_visual_count(dungeon_manager: Node, key: String, expected
 		var counts: Dictionary = dungeon_manager.call("get_debug_network_visual_counts")
 		return int(counts.get(key, 0)) >= expected_min
 	, timeout_sec)
+
+func _sample_enemy_animation(dungeon_manager: Node, enemy_id: int, duration_sec: float) -> Dictionary:
+	var start_state := _get_debug_network_enemy_state(dungeon_manager, enemy_id)
+	var start_pos: Vector3 = start_state.get("position", Vector3.ZERO)
+	var start_frame := int(start_state.get("anim_frame", 0))
+	var frame_changed := false
+	var animating_seen := bool(start_state.get("animating", false))
+	var max_distance := 0.0
+	var start_ms := Time.get_ticks_msec()
+	while float(Time.get_ticks_msec() - start_ms) * 0.001 <= duration_sec:
+		var state := _get_debug_network_enemy_state(dungeon_manager, enemy_id)
+		if state.is_empty():
+			return {
+				"enemy_missing": true,
+				"position_changed": max_distance > 0.25,
+				"frame_changed": frame_changed,
+				"animating_seen": animating_seen,
+			}
+		var current_pos: Vector3 = state.get("position", start_pos)
+		max_distance = maxf(max_distance, current_pos.distance_to(start_pos))
+		frame_changed = frame_changed or int(state.get("anim_frame", start_frame)) != start_frame
+		animating_seen = animating_seen or bool(state.get("animating", false))
+		await get_tree().create_timer(POLL_INTERVAL_SEC).timeout
+	return {
+		"enemy_missing": false,
+		"position_changed": max_distance > 0.25,
+		"frame_changed": frame_changed,
+		"animating_seen": animating_seen,
+		"distance_moved": max_distance,
+		"start_frame": start_frame,
+	}
 
 func _fire_network_weapon_requests(dungeon_manager: Node, local_player: Node, manager: WeaponManager, aim_target: Vector3, shot_count: int, shot_seed_offset: int) -> void:
 	var fire_offsets := [

@@ -1511,8 +1511,11 @@ func get_debug_network_enemy_states() -> Array:
 		result.append({
 			"id": enemy_id,
 			"position": snapshot.get("position", enemy.global_position),
+			"velocity": snapshot.get("velocity", Vector3.ZERO),
 			"health": int(snapshot.get("health", 0)),
 			"state": int(snapshot.get("state", 0)),
+			"anim_frame": int(snapshot.get("anim_frame", 0)),
+			"animating": bool(snapshot.get("animating", false)),
 			"is_proxy": enemy.has_method("is_network_proxy_mode") and bool(enemy.call("is_network_proxy_mode")),
 			"path": String(enemy.get_path()),
 		})

@@ -82,8 +82,11 @@ This file is the canonical instruction set for any AI agent working in this repo
   - `door-replication`
   - `weapon-state-sync`
   - `weapon-visual-replication`
+  - `projectile-damage-replication`
   - `enemy-damage-replication`
   - `enemy-death-replication`
+  - `enemy-animation-replication`
+  - `long-run-soak`
   - `shared-chest`
 - For multiplayer chest/inventory sync work, prefer the local automated harness before relying on reasoning alone.
 - Run the harness from the workspace root with:
@@ -162,6 +165,15 @@ This file is the canonical instruction set for any AI agent working in this repo
   - has the host fire a hitscan weapon and then a projectile weapon
   - confirms the client observes the replicated hitscan visual spawn
   - confirms the client observes the replicated projectile visual spawn
+- For authoritative projectile damage replication, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'projectile-damage-replication'
+  ```
+- What `projectile-damage-replication` does:
+  - launches a local headless host and client
+  - has the client fire a host-authoritative fireball at a live networked enemy
+  - confirms the host observes projectile damage or kill on that enemy
+  - confirms the client proxy converges on the same replicated health/death outcome
 - For authoritative enemy damage replication, run:
   ```powershell
   & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'enemy-damage-replication'
@@ -180,6 +192,24 @@ This file is the canonical instruction set for any AI agent working in this repo
   - has the client kill a live networked enemy through the host-authoritative rifle fire path
   - confirms the host observes both enemy death and later despawn
   - confirms the client sees the replicated death state before the proxy is removed
+- For enemy animation replication, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'enemy-animation-replication'
+  ```
+- What `enemy-animation-replication` does:
+  - launches a local headless host and client
+  - samples the same replicated enemy on both peers over a short window
+  - confirms enemy visual animation activity is present on the host sample
+  - confirms the client proxy also exhibits replicated frame or animate-state changes
+- For a long-running multiplayer stability pass, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'long-run-soak'
+  ```
+- What `long-run-soak` does:
+  - launches a local headless host and client
+  - keeps the session alive for an extended sample window
+  - verifies both peers retain valid local/remote players throughout the run
+  - verifies player replication and enemy replication continue producing updates during the soak
 - Harness artifacts are written under `boomer-shooter/.tmp/mp_verify_*`.
 - If the harness fails, inspect `launcher.log`, `host.log`, `host.err.log`, `client.log`, `client.err.log`, and any `*_error.json` files in that run directory.
-- Current automated coverage includes client spawn/floor stability, player roster/snapshot replication, player health replication, client disconnect cleanup, door interaction replication, weapon fire/reload state sync, replicated weapon visual effects, authoritative enemy damage replication, enemy death/despawn replication, and shared chest loot/chest sync behavior. It does not validate all multiplayer systems.
+- Current automated coverage includes client spawn/floor stability, player roster/snapshot replication, player health replication, client disconnect cleanup, door interaction replication, weapon fire/reload state sync, replicated weapon visual effects, authoritative projectile damage replication, authoritative enemy damage replication, enemy death/despawn replication, enemy animation replication, a long-run multiplayer soak pass, and shared chest loot/chest sync behavior. It does not validate all multiplayer systems.
