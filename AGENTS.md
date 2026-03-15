@@ -77,10 +77,13 @@ This file is the canonical instruction set for any AI agent working in this repo
 - Current supported scenarios:
   - `spawn-floor-stability`
   - `player-replication`
+  - `player-health-replication`
+  - `client-disconnect`
   - `door-replication`
   - `weapon-state-sync`
   - `weapon-visual-replication`
   - `enemy-damage-replication`
+  - `enemy-death-replication`
   - `shared-chest`
 - For multiplayer chest/inventory sync work, prefer the local automated harness before relying on reasoning alone.
 - Run the harness from the workspace root with:
@@ -115,6 +118,23 @@ This file is the canonical instruction set for any AI agent working in this repo
   - validates local versus remote player ownership flags in the roster snapshot
   - forces a client movement update and confirms the host receives it
   - forces a host movement update and confirms the client receives it
+- For authoritative player health replication, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'player-health-replication'
+  ```
+- What `player-health-replication` does:
+  - launches a local headless host and client
+  - has the host apply authoritative damage to the client-owned player
+  - confirms the host keeps the damaged health value instead of being overwritten by a client snapshot
+  - confirms the client local player converges to the replicated authoritative health
+- For client disconnect cleanup, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'client-disconnect'
+  ```
+- What `client-disconnect` does:
+  - launches a local headless host and client
+  - has the client leave the session through `NetworkSession.leave_game()`
+  - confirms the host removes the disconnected peer's player and shrinks the roster to one player
 - For door interaction replication, run:
   ```powershell
   & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'door-replication'
@@ -151,6 +171,15 @@ This file is the canonical instruction set for any AI agent working in this repo
   - has the client send a host-authoritative rifle fire request against a live networked enemy
   - confirms the host observes enemy health drop from that fire request
   - confirms the client proxy converges on the same replicated enemy health result
+- For authoritative enemy death/despawn replication, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'enemy-death-replication'
+  ```
+- What `enemy-death-replication` does:
+  - launches a local headless host and client
+  - has the client kill a live networked enemy through the host-authoritative rifle fire path
+  - confirms the host observes both enemy death and later despawn
+  - confirms the client sees the replicated death state before the proxy is removed
 - Harness artifacts are written under `boomer-shooter/.tmp/mp_verify_*`.
 - If the harness fails, inspect `launcher.log`, `host.log`, `host.err.log`, `client.log`, `client.err.log`, and any `*_error.json` files in that run directory.
-- Current automated coverage includes client spawn/floor stability, player roster/snapshot replication, door interaction replication, weapon fire/reload state sync, replicated weapon visual effects, authoritative enemy damage replication, and shared chest loot/chest sync behavior. It does not validate all multiplayer systems.
+- Current automated coverage includes client spawn/floor stability, player roster/snapshot replication, player health replication, client disconnect cleanup, door interaction replication, weapon fire/reload state sync, replicated weapon visual effects, authoritative enemy damage replication, enemy death/despawn replication, and shared chest loot/chest sync behavior. It does not validate all multiplayer systems.

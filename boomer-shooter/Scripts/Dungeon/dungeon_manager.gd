@@ -1570,7 +1570,10 @@ func rpc_submit_client_player_state(peer_id: int, snapshot: Dictionary) -> void:
 		return
 	var player_node = _player_by_peer_id.get(peer_id, null)
 	if is_instance_valid(player_node) and player_node.has_method("apply_network_snapshot"):
-		player_node.call("apply_network_snapshot", snapshot)
+		var sanitized_snapshot := snapshot.duplicate(true)
+		# The host owns health authority; never let a client overwrite it locally.
+		sanitized_snapshot.erase("health")
+		player_node.call("apply_network_snapshot", sanitized_snapshot)
 
 @rpc("authority", "call_remote", "unreliable")
 func rpc_receive_player_snapshots(snapshots: Array) -> void:

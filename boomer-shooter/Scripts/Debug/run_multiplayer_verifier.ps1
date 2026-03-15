@@ -171,6 +171,44 @@ switch ($scenarioKey) {
             throw "Client did not observe replicated host movement. Output dir: $verifyDir"
         }
     }
+    "player-health-replication" {
+        $hostHealthPath = Join-Path $verifyDir "host_player_health.json"
+        $clientHealthPath = Join-Path $verifyDir "client_player_health.json"
+        foreach ($path in @($hostHealthPath, $clientHealthPath)) {
+            if (-not (Test-Path $path)) {
+                throw "Expected verifier output missing: $path"
+            }
+        }
+
+        $hostHealth = Get-Content $hostHealthPath -Raw | ConvertFrom-Json
+        $clientHealth = Get-Content $clientHealthPath -Raw | ConvertFrom-Json
+
+        if (-not $hostHealth.passed) {
+            throw "Host did not observe authoritative player health damage. Output dir: $verifyDir"
+        }
+        if (-not $clientHealth.passed) {
+            throw "Client did not converge on replicated player health. Output dir: $verifyDir"
+        }
+    }
+    "client-disconnect" {
+        $hostDisconnectPath = Join-Path $verifyDir "host_client_disconnect.json"
+        $clientDisconnectPath = Join-Path $verifyDir "client_client_disconnect.json"
+        foreach ($path in @($hostDisconnectPath, $clientDisconnectPath)) {
+            if (-not (Test-Path $path)) {
+                throw "Expected verifier output missing: $path"
+            }
+        }
+
+        $hostDisconnect = Get-Content $hostDisconnectPath -Raw | ConvertFrom-Json
+        $clientDisconnect = Get-Content $clientDisconnectPath -Raw | ConvertFrom-Json
+
+        if (-not $clientDisconnect.requested) {
+            throw "Client did not request disconnect. Output dir: $verifyDir"
+        }
+        if (-not $hostDisconnect.passed) {
+            throw "Host did not observe roster cleanup after client disconnect. Output dir: $verifyDir"
+        }
+    }
     "door-replication" {
         $hostDoorPath = Join-Path $verifyDir "host_door_replication.json"
         $clientDoorPath = Join-Path $verifyDir "client_door_replication.json"
@@ -250,13 +288,32 @@ switch ($scenarioKey) {
             throw "Client did not converge on replicated enemy damage. Output dir: $verifyDir"
         }
     }
+    "enemy-death-replication" {
+        $hostEnemyDeathPath = Join-Path $verifyDir "host_enemy_death.json"
+        $clientEnemyDeathPath = Join-Path $verifyDir "client_enemy_death.json"
+        foreach ($path in @($hostEnemyDeathPath, $clientEnemyDeathPath)) {
+            if (-not (Test-Path $path)) {
+                throw "Expected verifier output missing: $path"
+            }
+        }
+
+        $hostEnemyDeath = Get-Content $hostEnemyDeathPath -Raw | ConvertFrom-Json
+        $clientEnemyDeath = Get-Content $clientEnemyDeathPath -Raw | ConvertFrom-Json
+
+        if (-not $hostEnemyDeath.passed) {
+            throw "Host did not observe authoritative enemy death/despawn. Output dir: $verifyDir"
+        }
+        if (-not $clientEnemyDeath.passed) {
+            throw "Client did not observe replicated enemy death/despawn. Output dir: $verifyDir"
+        }
+    }
     default {
         throw "Unsupported scenario: $scenarioKey"
     }
 }
 
 if ($hostTimedOut -or $clientTimedOut) {
-    if ($scenarioKey -eq "weapon-state-sync") {
+    if ($scenarioKey -in @("weapon-state-sync", "client-disconnect")) {
         if ($hostTimedOut) {
             $hostProcess.Kill()
             "Host process was still running after successful validation; killed after artifact verification." | Add-Content -Path $launcherLog
@@ -282,10 +339,13 @@ $label = switch ($scenarioKey) {
     "shared-chest" { "Multiplayer shared chest verification PASS" }
     "spawn-floor-stability" { "Multiplayer spawn/floor stability verification PASS" }
     "player-replication" { "Multiplayer player replication verification PASS" }
+    "player-health-replication" { "Multiplayer player health replication verification PASS" }
+    "client-disconnect" { "Multiplayer client disconnect verification PASS" }
     "door-replication" { "Multiplayer door replication verification PASS" }
     "weapon-state-sync" { "Multiplayer weapon state sync verification PASS" }
     "weapon-visual-replication" { "Multiplayer weapon visual replication verification PASS" }
     "enemy-damage-replication" { "Multiplayer enemy damage replication verification PASS" }
+    "enemy-death-replication" { "Multiplayer enemy death replication verification PASS" }
     default { "Multiplayer verification PASS" }
 }
 

@@ -39,6 +39,10 @@ func _run_verification() -> void:
 			await _run_spawn_floor_stability_verification()
 		"player-replication":
 			await _run_player_replication_verification()
+		"player-health-replication":
+			await _run_player_health_replication_verification()
+		"client-disconnect":
+			await _run_client_disconnect_verification()
 		"door-replication":
 			await _run_door_replication_verification()
 		"weapon-state-sync":
@@ -47,6 +51,8 @@ func _run_verification() -> void:
 			await _run_weapon_visual_replication_verification()
 		"enemy-damage-replication":
 			await _run_enemy_damage_replication_verification()
+		"enemy-death-replication":
+			await _run_enemy_death_replication_verification()
 		_:
 			_write_json_file(_path_in_dir("error.json"), {"role": _get_role(), "error": "invalid_scenario", "scenario": scenario})
 			get_tree().quit(5)
@@ -299,6 +305,168 @@ func _run_player_replication_host(local_player: Node, timeout_sec: float) -> voi
 
 	get_tree().quit(0)
 
+func _run_player_health_replication_verification() -> void:
+	var role := _get_role()
+	var timeout_sec := _get_timeout_sec()
+	var local_player: Node = await _wait_for_local_player(timeout_sec)
+	if local_player == null:
+		_write_json_file(_path_in_dir("%s_player_health_error.json" % role), {"role": role, "error": "local_player_not_found"})
+		get_tree().quit(110)
+		return
+	var remote_player: Node = _find_remote_player()
+	if remote_player == null:
+		_write_json_file(_path_in_dir("%s_player_health_error.json" % role), {"role": role, "error": "remote_player_not_found"})
+		get_tree().quit(111)
+		return
+	_touch_file(_path_in_dir("%s_player_health_ready.flag" % role))
+	var other_role := "client" if role == "host" else "host"
+	if not await _wait_for_file(_path_in_dir("%s_player_health_ready.flag" % other_role), timeout_sec):
+		_write_json_file(_path_in_dir("%s_player_health_error.json" % role), {"role": role, "error": "peer_ready_missing"})
+		get_tree().quit(112)
+		return
+
+	match role:
+		"host":
+			await _run_player_health_replication_host(remote_player, timeout_sec)
+		"client":
+			await _run_player_health_replication_client(local_player, remote_player, timeout_sec)
+		_:
+			_write_json_file(_path_in_dir("error.json"), {"role": role, "error": "invalid_role"})
+			get_tree().quit(5)
+
+func _run_player_health_replication_host(remote_player: Node, timeout_sec: float) -> void:
+	var damage_timeout := minf(timeout_sec, 8.0)
+	var client_timeout := minf(timeout_sec, 20.0)
+	var initial_health := int(remote_player.get("current_health"))
+	var damage_amount := mini(12, maxi(1, initial_health - 1))
+	if damage_amount <= 0:
+		_write_json_file(_path_in_dir("host_player_health_error.json"), {"role": "host", "error": "invalid_initial_health", "initial_health": initial_health})
+		get_tree().quit(113)
+		return
+	remote_player.call("take_damage", damage_amount)
+	var expected_health := maxi(0, initial_health - damage_amount)
+	var host_seen := await _wait_for_condition(func() -> bool:
+		return int(remote_player.get("current_health")) == expected_health
+	, damage_timeout)
+	_write_json_file(_path_in_dir("host_player_health.json"), {
+		"role": "host",
+		"passed": host_seen,
+		"initial_health": initial_health,
+		"damage_amount": damage_amount,
+		"expected_health": expected_health,
+		"observed_health": int(remote_player.get("current_health")),
+	})
+	_touch_file(_path_in_dir("host_player_health.flag"))
+	await _wait_for_file(_path_in_dir("client_player_health_done.flag"), client_timeout)
+	if host_seen:
+		get_tree().quit(0)
+		return
+	get_tree().quit(114)
+
+func _run_player_health_replication_client(local_player: Node, remote_player: Node, timeout_sec: float) -> void:
+	var phase_timeout := minf(timeout_sec, 8.0)
+	var initial_local_health := int(local_player.get("current_health"))
+	var initial_remote_health := int(remote_player.get("current_health"))
+	if not await _wait_for_file(_path_in_dir("host_player_health.flag"), phase_timeout):
+		_write_json_file(_path_in_dir("client_player_health_error.json"), {"role": "client", "error": "host_result_missing"})
+		get_tree().quit(116)
+		return
+	var host_result := _read_json_file(_path_in_dir("host_player_health.json"))
+	var expected_health := int(host_result.get("expected_health", initial_local_health))
+	var local_converged := await _wait_for_condition(func() -> bool:
+		return int(local_player.get("current_health")) == expected_health
+	, phase_timeout)
+	var remote_unchanged := int(remote_player.get("current_health")) == initial_remote_health
+	_write_json_file(_path_in_dir("client_player_health.json"), {
+		"role": "client",
+		"passed": bool(host_result.get("passed", false)) and local_converged and remote_unchanged,
+		"initial_local_health": initial_local_health,
+		"expected_local_health": expected_health,
+		"observed_local_health": int(local_player.get("current_health")),
+		"initial_remote_health": initial_remote_health,
+		"observed_remote_health": int(remote_player.get("current_health")),
+		"remote_unchanged": remote_unchanged,
+	})
+	_touch_file(_path_in_dir("client_player_health_done.flag"))
+	if bool(host_result.get("passed", false)) and local_converged and remote_unchanged:
+		get_tree().quit(0)
+		return
+	get_tree().quit(117)
+
+func _run_client_disconnect_verification() -> void:
+	var role := _get_role()
+	var timeout_sec := _get_timeout_sec()
+	var local_player: Node = await _wait_for_local_player(timeout_sec)
+	if local_player == null:
+		_write_json_file(_path_in_dir("%s_client_disconnect_error.json" % role), {"role": role, "error": "local_player_not_found"})
+		get_tree().quit(118)
+		return
+	if not await _wait_for_condition(func() -> bool:
+		return _find_remote_player() != null
+	, timeout_sec):
+		_write_json_file(_path_in_dir("%s_client_disconnect_error.json" % role), {"role": role, "error": "remote_player_not_found"})
+		get_tree().quit(119)
+		return
+	_touch_file(_path_in_dir("%s_client_disconnect_ready.flag" % role))
+	var other_role := "client" if role == "host" else "host"
+	if not await _wait_for_file(_path_in_dir("%s_client_disconnect_ready.flag" % other_role), timeout_sec):
+		_write_json_file(_path_in_dir("%s_client_disconnect_error.json" % role), {"role": role, "error": "peer_ready_missing"})
+		get_tree().quit(120)
+		return
+
+	match role:
+		"host":
+			await _run_client_disconnect_host(timeout_sec)
+		"client":
+			await _run_client_disconnect_client(timeout_sec)
+		_:
+			_write_json_file(_path_in_dir("error.json"), {"role": role, "error": "invalid_role"})
+			get_tree().quit(5)
+
+func _run_client_disconnect_host(timeout_sec: float) -> void:
+	var initial_roster := _build_player_roster_snapshot()
+	var initial_count := _get_network_players().size()
+	var remote_player: Node = _find_remote_player()
+	var remote_peer_id := _get_player_peer_id(remote_player)
+	if not await _wait_for_file(_path_in_dir("client_disconnect_requested.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("host_client_disconnect_error.json"), {"role": "host", "error": "client_request_missing"})
+		get_tree().quit(121)
+		return
+	var removed := await _wait_for_condition(func() -> bool:
+		return _find_remote_player() == null and _get_network_players().size() == 1
+	, timeout_sec)
+	var final_roster := _build_player_roster_snapshot()
+	_write_json_file(_path_in_dir("host_client_disconnect.json"), {
+		"role": "host",
+		"passed": removed,
+		"initial_player_count": initial_count,
+		"final_player_count": _get_network_players().size(),
+		"disconnected_peer_id": remote_peer_id,
+		"initial_roster": initial_roster.get("players", []),
+		"final_roster": final_roster.get("players", []),
+	})
+	if removed:
+		get_tree().quit(0)
+		return
+	get_tree().quit(122)
+
+func _run_client_disconnect_client(timeout_sec: float) -> void:
+	var session := get_node_or_null("/root/NetworkSession")
+	if session == null:
+		_write_json_file(_path_in_dir("client_client_disconnect_error.json"), {"role": "client", "error": "session_missing"})
+		get_tree().quit(123)
+		return
+	_write_json_file(_path_in_dir("client_client_disconnect.json"), {
+		"role": "client",
+		"local_peer_id": _get_local_peer_id(),
+		"requested": true,
+	})
+	_touch_file(_path_in_dir("client_disconnect_requested.flag"))
+	session.call("leave_game")
+	# Leaving the session transitions back to bootstrap and may not terminate immediately.
+	await get_tree().create_timer(minf(timeout_sec, 5.0)).timeout
+	get_tree().quit(0)
+
 func _run_door_replication_verification() -> void:
 	var role := _get_role()
 	var timeout_sec := _get_timeout_sec()
@@ -514,6 +682,40 @@ func _run_enemy_damage_replication_verification() -> void:
 			_write_json_file(_path_in_dir("error.json"), {"role": role, "error": "invalid_role"})
 			get_tree().quit(5)
 
+func _run_enemy_death_replication_verification() -> void:
+	var role := _get_role()
+	var timeout_sec := _get_timeout_sec()
+	var local_player: Node = await _wait_for_local_player(timeout_sec)
+	if local_player == null:
+		_write_json_file(_path_in_dir("%s_enemy_death_error.json" % role), {"role": role, "error": "local_player_not_found"})
+		get_tree().quit(94)
+		return
+	var dungeon_manager := get_parent()
+	if dungeon_manager == null:
+		_write_json_file(_path_in_dir("%s_enemy_death_error.json" % role), {"role": role, "error": "dungeon_manager_missing"})
+		get_tree().quit(95)
+		return
+	var manager: WeaponManager = local_player.get("weapon_manager")
+	if manager == null:
+		_write_json_file(_path_in_dir("%s_enemy_death_error.json" % role), {"role": role, "error": "weapon_manager_missing"})
+		get_tree().quit(96)
+		return
+	_touch_file(_path_in_dir("%s_enemy_death_ready.flag" % role))
+	var other_role := "client" if role == "host" else "host"
+	if not await _wait_for_file(_path_in_dir("%s_enemy_death_ready.flag" % other_role), timeout_sec):
+		_write_json_file(_path_in_dir("%s_enemy_death_error.json" % role), {"role": role, "error": "peer_ready_missing"})
+		get_tree().quit(97)
+		return
+
+	match role:
+		"client":
+			await _run_enemy_death_replication_client(local_player, manager, dungeon_manager, timeout_sec)
+		"host":
+			await _run_enemy_death_replication_host(dungeon_manager, timeout_sec)
+		_:
+			_write_json_file(_path_in_dir("error.json"), {"role": role, "error": "invalid_role"})
+			get_tree().quit(5)
+
 func _run_enemy_damage_replication_client(local_player: Node, manager: WeaponManager, dungeon_manager: Node, timeout_sec: float) -> void:
 	if not _switch_weapon_by_key(manager, "rifle"):
 		_write_json_file(_path_in_dir("client_enemy_damage_error.json"), {"role": "client", "error": "rifle_missing"})
@@ -676,6 +878,146 @@ func _run_enemy_damage_replication_host(dungeon_manager: Node, timeout_sec: floa
 		get_tree().quit(0)
 		return
 	get_tree().quit(93)
+
+func _run_enemy_death_replication_client(local_player: Node, manager: WeaponManager, dungeon_manager: Node, timeout_sec: float) -> void:
+	if not _switch_weapon_by_key(manager, "rifle"):
+		_write_json_file(_path_in_dir("client_enemy_death_error.json"), {"role": "client", "error": "rifle_missing"})
+		get_tree().quit(98)
+		return
+	var weapon: Weapon = manager.get_current_weapon()
+	if weapon == null:
+		_write_json_file(_path_in_dir("client_enemy_death_error.json"), {"role": "client", "error": "weapon_missing_after_switch"})
+		get_tree().quit(99)
+		return
+	var shot_damage := weapon.damage
+	if weapon.has_method("_get_effective_damage"):
+		shot_damage = int(weapon.call("_get_effective_damage"))
+	_write_json_file(_path_in_dir("client_enemy_death_weapon.json"), {
+		"role": "client",
+		"weapon_key": manager.get_current_weapon_key(),
+		"weapon_slot": manager.get_current_weapon_slot(),
+		"shot_damage": shot_damage,
+	})
+	_touch_file(_path_in_dir("client_enemy_death_weapon.flag"))
+
+	if not await _wait_for_file(_path_in_dir("host_enemy_death_target.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("client_enemy_death_error.json"), {"role": "client", "error": "host_target_missing"})
+		get_tree().quit(100)
+		return
+	var target := _read_json_file(_path_in_dir("host_enemy_death_target.json"))
+	var enemy_id := int(target.get("enemy_id", -1))
+	if enemy_id < 0:
+		_write_json_file(_path_in_dir("client_enemy_death_error.json"), {"role": "client", "error": "invalid_enemy_id", "target": target})
+		get_tree().quit(101)
+		return
+	var expected_initial_health := int(target.get("initial_health", -1))
+	if not await _wait_for_condition(func() -> bool:
+		var enemy_state := _get_debug_network_enemy_state(dungeon_manager, enemy_id)
+		if enemy_state.is_empty():
+			return false
+		return int(enemy_state.get("health", -1)) == expected_initial_health
+	, timeout_sec):
+		_write_json_file(_path_in_dir("client_enemy_death_error.json"), {
+			"role": "client",
+			"error": "enemy_proxy_not_ready",
+			"enemy_id": enemy_id,
+			"expected_initial_health": expected_initial_health,
+			"observed_state": _get_debug_network_enemy_state(dungeon_manager, enemy_id),
+		})
+		get_tree().quit(102)
+		return
+
+	var aim_target := _dict_to_vec3(target.get("aim_target", {}))
+	var shot_count := maxi(1, int(target.get("shot_count", 1)))
+	await _fire_network_weapon_requests(dungeon_manager, local_player, manager, aim_target, shot_count, 2000)
+	_touch_file(_path_in_dir("client_enemy_death_sent.flag"))
+
+	var dead_state_seen := await _wait_for_condition(func() -> bool:
+		var enemy_state := _get_debug_network_enemy_state(dungeon_manager, enemy_id)
+		if enemy_state.is_empty():
+			return false
+		return int(enemy_state.get("state", -1)) == 5 or int(enemy_state.get("health", 1)) <= 0
+	, timeout_sec)
+	var despawn_seen := await _wait_for_condition(func() -> bool:
+		return _get_debug_network_enemy_state(dungeon_manager, enemy_id).is_empty()
+	, timeout_sec)
+	if not await _wait_for_file(_path_in_dir("host_enemy_death.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("client_enemy_death_error.json"), {"role": "client", "error": "host_result_missing", "enemy_id": enemy_id})
+		get_tree().quit(103)
+		return
+	var host_result := _read_json_file(_path_in_dir("host_enemy_death.json"))
+	var final_state := _get_debug_network_enemy_state(dungeon_manager, enemy_id)
+	_write_json_file(_path_in_dir("client_enemy_death.json"), {
+		"role": "client",
+		"passed": dead_state_seen and despawn_seen and bool(host_result.get("passed", false)),
+		"enemy_id": enemy_id,
+		"dead_state_seen": dead_state_seen,
+		"despawn_seen": despawn_seen,
+		"enemy_missing": final_state.is_empty(),
+		"host_passed": bool(host_result.get("passed", false)),
+	})
+	_touch_file(_path_in_dir("client_enemy_death_done.flag"))
+	if dead_state_seen and despawn_seen and bool(host_result.get("passed", false)):
+		get_tree().quit(0)
+		return
+	get_tree().quit(104)
+
+func _run_enemy_death_replication_host(dungeon_manager: Node, timeout_sec: float) -> void:
+	if not await _wait_for_file(_path_in_dir("client_enemy_death_weapon.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("host_enemy_death_error.json"), {"role": "host", "error": "client_weapon_missing"})
+		get_tree().quit(105)
+		return
+	var weapon_data := _read_json_file(_path_in_dir("client_enemy_death_weapon.json"))
+	var shot_damage := maxi(1, int(weapon_data.get("shot_damage", 1)))
+	var target_state := await _wait_for_enemy_state(dungeon_manager, func(state: Dictionary) -> bool:
+		return not bool(state.get("is_proxy", true)) and int(state.get("health", 0)) > 0
+	, timeout_sec)
+	if target_state.is_empty():
+		_write_json_file(_path_in_dir("host_enemy_death_error.json"), {"role": "host", "error": "target_enemy_missing"})
+		get_tree().quit(106)
+		return
+	var enemy_id := int(target_state.get("id", -1))
+	var initial_health := int(target_state.get("health", 0))
+	var shot_count := maxi(1, int(ceil(float(initial_health) / float(shot_damage))))
+	var target_position: Vector3 = target_state.get("position", Vector3.ZERO)
+	var aim_target := target_position + Vector3(0.0, 0.9, 0.0)
+	_write_json_file(_path_in_dir("host_enemy_death_target.json"), {
+		"role": "host",
+		"enemy_id": enemy_id,
+		"initial_health": initial_health,
+		"shot_count": shot_count,
+		"aim_target": _vec3_to_dict(aim_target),
+	})
+	_touch_file(_path_in_dir("host_enemy_death_target.flag"))
+
+	if not await _wait_for_file(_path_in_dir("client_enemy_death_sent.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("host_enemy_death_error.json"), {"role": "host", "error": "client_fire_missing", "enemy_id": enemy_id})
+		get_tree().quit(107)
+		return
+	var death_seen := await _wait_for_condition(func() -> bool:
+		var enemy_state := _get_debug_network_enemy_state(dungeon_manager, enemy_id)
+		return enemy_state.is_empty() or int(enemy_state.get("state", -1)) == 5 or int(enemy_state.get("health", 1)) <= 0
+	, timeout_sec)
+	var despawn_seen := await _wait_for_condition(func() -> bool:
+		return _get_debug_network_enemy_state(dungeon_manager, enemy_id).is_empty()
+	, timeout_sec)
+	_write_json_file(_path_in_dir("host_enemy_death.json"), {
+		"role": "host",
+		"passed": death_seen and despawn_seen,
+		"enemy_id": enemy_id,
+		"initial_health": initial_health,
+		"death_seen": death_seen,
+		"despawn_seen": despawn_seen,
+	})
+	_touch_file(_path_in_dir("host_enemy_death.flag"))
+	if not await _wait_for_file(_path_in_dir("client_enemy_death_done.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("host_enemy_death_error.json"), {"role": "host", "error": "client_result_missing", "enemy_id": enemy_id})
+		get_tree().quit(108)
+		return
+	if death_seen and despawn_seen:
+		get_tree().quit(0)
+		return
+	get_tree().quit(109)
 
 func _run_weapon_state_sync_client(local_player: Node, manager: WeaponManager, timeout_sec: float) -> void:
 	var local_weapon: Weapon = _select_finite_ammo_weapon(manager)
@@ -990,6 +1332,28 @@ func _wait_for_network_visual_count(dungeon_manager: Node, key: String, expected
 		var counts: Dictionary = dungeon_manager.call("get_debug_network_visual_counts")
 		return int(counts.get(key, 0)) >= expected_min
 	, timeout_sec)
+
+func _fire_network_weapon_requests(dungeon_manager: Node, local_player: Node, manager: WeaponManager, aim_target: Vector3, shot_count: int, shot_seed_offset: int) -> void:
+	var fire_offsets := [
+		Vector3(0.0, 0.3, 2.5),
+		Vector3(0.0, 0.3, -2.5),
+		Vector3(2.5, 0.3, 0.0),
+		Vector3(-2.5, 0.3, 0.0),
+	]
+	var local_peer_id := _get_player_peer_id(local_player)
+	for i in range(shot_count):
+		var fire_origin: Vector3 = aim_target + fire_offsets[i % fire_offsets.size()]
+		var fire_direction: Vector3 = (aim_target - fire_origin).normalized()
+		dungeon_manager.call(
+			"request_weapon_fire",
+			local_peer_id,
+			manager.get_current_weapon_slot(),
+			manager.get_current_weapon_key(),
+			fire_origin,
+			fire_direction,
+			int(Time.get_ticks_msec()) + shot_seed_offset + i
+		)
+		await get_tree().create_timer(0.35).timeout
 
 func _wait_for_enemy_state(dungeon_manager: Node, predicate: Callable, timeout_sec: float) -> Dictionary:
 	var start_ms := Time.get_ticks_msec()
