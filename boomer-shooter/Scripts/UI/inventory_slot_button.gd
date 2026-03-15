@@ -14,6 +14,7 @@ var _rarity_border_color := Color(0.52, 0.55, 0.60, 1.0)
 
 func _ready() -> void:
 	pressed.connect(_on_pressed)
+	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_refresh_styles()
 
 func _gui_input(event: InputEvent) -> void:

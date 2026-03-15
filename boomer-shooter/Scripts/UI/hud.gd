@@ -487,7 +487,6 @@ func _build_section_label(text: String) -> Label:
 func _make_slot_button(slot_ref: SlotRef) -> InventorySlotButton:
 	var button: InventorySlotButton = SLOT_BUTTON_SCRIPT.new()
 	button.custom_minimum_size = Vector2(0, 32)
-	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	button.text = "..."
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.set_slot_ref(slot_ref)
