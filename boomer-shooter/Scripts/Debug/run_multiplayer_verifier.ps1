@@ -343,6 +343,25 @@ switch ($scenarioKey) {
             throw "Client did not observe replicated enemy loot. Output dir: $verifyDir"
         }
     }
+    "loot-pickup-sync" {
+        $hostLootPickupPath = Join-Path $verifyDir "host_loot_pickup_sync.json"
+        $clientLootPickupPath = Join-Path $verifyDir "client_loot_pickup_sync.json"
+        foreach ($path in @($hostLootPickupPath, $clientLootPickupPath)) {
+            if (-not (Test-Path $path)) {
+                throw "Expected verifier output missing: $path"
+            }
+        }
+
+        $hostLootPickup = Get-Content $hostLootPickupPath -Raw | ConvertFrom-Json
+        $clientLootPickup = Get-Content $clientLootPickupPath -Raw | ConvertFrom-Json
+
+        if (-not $hostLootPickup.passed) {
+            throw "Host did not observe authoritative client loot pickup state. Output dir: $verifyDir"
+        }
+        if (-not $clientLootPickup.passed) {
+            throw "Client did not receive the picked-up loot in local inventory. Output dir: $verifyDir"
+        }
+    }
     "enemy-animation-replication" {
         $hostEnemyAnimationPath = Join-Path $verifyDir "host_enemy_animation.json"
         $clientEnemyAnimationPath = Join-Path $verifyDir "client_enemy_animation.json"
@@ -418,6 +437,7 @@ $label = switch ($scenarioKey) {
     "enemy-damage-replication" { "Multiplayer enemy damage replication verification PASS" }
     "enemy-death-replication" { "Multiplayer enemy death replication verification PASS" }
     "enemy-loot-replication" { "Multiplayer enemy loot replication verification PASS" }
+    "loot-pickup-sync" { "Multiplayer loot pickup sync verification PASS" }
     "enemy-animation-replication" { "Multiplayer enemy animation replication verification PASS" }
     "long-run-soak" { "Multiplayer long-run soak verification PASS" }
     default { "Multiplayer verification PASS" }

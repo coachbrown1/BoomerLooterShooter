@@ -58,6 +58,8 @@ func _run_verification() -> void:
 			await _run_enemy_death_replication_verification()
 		"enemy-loot-replication":
 			await _run_enemy_loot_replication_verification()
+		"loot-pickup-sync":
+			await _run_loot_pickup_sync_verification()
 		"enemy-animation-replication":
 			await _run_enemy_animation_replication_verification()
 		"long-run-soak":
@@ -1427,6 +1429,143 @@ func _run_enemy_loot_replication_verification() -> void:
 			_write_json_file(_path_in_dir("error.json"), {"role": role, "error": "invalid_role"})
 			get_tree().quit(5)
 
+func _run_loot_pickup_sync_host(_local_player: Node, inventory_system: InventorySystem, dungeon_manager: Node, timeout_sec: float) -> void:
+	var remote_player: Node = _find_remote_player()
+	if remote_player == null:
+		_write_json_file(_path_in_dir("host_loot_pickup_sync_error.json"), {"role": "host", "error": "remote_player_missing"})
+		get_tree().quit(181)
+		return
+	var expected_item_id := "verify_network_loot_pickup"
+	var item_payload := {
+		"item_id": expected_item_id,
+		"display_name": "Verifier Loot Pickup",
+		"category": "misc",
+		"equipment_slot": "",
+		"weapon_key": "",
+		"icon_path": "",
+		"rarity": "Common",
+		"implicit_stats": {},
+		"affixes": [],
+		"stats": {"rarity": "Common"},
+	}
+	var drop_origin: Vector3 = remote_player.global_position + Vector3(0.0, 0.6, 0.0)
+	dungeon_manager.call("spawn_network_item_pickup", item_payload, drop_origin, Vector3(0.0, 0.0, 0.4))
+	_write_json_file(_path_in_dir("host_loot_pickup_sync_target.json"), {
+		"role": "host",
+		"item_id": expected_item_id,
+	})
+	_touch_file(_path_in_dir("host_loot_pickup_sync_target.flag"))
+	var host_inventory_synced := await _wait_for_condition(func() -> bool:
+		var live_remote_player: Node = _find_remote_player()
+		if live_remote_player == null:
+			return false
+		var live_remote_inventory: InventorySystem = live_remote_player.get("inventory_system") as InventorySystem
+		return _get_storage_item_ids(live_remote_inventory).has(expected_item_id)
+	, timeout_sec)
+	var pickup_gone := await _wait_for_condition(func() -> bool:
+		return _find_loot_pickup_with_item_id(expected_item_id) == null
+	, timeout_sec)
+	var live_remote_player: Node = _find_remote_player()
+	var remote_inventory: InventorySystem = live_remote_player.get("inventory_system") as InventorySystem if live_remote_player != null else null
+	var remote_storage_ids := _get_storage_item_ids(remote_inventory) if remote_inventory != null else []
+	_write_json_file(_path_in_dir("host_loot_pickup_sync.json"), {
+		"role": "host",
+		"passed": host_inventory_synced and pickup_gone,
+		"item_id": expected_item_id,
+		"remote_storage_ids": remote_storage_ids,
+		"pickup_gone": pickup_gone,
+	})
+	_touch_file(_path_in_dir("host_loot_pickup_sync_done.flag"))
+	if not await _wait_for_file(_path_in_dir("client_loot_pickup_sync_done.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("host_loot_pickup_sync_error.json"), {"role": "host", "error": "client_result_missing"})
+		get_tree().quit(182)
+		return
+	if host_inventory_synced and pickup_gone:
+		get_tree().quit(0)
+		return
+	get_tree().quit(183)
+
+func _run_loot_pickup_sync_client(local_player: Node, inventory_system: InventorySystem, timeout_sec: float) -> void:
+	if not await _wait_for_file(_path_in_dir("host_loot_pickup_sync_target.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("client_loot_pickup_sync_error.json"), {"role": "client", "error": "host_target_missing"})
+		get_tree().quit(184)
+		return
+	var target := _read_json_file(_path_in_dir("host_loot_pickup_sync_target.json"))
+	var expected_item_id := String(target.get("item_id", ""))
+	if expected_item_id.is_empty():
+		_write_json_file(_path_in_dir("client_loot_pickup_sync_error.json"), {"role": "client", "error": "invalid_item_id"})
+		get_tree().quit(185)
+		return
+	var pickup_ready := await _wait_for_condition(func() -> bool:
+		return _find_loot_pickup_with_item_id(expected_item_id) != null
+	, timeout_sec)
+	if not pickup_ready:
+		_write_json_file(_path_in_dir("client_loot_pickup_sync_error.json"), {"role": "client", "error": "pickup_missing", "item_id": expected_item_id})
+		get_tree().quit(186)
+		return
+	var pickup := _find_loot_pickup_with_item_id(expected_item_id)
+	if pickup == null:
+		_write_json_file(_path_in_dir("client_loot_pickup_sync_error.json"), {"role": "client", "error": "pickup_lost_before_interact", "item_id": expected_item_id})
+		get_tree().quit(187)
+		return
+	var before_storage_ids := _get_storage_item_ids(inventory_system)
+	var dungeon_manager := get_parent()
+	dungeon_manager.call("request_interaction", local_player, pickup)
+	var inventory_synced := await _wait_for_condition(func() -> bool:
+		return _get_storage_item_ids(inventory_system).has(expected_item_id)
+	, timeout_sec)
+	var pickup_gone := await _wait_for_condition(func() -> bool:
+		return _find_loot_pickup_with_item_id(expected_item_id) == null
+	, timeout_sec)
+	var after_storage_ids := _get_storage_item_ids(inventory_system)
+	_write_json_file(_path_in_dir("client_loot_pickup_sync.json"), {
+		"role": "client",
+		"passed": inventory_synced and pickup_gone,
+		"item_id": expected_item_id,
+		"before_storage_ids": before_storage_ids,
+		"after_storage_ids": after_storage_ids,
+		"pickup_gone": pickup_gone,
+	})
+	_touch_file(_path_in_dir("client_loot_pickup_sync_done.flag"))
+	if inventory_synced and pickup_gone:
+		get_tree().quit(0)
+		return
+	get_tree().quit(188)
+
+func _run_loot_pickup_sync_verification() -> void:
+	var role := _get_role()
+	var timeout_sec := _get_timeout_sec()
+	var local_player: Node = await _wait_for_local_player(timeout_sec)
+	if local_player == null:
+		_write_json_file(_path_in_dir("%s_loot_pickup_sync_error.json" % role), {"role": role, "error": "local_player_not_found"})
+		get_tree().quit(177)
+		return
+	var dungeon_manager := get_parent()
+	if dungeon_manager == null:
+		_write_json_file(_path_in_dir("%s_loot_pickup_sync_error.json" % role), {"role": role, "error": "dungeon_manager_missing"})
+		get_tree().quit(178)
+		return
+	var inventory_system: InventorySystem = local_player.get("inventory_system") as InventorySystem
+	if inventory_system == null:
+		_write_json_file(_path_in_dir("%s_loot_pickup_sync_error.json" % role), {"role": role, "error": "inventory_system_missing"})
+		get_tree().quit(179)
+		return
+	_touch_file(_path_in_dir("%s_loot_pickup_sync_ready.flag" % role))
+	var other_role := "client" if role == "host" else "host"
+	if not await _wait_for_file(_path_in_dir("%s_loot_pickup_sync_ready.flag" % other_role), timeout_sec):
+		_write_json_file(_path_in_dir("%s_loot_pickup_sync_error.json" % role), {"role": role, "error": "peer_ready_missing"})
+		get_tree().quit(180)
+		return
+
+	match role:
+		"client":
+			await _run_loot_pickup_sync_client(local_player, inventory_system, timeout_sec)
+		"host":
+			await _run_loot_pickup_sync_host(local_player, inventory_system, dungeon_manager, timeout_sec)
+		_:
+			_write_json_file(_path_in_dir("error.json"), {"role": role, "error": "invalid_role"})
+			get_tree().quit(5)
+
 func _run_enemy_animation_replication_host(local_player: Node, dungeon_manager: Node, timeout_sec: float) -> void:
 	var target_state := await _wait_for_enemy_state(dungeon_manager, func(state: Dictionary) -> bool:
 		return not bool(state.get("is_proxy", true)) and int(state.get("state", 0)) != 5
@@ -1983,6 +2122,20 @@ func _get_loot_pickup_snapshots() -> Array:
 	)
 	return snapshots
 
+func _find_loot_pickup_with_item_id(item_id: String) -> Node3D:
+	for pickup_variant in get_tree().get_nodes_in_group("loot_pickup"):
+		if not is_instance_valid(pickup_variant):
+			continue
+		if not (pickup_variant is Node3D):
+			continue
+		var pickup: Node3D = pickup_variant
+		if not pickup.has_method("get_item_snapshot"):
+			continue
+		var item_snapshot: Dictionary = pickup.call("get_item_snapshot")
+		if String(item_snapshot.get("item_id", "")) == item_id:
+			return pickup
+	return null
+
 func _wait_for_closed_door(timeout_sec: float):
 	var found: bool = await _wait_for_condition(func() -> bool:
 		return _find_closed_door() != null
@@ -2129,6 +2282,18 @@ func _get_chest_item_ids(inventory_system: InventorySystem) -> Array:
 	var snapshot: Dictionary = inventory_system.get_slot_snapshot()
 	var ids: Array = []
 	for item_variant in snapshot.get("chest", []):
+		if item_variant == null:
+			ids.append("")
+			continue
+		ids.append(String(item_variant.get("item_id", "")))
+	return ids
+
+func _get_storage_item_ids(inventory_system: InventorySystem) -> Array:
+	if inventory_system == null:
+		return []
+	var snapshot: Dictionary = inventory_system.get_slot_snapshot()
+	var ids: Array = []
+	for item_variant in snapshot.get("storage", []):
 		if item_variant == null:
 			ids.append("")
 			continue

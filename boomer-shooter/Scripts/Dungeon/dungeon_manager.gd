@@ -490,13 +490,23 @@ func _on_exit_entered(body: Node3D) -> void:
 	if _session_multiplayer and not _session_host:
 		return
 
-	# Snapshot inventory before leaving the dungeon
-	var inv: InventorySystem = body.get("inventory_system") as InventorySystem
-	if inv != null:
-		GameState.player_inventory_snapshot = inv.get_slot_snapshot()
+	# Snapshot the local player's inventory before leaving.
+	var local_player := _get_local_player_node()
+	if is_instance_valid(local_player):
+		var inv := local_player.get("inventory_system") as InventorySystem
+		if inv != null:
+			GameState.player_inventory_snapshot = inv.get_slot_snapshot()
 	GameState.initialized = true
 
-	get_tree().change_scene_to_file(HUB_SCENE_PATH)
+	if _session_multiplayer:
+		# Broadcast to all peers (including self) so everyone transitions together.
+		rpc("rpc_dungeon_exit_to_hub")
+	else:
+		get_tree().call_deferred("change_scene_to_file", HUB_SCENE_PATH)
+
+@rpc("authority", "call_local", "reliable")
+func rpc_dungeon_exit_to_hub() -> void:
+	get_tree().call_deferred("change_scene_to_file", HUB_SCENE_PATH)
 
 func _get_biome_data(biome_id: String) -> Resource:
 	if biome_database == null:
@@ -1180,7 +1190,12 @@ func _apply_interaction(interactor: Node, target: Node) -> void:
 		return
 	if target is LootPickup:
 		var loot_id := int(target.get_meta("network_loot_id", -1))
+		var interactor_peer := _local_peer_id
+		if interactor != null and interactor.has_method("get_network_peer_id"):
+			interactor_peer = int(interactor.call("get_network_peer_id"))
 		target.interact(interactor)
+		if _session_multiplayer and _session_host and interactor_peer != _local_peer_id:
+			_sync_pickup_state_to_peer(interactor_peer, interactor)
 		if loot_id >= 0 and (not is_instance_valid(target) or target.is_queued_for_deletion()):
 			_loot_pickup_by_network_id.erase(loot_id)
 			if _session_multiplayer and _session_host:
@@ -1188,6 +1203,29 @@ func _apply_interaction(interactor: Node, target: Node) -> void:
 		return
 	if target.has_method("interact"):
 		target.interact(interactor)
+
+func _sync_pickup_state_to_peer(peer_id: int, interactor: Node) -> void:
+	if peer_id <= 0 or not _session_multiplayer or not _session_host:
+		return
+	if interactor == null:
+		return
+	var inventory_snapshot := {}
+	var inventory_system: InventorySystem = interactor.get("inventory_system") as InventorySystem
+	if inventory_system != null:
+		inventory_snapshot = inventory_system.get_slot_snapshot()
+	var health := -1
+	if interactor.has_method("apply_authoritative_health") or interactor.has_method("heal"):
+		health = int(interactor.get("current_health"))
+	var weapon_slot := -1
+	var current_mag := -1
+	var ammo_snapshot := {}
+	var weapon_manager: WeaponManager = interactor.get("weapon_manager") as WeaponManager
+	if weapon_manager != null:
+		weapon_slot = weapon_manager.get_current_weapon_slot()
+		var weapon := weapon_manager.get_current_weapon()
+		current_mag = weapon.current_mag if weapon != null else -1
+		ammo_snapshot = weapon_manager.get_ammo_snapshot()
+	rpc_id(peer_id, "rpc_sync_pickup_state", peer_id, inventory_snapshot, health, weapon_slot, current_mag, ammo_snapshot)
 
 func _resolve_interaction_target(target: Node) -> Node:
 	var current := target
@@ -1669,6 +1707,22 @@ func rpc_sync_weapon_state(peer_id: int, slot_index: int, current_mag: int, ammo
 	if manager == null:
 		return
 	manager.apply_authoritative_weapon_state(slot_index, current_mag, ammo_snapshot)
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_sync_pickup_state(peer_id: int, inventory_snapshot: Dictionary, health: int, weapon_slot: int, current_mag: int, ammo_snapshot: Dictionary) -> void:
+	if _local_peer_id != peer_id:
+		return
+	var local_player = NetworkPlayerManager.get_local_player()
+	if not is_instance_valid(local_player):
+		return
+	var inventory_system: InventorySystem = local_player.get("inventory_system") as InventorySystem
+	if inventory_system != null and not inventory_snapshot.is_empty():
+		inventory_system.apply_slot_snapshot(inventory_snapshot)
+	if health >= 0 and local_player.has_method("apply_authoritative_health"):
+		local_player.call("apply_authoritative_health", health)
+	var manager: WeaponManager = local_player.get("weapon_manager")
+	if manager != null and not ammo_snapshot.is_empty():
+		manager.apply_authoritative_weapon_state(weapon_slot, current_mag, ammo_snapshot)
 
 @rpc("any_peer", "reliable")
 func rpc_request_interaction(peer_id: int, target_path: String, target_pos: Vector3 = Vector3.ZERO) -> void:
