@@ -48,6 +48,10 @@ var _pending_player_roster: Array = []
 var _pending_enemy_spawns: Array = []
 var _handcrafted_room_overlays_by_id := {}
 var _suppressed_enemies_by_room_id := {}
+var _debug_network_visual_counts := {
+	"hitscan": 0,
+	"projectile": 0,
+}
 
 func _ready() -> void:
 	add_to_group("dungeon_manager")
@@ -121,6 +125,7 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 	_enemy_network_id_by_instance_id.clear()
 	_handcrafted_room_overlays_by_id.clear()
 	_suppressed_enemies_by_room_id.clear()
+	_reset_debug_network_visual_counts()
 
 	# Generate tile layout
 	_generator = DungeonGenerator.new()
@@ -1486,6 +1491,36 @@ func _on_network_session_ended(_reason: String) -> void:
 	_session_host = true
 	get_tree().change_scene_to_file("res://Scenes/System/bootstrap.tscn")
 
+func _reset_debug_network_visual_counts() -> void:
+	_debug_network_visual_counts["hitscan"] = 0
+	_debug_network_visual_counts["projectile"] = 0
+
+func get_debug_network_visual_counts() -> Dictionary:
+	return _debug_network_visual_counts.duplicate(true)
+
+func get_debug_network_enemy_states() -> Array:
+	var result: Array = []
+	for enemy_id_variant in _enemy_by_network_id.keys():
+		var enemy_id := int(enemy_id_variant)
+		var enemy = _enemy_by_network_id.get(enemy_id, null)
+		if not is_instance_valid(enemy):
+			continue
+		var snapshot: Dictionary = {}
+		if enemy.has_method("get_network_state_snapshot"):
+			snapshot = enemy.call("get_network_state_snapshot")
+		result.append({
+			"id": enemy_id,
+			"position": snapshot.get("position", enemy.global_position),
+			"health": int(snapshot.get("health", 0)),
+			"state": int(snapshot.get("state", 0)),
+			"is_proxy": enemy.has_method("is_network_proxy_mode") and bool(enemy.call("is_network_proxy_mode")),
+			"path": String(enemy.get_path()),
+		})
+	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.get("id", 0)) < int(b.get("id", 0))
+	)
+	return result
+
 @rpc("any_peer", "reliable")
 func rpc_client_ready_for_sync(peer_id: int) -> void:
 	if not _session_host:
@@ -1726,6 +1761,8 @@ func rpc_spawn_projectile_visual(scene_path: String, cam_origin: Vector3, cam_fo
 	projectile.network_visual_only = true
 	projectile.direction = cam_forward.normalized()
 	spawn_parent.add_child(projectile)
+	projectile.add_to_group("network_replicated_projectile_visual")
+	_debug_network_visual_counts["projectile"] = int(_debug_network_visual_counts.get("projectile", 0)) + 1
 	projectile.global_position = cam_origin + cam_forward.normalized() * 2.0
 	if projectile.direction.abs().is_equal_approx(Vector3(0, 1, 0)):
 		projectile.look_at(projectile.global_position + projectile.direction, Vector3.RIGHT)
@@ -1759,6 +1796,8 @@ func rpc_spawn_hitscan_visual(from: Vector3, to: Vector3) -> void:
 		temp_tracer.queue_free()
 		return
 	current_scene.add_child(temp_tracer)
+	temp_tracer.add_to_group("network_replicated_hitscan_visual")
+	_debug_network_visual_counts["hitscan"] = int(_debug_network_visual_counts.get("hitscan", 0)) + 1
 
 	temp_tracer.global_position = (from + to) / 2.0
 	temp_tracer.look_at(to, Vector3.UP)
