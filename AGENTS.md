@@ -70,6 +70,17 @@ This file is the canonical instruction set for any AI agent working in this repo
 
 ## 9. Multiplayer Verification Harness
 
+- Generalized runner:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario '<scenario>'
+  ```
+- Current supported scenarios:
+  - `spawn-floor-stability`
+  - `player-replication`
+  - `door-replication`
+  - `weapon-state-sync`
+  - `weapon-visual-replication`
+  - `shared-chest`
 - For multiplayer chest/inventory sync work, prefer the local automated harness before relying on reasoning alone.
 - Run the harness from the workspace root with:
   ```powershell
@@ -83,6 +94,53 @@ This file is the canonical instruction set for any AI agent working in this repo
   - verifies the client sees the same updated chest contents
 - Expected success output:
   - `Multiplayer chest verification PASS`
+- For the client-startup floor regression, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'spawn-floor-stability'
+  ```
+- What `spawn-floor-stability` does:
+  - launches a local headless host and client
+  - waits for match start and floor sync
+  - verifies each peer gets a local player
+  - samples the player's Y position and floor contact during the initial settle window
+  - fails if the client never stabilizes on the floor or drops too far below its spawn point
+- For player roster and snapshot replication, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'player-replication'
+  ```
+- What `player-replication` does:
+  - launches a local headless host and client
+  - verifies both peers see a two-player roster
+  - validates local versus remote player ownership flags in the roster snapshot
+  - forces a client movement update and confirms the host receives it
+  - forces a host movement update and confirms the client receives it
+- For door interaction replication, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'door-replication'
+  ```
+- What `door-replication` does:
+  - launches a local headless host and client
+  - has the client request a door interaction through the normal multiplayer interaction path
+  - confirms the authoritative host opens the matched door
+  - confirms the client receives the replicated open state for that same door
+- For authoritative weapon fire/reload state sync, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'weapon-state-sync'
+  ```
+- What `weapon-state-sync` does:
+  - launches a local headless host and client
+  - switches the client to a finite-ammo weapon
+  - validates one authoritative fire request updates weapon mag state on both peers
+  - validates one authoritative reload request restores the expected mag state on both peers
+- For replicated weapon visual effects, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'weapon-visual-replication'
+  ```
+- What `weapon-visual-replication` does:
+  - launches a local headless host and client
+  - has the host fire a hitscan weapon and then a projectile weapon
+  - confirms the client observes the replicated hitscan visual spawn
+  - confirms the client observes the replicated projectile visual spawn
 - Harness artifacts are written under `boomer-shooter/.tmp/mp_verify_*`.
 - If the harness fails, inspect `launcher.log`, `host.log`, `host.err.log`, `client.log`, `client.err.log`, and any `*_error.json` files in that run directory.
-- Current coverage is specifically shared chest loot and chest sync behavior. It does not validate all multiplayer systems.
+- Current automated coverage includes client spawn/floor stability, player roster/snapshot replication, door interaction replication, weapon fire/reload state sync, replicated weapon visual effects, and shared chest loot/chest sync behavior. It does not validate all multiplayer systems.
