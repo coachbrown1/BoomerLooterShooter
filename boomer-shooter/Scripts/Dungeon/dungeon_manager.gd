@@ -16,7 +16,6 @@ class_name DungeonManager
 
 @onready var nav_region: NavigationRegion3D = $NavigationRegion3D
 
-const PLAYER_SCENE: PackedScene = preload("res://Scenes/Player/player.tscn")
 const SNAPSHOT_INTERVAL: float = 0.05
 const CASTLE_INNER_CHAMBER_SCENE_PATH := "res://Scenes/Dungeon/Handcrafted/Castle_InnerChamber.tscn"
 
@@ -29,17 +28,13 @@ var _room_lookup := {}
 var _spawned_enemy_rooms := {}
 var _last_player_room_id: int = -1
 
-var _cached_player: Node3D = null
 var _session_multiplayer: bool = false
 var _session_host: bool = false
 var _local_peer_id: int = 1
 var _snapshot_timer: float = 0.0
-var _local_player_state_timer: float = 0.0
-var _player_by_peer_id: Dictionary = {}
 var _enemy_by_network_id: Dictionary = {}
 var _enemy_network_id_by_instance_id: Dictionary = {}
 var _next_enemy_network_id: int = 1
-var _player_spawn_points_by_peer: Dictionary = {}
 var _chest_viewers_by_path: Dictionary = {}
 var _leave_session_ui: CanvasLayer = null
 var _floor_sync_in_progress := false
@@ -48,6 +43,8 @@ var _pending_player_roster: Array = []
 var _pending_enemy_spawns: Array = []
 var _handcrafted_room_overlays_by_id := {}
 var _suppressed_enemies_by_room_id := {}
+var _players_ready_callback: Callable = Callable()
+var _pending_inventory_restore: bool = false
 var _debug_network_visual_counts := {
 	"hitscan": 0,
 	"projectile": 0,
@@ -63,19 +60,16 @@ func _ready() -> void:
 	_session_host = not _session_multiplayer or _is_network_host()
 	_local_peer_id = _get_network_local_peer_id()
 	_bind_network_signals()
-	_prepare_player_nodes()
 	if _session_multiplayer:
 		_build_leave_session_ui()
 
 	set_process(true)
 	if _session_multiplayer and not _session_host:
-		_remove_non_local_player_nodes()
 		return
 
 	generate_floor(floor_number)
 	if _session_multiplayer and _session_host:
 		_sync_floor_to_clients()
-		_spawn_missing_network_players()
 
 func _process(delta: float) -> void:
 	if _session_multiplayer:
@@ -83,13 +77,7 @@ func _process(delta: float) -> void:
 			_snapshot_timer += delta
 			if _snapshot_timer >= SNAPSHOT_INTERVAL:
 				_snapshot_timer = 0.0
-				_broadcast_player_snapshots()
 				_broadcast_enemy_snapshots()
-		else:
-			_local_player_state_timer += delta
-			if _local_player_state_timer >= SNAPSHOT_INTERVAL:
-				_local_player_state_timer = 0.0
-				_send_local_player_snapshot_to_host()
 
 	if _encounter == null or _rooms.is_empty():
 		return
@@ -337,31 +325,19 @@ func _place_player() -> void:
 	var look_target: Vector3 = spawn_data.get("look_target", base_pos + Vector3(0.0, 0.0, 1.0)) as Vector3
 	base_pos.y = 1.0
 
-	if not _session_multiplayer:
-		if not is_instance_valid(_cached_player):
-			_cached_player = get_tree().get_first_node_in_group("player") as Node3D
-		if is_instance_valid(_cached_player):
-			_cached_player.global_position = base_pos
-			_orient_player_toward(_cached_player, look_target)
-		return
+	var spawn_positions: Array[Vector3] = [base_pos]
+	if _session_multiplayer and _session_host:
+		var remote_peers := _get_network_connected_peer_ids()
+		for i in range(remote_peers.size()):
+			spawn_positions.append(_offset_spawn_position(base_pos, i + 1))
 
-	if not _session_host:
-		return
-
-	_player_spawn_points_by_peer.clear()
-	var peer_ids := _player_by_peer_id.keys()
-	peer_ids.sort()
-	var index := 0
-	for peer_key in peer_ids:
-		var peer_id := int(peer_key)
-		var player_node = _player_by_peer_id.get(peer_id, null)
-		if not is_instance_valid(player_node):
-			continue
-		var spawn_pos := _offset_spawn_position(base_pos, index)
-		player_node.global_position = spawn_pos
-		_orient_player_toward(player_node, look_target)
-		_player_spawn_points_by_peer[peer_id] = spawn_pos
-		index += 1
+	if _players_ready_callback.is_valid() and NetworkPlayerManager.players_ready.is_connected(_players_ready_callback):
+		NetworkPlayerManager.players_ready.disconnect(_players_ready_callback)
+	_players_ready_callback = Callable(self, "_on_players_ready_for_floor").bind(look_target)
+	NetworkPlayerManager.players_ready.connect(_players_ready_callback)
+	_pending_inventory_restore = GameState.initialized and not GameState.player_inventory_snapshot.is_empty()
+	NetworkPlayerManager.setup(spawn_positions)
+	_on_players_ready_for_floor(NetworkPlayerManager.get_all_players(), look_target)
 
 func _get_start_player_spawn_data(start_room: RoomData) -> Dictionary:
 	var fallback_pos := start_room.get_world_center(DungeonBuilder.TILE_SIZE)
@@ -388,61 +364,127 @@ func _get_start_player_spawn_data(start_room: RoomData) -> Dictionary:
 func _orient_player_toward(player_node: Node3D, look_target: Vector3) -> void:
 	if player_node == null:
 		return
-	player_node.look_at(look_target, Vector3.UP)
+	# Only rotate around Y (yaw). look_at() also pitches the body when the
+	# target is at a different elevation, which tilts the CharacterBody3D mesh.
+	var dir := (look_target - player_node.global_position)
+	dir.y = 0.0
+	if dir.length_squared() > 0.001:
+		player_node.rotation.y = atan2(dir.x, dir.z)
 	if player_node.has_node("Head"):
 		var head := player_node.get_node("Head") as Node3D
 		if head != null:
 			head.rotation.x = 0.0
 
-func _place_exit(biome_data: Resource = null) -> void:
+func _on_players_ready_for_floor(_players: Dictionary, look_target: Vector3) -> void:
+	for player_variant in NetworkPlayerManager.get_all_players().values():
+		if player_variant is Node3D and is_instance_valid(player_variant):
+			var player_node: Node3D = player_variant
+			_orient_player_toward(player_node, look_target)
+	var local_player := _get_local_player_node()
+	if _pending_inventory_restore and is_instance_valid(local_player):
+		var inv := local_player.get("inventory_system") as InventorySystem
+		if inv != null:
+			inv.apply_slot_snapshot(GameState.player_inventory_snapshot)
+			_pending_inventory_restore = false
+
+func _place_exit(_biome_data: Resource = null) -> void:
 	var exit_room := _get_room_by_type(RoomData.RoomType.EXIT)
 	if exit_room == null:
 		return
 
-	# Load and instance the exit portal scene
-	var portal_tex: Texture2D = preload("res://Assets/Environment/exit_portal.png")
-	if biome_data and biome_data.has_method("get"):
-		var candidate: Variant = biome_data.get("exit_portal_texture")
-		if candidate is Texture2D:
-			portal_tex = candidate
-	if portal_tex == null:
-		return
-
 	var portal_body := Area3D.new()
 	portal_body.name = "ExitPortal"
+	portal_body.collision_mask = 2  # player CharacterBody3D is on layer 2
+
 	var col := CollisionShape3D.new()
 	col.shape = SphereShape3D.new()
-	col.shape.radius = 1.5
+	col.shape.radius = 1.8
 	portal_body.add_child(col)
 
-	var sprite := Sprite3D.new()
-	sprite.texture = portal_tex
-	sprite.pixel_size = 0.006
-	sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	portal_body.add_child(sprite)
+	# Build animated sprite from spritesheet (4x4 grid, 160x160 px per frame)
+	var sheet: Texture2D = load("res://Assets/Environment/portal_spritesheet.png")
+	var sprite := AnimatedSprite3D.new()
+	sprite.pixel_size = 0.020
+	sprite.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+	sprite.no_depth_test = false
+	sprite.transparent = true
+	sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
 
-	var pos = exit_room.get_world_center(DungeonBuilder.TILE_SIZE)
-	pos.y = 1.2
+	var frames := SpriteFrames.new()
+	frames.add_animation("idle")
+	frames.set_animation_loop("idle", true)
+	frames.set_animation_speed("idle", 12.0)
+	for row in range(4):
+		for col_idx in range(4):
+			var atlas := AtlasTexture.new()
+			atlas.atlas = sheet
+			atlas.region = Rect2(col_idx * 160, row * 160, 160, 160)
+			frames.add_frame("idle", atlas)
+
+	sprite.sprite_frames = frames
+	portal_body.add_child(sprite)
+	sprite.play("idle")
+
+	# Place against an unoccupied wall
+	var wall_t := _find_portal_wall_transform(exit_room)
 	nav_region.add_child(portal_body)
-	portal_body.global_position = pos
+	portal_body.global_transform = wall_t
 	portal_body.body_entered.connect(_on_exit_entered)
 
+
+func _find_portal_wall_transform(exit_room: RoomData) -> Transform3D:
+	var tile_size: float = DungeonBuilder.TILE_SIZE
+	var center := exit_room.get_world_center(tile_size)
+	var rect := exit_room.grid_rect
+
+	# Find which cardinal directions lead to connected rooms
+	var occupied := {}
+	for room_variant in _rooms:
+		var room: RoomData = room_variant as RoomData
+		if room.id == exit_room.id:
+			continue
+		if exit_room.connected_to.has(room.id):
+			var diff := room.get_world_center(tile_size) - center
+			if abs(diff.x) >= abs(diff.z):
+				occupied["east" if diff.x > 0.0 else "west"] = true
+			else:
+				occupied["south" if diff.z > 0.0 else "north"] = true
+
+	# Wall candidates: [dir, world_pos, Y_rotation_radians]
+	# Sprite3D faces +Z by default; we rotate so it faces into the room.
+	var offset := 0.35
+	# pixel_size=0.020, frame=160px → sprite height=3.2m → center at y=1.6 touches floor
+	var y := 1.6
+	var candidates: Array = [
+		["north", Vector3(center.x, y, rect.position.y * tile_size + offset),  0.0],
+		["south", Vector3(center.x, y, rect.end.y      * tile_size - offset),  PI],
+		["west",  Vector3(rect.position.x * tile_size + offset, y, center.z),  -PI * 0.5],
+		["east",  Vector3(rect.end.x      * tile_size - offset, y, center.z),   PI * 0.5],
+	]
+
+	for cand in candidates:
+		if not occupied.has(cand[0]):
+			var basis := Basis(Vector3.UP, cand[2] as float)
+			return Transform3D(basis, cand[1] as Vector3)
+
+	# Fallback: room centre
+	return Transform3D(Basis(), Vector3(center.x, 1.4, center.z))
+
+const HUB_SCENE_PATH := "res://Scenes/World/hub.tscn"
+
 func _on_exit_entered(body: Node3D) -> void:
-	if body.is_in_group("player"):
-		if _session_multiplayer and not _session_host:
-			return
+	if not body.is_in_group("player"):
+		return
+	if _session_multiplayer and not _session_host:
+		return
 
-		# Emit global event for floor completion before advancing
-		if has_node("/root/GlobalEventBus"):
-			var event_bus = get_node("/root/GlobalEventBus")
-			if event_bus.has_signal("floor_completed"):
-				event_bus.emit_signal("floor_completed", floor_number)
+	# Snapshot inventory before leaving the dungeon
+	var inv: InventorySystem = body.get("inventory_system") as InventorySystem
+	if inv != null:
+		GameState.player_inventory_snapshot = inv.get_slot_snapshot()
+	GameState.initialized = true
 
-		floor_number += 1
-		print("Descending to floor %d..." % floor_number)
-		generate_floor(floor_number)
-		if _session_multiplayer and _session_host:
-			_sync_floor_to_clients()
+	get_tree().change_scene_to_file(HUB_SCENE_PATH)
 
 func _get_biome_data(biome_id: String) -> Resource:
 	if biome_database == null:
@@ -758,37 +800,6 @@ func _build_leave_session_ui() -> void:
 func _leave_current_session() -> void:
 	_leave_network_game()
 
-func _prepare_player_nodes() -> void:
-	_player_by_peer_id.clear()
-	var players := get_tree().get_nodes_in_group("player")
-	if players.is_empty():
-		return
-
-	if not _session_multiplayer:
-		var player_node := players[0]
-		if player_node is Node3D:
-			_register_player_node(_local_peer_id, player_node)
-		return
-
-	if _session_host:
-		var host_player := players[0]
-		if host_player is Node3D:
-			_register_player_node(_local_peer_id, host_player)
-	else:
-		for player_variant in players:
-			if player_variant is Node3D:
-				player_variant.queue_free()
-
-func _remove_non_local_player_nodes() -> void:
-	for player_variant in get_tree().get_nodes_in_group("player"):
-		if not (player_variant is Node3D):
-			continue
-		var player_node: Node3D = player_variant
-		player_node.queue_free()
-	_player_by_peer_id.clear()
-	_cached_player = null
-	call_deferred("_request_host_sync")
-
 func _request_host_sync() -> void:
 	if _session_multiplayer and not _session_host:
 		_floor_sync_in_progress = true
@@ -796,69 +807,13 @@ func _request_host_sync() -> void:
 		_pending_enemy_spawns.clear()
 		rpc_id(1, "rpc_client_ready_for_sync", _local_peer_id)
 
-func _register_player_node(peer_id: int, player_node: Node3D) -> void:
-	if player_node == null:
-		return
-	_player_by_peer_id[peer_id] = player_node
-	player_node.name = "Player_%d" % peer_id
-	if player_node.has_method("set_network_peer_id"):
-		player_node.call("set_network_peer_id", peer_id)
-	if peer_id == _local_peer_id:
-		_cached_player = player_node
-
-func _spawn_player_for_peer(peer_id: int, spawn_pos: Vector3) -> Node3D:
-	var existing = _player_by_peer_id.get(peer_id, null)
-	if existing is Node3D and is_instance_valid(existing):
-		existing.global_position = spawn_pos
-		return existing
-
-	var player_variant := PLAYER_SCENE.instantiate()
-	if not (player_variant is Node3D):
-		return null
-	var player_node: Node3D = player_variant
-	if player_node.has_method("set_network_peer_id"):
-		player_node.call("set_network_peer_id", peer_id)
-	else:
-		player_node.set("network_peer_id", peer_id)
-	add_child(player_node)
-	player_node.global_position = spawn_pos
-	_register_player_node(peer_id, player_node)
-	return player_node
-
-func _spawn_missing_network_players() -> void:
-	if not _session_multiplayer or not _session_host:
-		return
-	var base_pos := Vector3.ZERO
-	if _player_spawn_points_by_peer.has(_local_peer_id):
-		base_pos = _player_spawn_points_by_peer[_local_peer_id]
-	var existing_peers := _get_network_connected_peer_ids()
-	var offset_index := 1
-	for peer_id in existing_peers:
-		if _player_by_peer_id.has(peer_id):
-			continue
-		var spawn_pos := _offset_spawn_position(base_pos, offset_index)
-		_spawn_player_for_peer(peer_id, spawn_pos)
-		_player_spawn_points_by_peer[peer_id] = spawn_pos
-		offset_index += 1
-	_sync_player_roster_to_clients()
-
 func _sync_player_roster_to_clients() -> void:
 	if not _session_multiplayer or not _session_host:
 		return
-	var roster: Array = []
-	for peer_key in _player_by_peer_id.keys():
-		var peer_id := int(peer_key)
-		var player_node = _player_by_peer_id[peer_id]
-		if not is_instance_valid(player_node):
-			continue
-		roster.append({
-			"peer_id": peer_id,
-			"position": player_node.global_position,
-		})
 	for peer_id in _get_network_connected_peer_ids():
 		if not _is_peer_floor_sync_ready(peer_id):
 			continue
-		rpc_id(peer_id, "rpc_sync_player_roster", roster)
+		NetworkPlayerManager.sync_roster_to(peer_id)
 
 func _mark_all_clients_floor_not_ready() -> void:
 	_floor_sync_ready_by_peer.clear()
@@ -878,17 +833,7 @@ func _send_player_roster_to_peer(peer_id: int) -> void:
 		return
 	if not _is_peer_floor_sync_ready(peer_id):
 		return
-	var roster: Array = []
-	for peer_key in _player_by_peer_id.keys():
-		var roster_peer_id := int(peer_key)
-		var player_node = _player_by_peer_id[roster_peer_id]
-		if not is_instance_valid(player_node):
-			continue
-		roster.append({
-			"peer_id": roster_peer_id,
-			"position": player_node.global_position,
-		})
-	rpc_id(peer_id, "rpc_sync_player_roster", roster)
+	NetworkPlayerManager.sync_roster_to(peer_id)
 
 func _send_all_enemies_to_peer(peer_id: int) -> void:
 	if not _session_multiplayer or not _session_host:
@@ -924,34 +869,7 @@ func _apply_pending_network_sync() -> void:
 		)
 
 func _apply_remote_player_roster(roster: Array) -> void:
-	var roster_peer_ids := {}
-	for entry_variant in roster:
-		if typeof(entry_variant) != TYPE_DICTIONARY:
-			continue
-		var entry: Dictionary = entry_variant
-		var peer_id := int(entry.get("peer_id", -1))
-		if peer_id < 0:
-			continue
-		roster_peer_ids[peer_id] = true
-		var spawn_pos: Vector3 = entry.get("position", Vector3.ZERO)
-		var player_node = _spawn_player_for_peer(peer_id, spawn_pos)
-		if player_node != null and player_node.has_method("set_network_peer_id"):
-			player_node.call("set_network_peer_id", peer_id)
-
-	var to_remove: Array = []
-	for peer_key in _player_by_peer_id.keys():
-		var peer_id := int(peer_key)
-		if peer_id == _local_peer_id:
-			# Avoid transient roster packets despawning the local client avatar.
-			continue
-		if roster_peer_ids.has(peer_id):
-			continue
-		var node = _player_by_peer_id[peer_id]
-		if is_instance_valid(node):
-			node.queue_free()
-		to_remove.append(peer_id)
-	for peer_id_variant in to_remove:
-		_player_by_peer_id.erase(int(peer_id_variant))
+	NetworkPlayerManager.apply_roster(roster)
 
 func _spawn_enemy_proxy(enemy_id: int, scene_path: String, enemy_position: Vector3) -> void:
 	if enemy_id < 0:
@@ -979,12 +897,18 @@ func _spawn_enemy_proxy(enemy_id: int, scene_path: String, enemy_position: Vecto
 
 func _get_authoritative_progress_player() -> Node3D:
 	if _session_multiplayer:
-		var local_player = _player_by_peer_id.get(_local_peer_id, null)
+		var local_player = NetworkPlayerManager.get_local_player()
 		if is_instance_valid(local_player):
 			return local_player
 	for player_variant in get_tree().get_nodes_in_group("player"):
 		if player_variant is Node3D and is_instance_valid(player_variant):
 			return player_variant
+	return null
+
+func _get_player_node_for_peer(peer_id: int) -> Node3D:
+	var player = NetworkPlayerManager.get_player(peer_id)
+	if player is Node3D and is_instance_valid(player):
+		return player
 	return null
 
 func _configure_handcrafted_room_overlay(room: RoomData, room_overlay: Node3D) -> void:
@@ -1105,32 +1029,6 @@ func _sync_floor_to_clients() -> void:
 	_mark_all_clients_floor_not_ready()
 	rpc("rpc_sync_floor_state", floor_number, generation_seed)
 
-func _broadcast_player_snapshots() -> void:
-	if not _session_multiplayer or not _session_host:
-		return
-	var snapshots: Array = []
-	for peer_key in _player_by_peer_id.keys():
-		var peer_id := int(peer_key)
-		var player_node = _player_by_peer_id[peer_id]
-		if not is_instance_valid(player_node):
-			continue
-		if player_node.has_method("build_network_snapshot"):
-			snapshots.append({
-				"peer_id": peer_id,
-				"state": player_node.call("build_network_snapshot"),
-			})
-	rpc("rpc_receive_player_snapshots", snapshots)
-
-func _send_local_player_snapshot_to_host() -> void:
-	if not _session_multiplayer or _session_host:
-		return
-	var local_player = _player_by_peer_id.get(_local_peer_id, null)
-	if not is_instance_valid(local_player):
-		return
-	if not local_player.has_method("build_network_snapshot"):
-		return
-	rpc_id(1, "rpc_submit_client_player_state", _local_peer_id, local_player.call("build_network_snapshot"))
-
 func request_weapon_fire(peer_id: int, weapon_slot: int, weapon_key: String, cam_origin: Vector3, cam_forward: Vector3, shot_id: int) -> void:
 	if not _session_multiplayer:
 		return
@@ -1155,7 +1053,7 @@ func broadcast_projectile_visual(scene_path: String, cam_origin: Vector3, cam_fo
 	rpc("rpc_spawn_projectile_visual", scene_path, cam_origin, cam_forward)
 
 func _handle_weapon_fire_request(peer_id: int, weapon_slot: int, weapon_key: String, cam_origin: Vector3, cam_forward: Vector3, _shot_id: int) -> void:
-	var player_node = _player_by_peer_id.get(peer_id, null)
+	var player_node = _get_player_node_for_peer(peer_id)
 	if not is_instance_valid(player_node):
 		return
 	var manager: WeaponManager = player_node.get("weapon_manager")
@@ -1180,7 +1078,7 @@ func _handle_weapon_fire_request(peer_id: int, weapon_slot: int, weapon_key: Str
 	rpc_id(peer_id, "rpc_sync_weapon_state", peer_id, manager.get_current_weapon_slot(), weapon.current_mag, manager.get_ammo_snapshot())
 
 func _handle_weapon_reload_request(peer_id: int, weapon_slot: int, weapon_key: String) -> void:
-	var player_node = _player_by_peer_id.get(peer_id, null)
+	var player_node = _get_player_node_for_peer(peer_id)
 	if not is_instance_valid(player_node):
 		return
 	var manager: WeaponManager = player_node.get("weapon_manager")
@@ -1428,7 +1326,7 @@ func _find_chest_by_position(world_pos: Vector3, max_distance: float = 5.0) -> I
 	return closest
 
 func _get_local_player_node() -> Node3D:
-	var local_player = _player_by_peer_id.get(_local_peer_id, null)
+	var local_player = NetworkPlayerManager.get_local_player()
 	if is_instance_valid(local_player) and local_player is Node3D:
 		return local_player
 	for player_variant in get_tree().get_nodes_in_group("player"):
@@ -1479,7 +1377,6 @@ func _on_network_peer_joined(peer_id: int) -> void:
 	if not _session_host:
 		return
 	_set_peer_floor_sync_ready(peer_id, false)
-	_spawn_missing_network_players()
 	_sync_floor_to_clients()
 
 func _on_network_peer_left(peer_id: int) -> void:
@@ -1487,12 +1384,6 @@ func _on_network_peer_left(peer_id: int) -> void:
 		return
 	_remove_peer_from_chest_views(peer_id)
 	_floor_sync_ready_by_peer.erase(peer_id)
-	var player_node = _player_by_peer_id.get(peer_id, null)
-	if is_instance_valid(player_node):
-		player_node.queue_free()
-	_player_by_peer_id.erase(peer_id)
-	_player_spawn_points_by_peer.erase(peer_id)
-	_sync_player_roster_to_clients()
 
 func _on_network_session_ended(_reason: String) -> void:
 	if not _session_multiplayer:
@@ -1542,7 +1433,6 @@ func rpc_client_ready_for_sync(peer_id: int) -> void:
 	if sender != peer_id:
 		return
 	_set_peer_floor_sync_ready(peer_id, false)
-	_spawn_missing_network_players()
 	rpc_id(peer_id, "rpc_sync_floor_state", floor_number, generation_seed)
 
 @rpc("authority", "call_remote", "reliable")
@@ -1565,48 +1455,6 @@ func rpc_client_finished_floor_sync(peer_id: int) -> void:
 	_set_peer_floor_sync_ready(peer_id, true)
 	_send_player_roster_to_peer(peer_id)
 	_send_all_enemies_to_peer(peer_id)
-
-@rpc("authority", "call_remote", "reliable")
-func rpc_sync_player_roster(roster: Array) -> void:
-	if _session_host:
-		return
-	if _floor_sync_in_progress:
-		_pending_player_roster = roster.duplicate(true)
-		return
-	_apply_remote_player_roster(roster)
-
-@rpc("any_peer", "unreliable")
-func rpc_submit_client_player_state(peer_id: int, snapshot: Dictionary) -> void:
-	if not _session_host:
-		return
-	if multiplayer.get_remote_sender_id() != peer_id:
-		return
-	var player_node = _player_by_peer_id.get(peer_id, null)
-	if is_instance_valid(player_node) and player_node.has_method("apply_network_snapshot"):
-		var sanitized_snapshot := snapshot.duplicate(true)
-		# The host owns health authority; never let a client overwrite it locally.
-		sanitized_snapshot.erase("health")
-		player_node.call("apply_network_snapshot", sanitized_snapshot)
-
-@rpc("authority", "call_remote", "unreliable")
-func rpc_receive_player_snapshots(snapshots: Array) -> void:
-	if _session_host:
-		return
-	for entry_variant in snapshots:
-		if typeof(entry_variant) != TYPE_DICTIONARY:
-			continue
-		var entry: Dictionary = entry_variant
-		var peer_id := int(entry.get("peer_id", -1))
-		var player_node = _player_by_peer_id.get(peer_id, null)
-		if not is_instance_valid(player_node):
-			continue
-		var state: Dictionary = entry.get("state", {})
-		if peer_id == _local_peer_id:
-			if state.has("health") and player_node.has_method("apply_authoritative_health"):
-				player_node.call("apply_authoritative_health", int(state.get("health", 0)))
-			continue
-		if player_node.has_method("apply_network_snapshot"):
-			player_node.call("apply_network_snapshot", state)
 
 @rpc("any_peer", "reliable")
 func rpc_request_weapon_fire(peer_id: int, weapon_slot: int, weapon_key: String, cam_origin: Vector3, cam_forward: Vector3, shot_id: int) -> void:
@@ -1633,7 +1481,7 @@ func rpc_request_weapon_reload(peer_id: int, weapon_slot: int, weapon_key: Strin
 func rpc_sync_weapon_state(peer_id: int, slot_index: int, current_mag: int, ammo_snapshot: Dictionary) -> void:
 	if _local_peer_id != peer_id:
 		return
-	var local_player = _player_by_peer_id.get(_local_peer_id, null)
+	var local_player = NetworkPlayerManager.get_local_player()
 	if not is_instance_valid(local_player):
 		return
 	var manager: WeaponManager = local_player.get("weapon_manager")
@@ -1647,7 +1495,7 @@ func rpc_request_interaction(peer_id: int, target_path: String, target_pos: Vect
 		return
 	if multiplayer.get_remote_sender_id() != peer_id:
 		return
-	var interactor = _player_by_peer_id.get(peer_id, null)
+	var interactor = _get_player_node_for_peer(peer_id)
 	var target := get_node_or_null(NodePath(target_path))
 	target = _resolve_interaction_target(target)
 	if target == null:

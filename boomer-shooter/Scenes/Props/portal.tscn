@@ -1,0 +1,118 @@
+[gd_scene format=3 uid="uid://b5y4kr6d1rq34"]
+
+[ext_resource type="Script" uid="uid://bjequ2jmjvm0" path="res://Scripts/Props/portal.gd" id="1_portal"]
+[ext_resource type="Texture2D" uid="uid://i8gs3l313c1t" path="res://Assets/Environment/portal_spritesheet.png" id="2_nd2cl"]
+
+[sub_resource type="SphereShape3D" id="SphereShape_portal"]
+radius = 1.8
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3eer7"]
+atlas = ExtResource("2_nd2cl")
+region = Rect2(480, 0, 160, 160)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_yfavd"]
+atlas = ExtResource("2_nd2cl")
+region = Rect2(0, 160, 160, 160)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_uybl8"]
+atlas = ExtResource("2_nd2cl")
+region = Rect2(160, 160, 160, 160)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_f8ak6"]
+atlas = ExtResource("2_nd2cl")
+region = Rect2(320, 160, 160, 160)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_o6k6b"]
+atlas = ExtResource("2_nd2cl")
+region = Rect2(0, 320, 160, 160)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_q5d1n"]
+atlas = ExtResource("2_nd2cl")
+region = Rect2(160, 320, 160, 160)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_dhkij"]
+atlas = ExtResource("2_nd2cl")
+region = Rect2(320, 320, 160, 160)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_05tv6"]
+atlas = ExtResource("2_nd2cl")
+region = Rect2(480, 320, 160, 160)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_16ui6"]
+atlas = ExtResource("2_nd2cl")
+region = Rect2(0, 480, 160, 160)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_e0shx"]
+atlas = ExtResource("2_nd2cl")
+region = Rect2(160, 480, 160, 160)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_8rv4q"]
+atlas = ExtResource("2_nd2cl")
+region = Rect2(320, 480, 160, 160)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_r0lek"]
+atlas = ExtResource("2_nd2cl")
+region = Rect2(480, 480, 160, 160)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_sf1jd"]
+animations = [{
+"frames": [],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3eer7")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_yfavd")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_uybl8")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_f8ak6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_o6k6b")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_q5d1n")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_dhkij")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_05tv6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_16ui6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_e0shx")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_8rv4q")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_r0lek")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 12.0
+}]
+
+[node name="Portal" type="Area3D" unique_id=963420516]
+collision_mask = 2
+script = ExtResource("1_portal")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=2009306818]
+shape = SubResource("SphereShape_portal")
+
+[node name="AnimatedSprite3D" type="AnimatedSprite3D" parent="." unique_id=95409308]
+pixel_size = 0.02
+alpha_cut = 1
+sprite_frames = SubResource("SpriteFrames_sf1jd")
+animation = &"idle"
+frame_progress = 0.5631646

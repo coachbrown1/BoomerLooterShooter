@@ -20,6 +20,7 @@ config/icon="res://icon.svg"
 
 NetworkSession="*res://Scripts/Networking/network_session.gd"
 NetSession="*res://Scripts/Networking/network_session.gd"
+NetworkPlayerManager="*res://Scripts/Networking/network_player_manager.gd"
 GlobalEventBus="*res://Scripts/Systems/event_bus.gd"
 
 [display]

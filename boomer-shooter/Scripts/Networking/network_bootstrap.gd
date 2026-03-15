@@ -1,11 +1,13 @@
 extends Node
 
 const DUNGEON_SCENE_PATH := "res://Scenes/World/dungeon.tscn"
+const HUB_SCENE_PATH     := "res://Scenes/World/hub.tscn"
 const DEFAULT_PORT_FALLBACK := 7000
 const ARG_ROLE := "--net-role"
 const ARG_HOST := "--net-host"
 const ARG_PORT := "--net-port"
 const ARG_AUTO_START := "--net-auto-start"
+const ARG_VERIFY_SCENARIO := "--verify-scenario"
 const VERSION_FALLBACK := "dev"
 const PUBLIC_IP_URL := "https://api.ipify.org"
 
@@ -182,9 +184,14 @@ func _on_match_started() -> void:
 	_change_to_dungeon()
 
 func _change_to_dungeon() -> void:
-	var err := get_tree().change_scene_to_file(DUNGEON_SCENE_PATH)
+	var scene_path := HUB_SCENE_PATH
+	# Keep verifier runs on the dungeon scene so the multiplayer harness can
+	# exercise the existing debug node and dungeon-specific scenarios.
+	if _is_verifier_run():
+		scene_path = DUNGEON_SCENE_PATH
+	var err := get_tree().change_scene_to_file(scene_path)
 	if err != OK:
-		_set_status("Failed to load dungeon (error %d)." % err)
+		_set_status("Failed to load scene (error %d)." % err)
 
 func _apply_release_metadata() -> void:
 	var version := String(ProjectSettings.get_setting("application/config/version", VERSION_FALLBACK))
@@ -409,3 +416,6 @@ func _parse_automation_args(args: PackedStringArray) -> Dictionary:
 	if not out.has("auto_start"):
 		out["auto_start"] = false
 	return out
+
+func _is_verifier_run() -> bool:
+	return OS.get_cmdline_user_args().has(ARG_VERIFY_SCENARIO)
