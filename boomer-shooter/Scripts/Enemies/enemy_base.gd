@@ -491,24 +491,66 @@ func _spawn_death_effects() -> void:
 
 func _maybe_spawn_loot() -> void:
 	var drop_origin := global_position + Vector3.UP * (actual_height * 0.5)
-	var drop_index := 0
 	var seed_val := hash(str(global_position) + str(Time.get_ticks_msec()))
 	var players := _get_valid_players()
+	var loot_roll := _roll_drop_entry(seed_val, players)
+	if loot_roll.is_empty():
+		return
+	_spawn_drop_entry(loot_roll, drop_origin, seed_val, players)
 
-	if randf() <= loot_drop_chance:
-		var catalog := load("res://Data/gear/gear_catalog.tres") as GearCatalogData
-		if catalog != null:
+func _roll_drop_entry(seed_val: int, players: Array[Node]) -> Dictionary:
+	var weighted_entries: Array[Dictionary] = []
+	var total_weight := 0.0
+
+	if loot_drop_chance > 0.0:
+		weighted_entries.append({
+			"type": "item",
+			"weight": loot_drop_chance
+		})
+		total_weight += loot_drop_chance
+
+	if _party_needs_ammo(players) and ammo_drop_chance > 0.0:
+		weighted_entries.append({
+			"type": "ammo",
+			"weight": ammo_drop_chance
+		})
+		total_weight += ammo_drop_chance
+
+	if _party_needs_health(players) and health_drop_chance > 0.0:
+		weighted_entries.append({
+			"type": "health",
+			"weight": health_drop_chance
+		})
+		total_weight += health_drop_chance
+
+	if weighted_entries.is_empty():
+		return {}
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_val ^ 0x1b873593
+	var roll := rng.randf_range(0.0, total_weight)
+	var running := 0.0
+	for entry in weighted_entries:
+		running += float(entry.get("weight", 0.0))
+		if roll <= running:
+			return entry.duplicate(true)
+	return weighted_entries[weighted_entries.size() - 1].duplicate(true)
+
+func _spawn_drop_entry(entry: Dictionary, drop_origin: Vector3, seed_val: int, players: Array[Node]) -> void:
+	var drop_type := String(entry.get("type", ""))
+	match drop_type:
+		"item":
+			var catalog := load("res://Data/gear/gear_catalog.tres") as GearCatalogData
+			if catalog == null:
+				return
 			var items := catalog.create_random_items(1, seed_val)
-			if not items.is_empty():
-				_spawn_pickup(items[0], drop_origin, drop_index)
-				drop_index += 1
-
-	if _party_needs_ammo(players) and randf() <= ammo_drop_chance:
-		if _spawn_ammo_pickup(drop_origin, drop_index, seed_val, players):
-			drop_index += 1
-
-	if _party_needs_health(players) and randf() <= health_drop_chance:
-		_spawn_health_pickup(drop_origin, drop_index)
+			if items.is_empty():
+				return
+			_spawn_pickup(items[0], drop_origin, 0)
+		"ammo":
+			_spawn_ammo_pickup(drop_origin, 0, seed_val, players)
+		"health":
+			_spawn_health_pickup(drop_origin, 0)
 
 func _spawn_pickup(item: InventoryItemData, drop_origin: Vector3, drop_index: int) -> void:
 	if item == null:
