@@ -39,6 +39,7 @@ fire_rate = 1.0
 ammo_type = "arrows"
 mag_size = 1
 reload_time = 0.5
+infinite_reserve_ammo = true
 is_projectile = true
 projectile_scene = ExtResource("5_arrow")
 ejects_shells = false

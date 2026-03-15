@@ -95,25 +95,14 @@ func _explode() -> void:
 		var collider = result.collider
 		if not is_instance_valid(collider):
 			continue
-			
-		# Find the actual entity to damage
-		var target_entity: Node = null
-		if collider is HitboxComponent:
-			# Resolve to parent so CharacterBody3D + HitboxComponent hits for the same
-			# enemy both map to the same node, preventing double-damage from one explosion.
-			var parent = collider.get_parent()
-			target_entity = parent if (parent and parent.has_method("take_damage")) else collider
-		elif collider.has_method("take_damage"):
-			target_entity = collider
-		elif collider.get_parent() and collider.get_parent().has_method("take_damage"):
-			target_entity = collider.get_parent()
-			
+
+		var target_entity := _resolve_damage_target(collider)
 		if target_entity and target_entity not in damaged_entities:
 			# Skip damaging the shooter
 			if shooter and (target_entity == shooter or shooter.is_ancestor_of(target_entity)):
 				continue
-				
-			target_entity.take_damage(explosion_damage)
+
+			_apply_damage_to_target(target_entity, explosion_damage)
 			damaged_entities.append(target_entity)
 
 func _on_area_entered(area: Area3D) -> void:
@@ -125,13 +114,9 @@ func _on_area_entered(area: Area3D) -> void:
 		_trigger_impact()
 		return
 
-	if area is HitboxComponent or area.has_method("take_damage"):
-		# Apply direct hit damage
-		if area.has_method("take_damage"):
-			area.take_damage(damage)
-		elif area is HitboxComponent and area.health_component:
-			area.health_component.take_damage(damage)
-			
+	var target_entity := _resolve_damage_target(area)
+	if target_entity != null:
+		_apply_damage_to_target(target_entity, damage)
 		_trigger_impact()
 
 func _on_body_entered(body: Node3D) -> void:
@@ -143,14 +128,34 @@ func _on_body_entered(body: Node3D) -> void:
 		_trigger_impact()
 		return
 
-	if body.is_in_group("player"):
-		if body.has_method("take_damage"):
-			body.take_damage(damage)
-		_trigger_impact()
-	elif body is CharacterBody3D:
-		# Direct hit on enemy body
-		if body.has_method("take_damage"):
-			body.take_damage(damage)
+	var target_entity := _resolve_damage_target(body)
+	if target_entity != null:
+		_apply_damage_to_target(target_entity, damage)
 		_trigger_impact()
 	elif body is StaticBody3D or body is CSGBox3D or body is GridMap: # Walls/floor
 		_trigger_impact()
+
+func _resolve_damage_target(collider: Node) -> Node:
+	var current: Node = collider
+	while current != null:
+		if current is HitboxComponent:
+			var hitbox: HitboxComponent = current
+			var owner_node := hitbox.get_parent()
+			if owner_node != null and owner_node.has_method("take_damage"):
+				return owner_node
+			return hitbox
+		if current.has_method("take_damage"):
+			return current
+		current = current.get_parent()
+	return null
+
+func _apply_damage_to_target(target: Node, amount: int) -> void:
+	if target == null:
+		return
+	if target is HitboxComponent:
+		var hitbox: HitboxComponent = target
+		if hitbox.health_component != null:
+			hitbox.health_component.take_damage(amount)
+		return
+	if target.has_method("take_damage"):
+		target.take_damage(amount)

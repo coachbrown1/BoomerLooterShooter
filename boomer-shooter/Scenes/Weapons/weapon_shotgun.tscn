@@ -38,7 +38,8 @@ fire_rate = 0.8
 ammo_type = "shells"
 mag_size = 2
 pellet_count = 8
-spread_angle = 8.0
+spread_angle = 18.0
+ray_range = 18.0
 muzzle_2d_offset = Vector2(0, -200)
 muzzle_2d_scale = 0.4
 

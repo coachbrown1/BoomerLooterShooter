@@ -2,6 +2,13 @@ extends Area3D
 class_name LootPickup
 
 var item_data: InventoryItemData = null
+var ammo_type: String = ""
+var ammo_amount: int = 0
+var ammo_display_name: String = ""
+var ammo_icon_path: String = ""
+var health_amount: int = 0
+var health_display_name: String = ""
+var health_icon_path: String = ""
 
 const HOVER_AMPLITUDE := 0.07
 const HOVER_SPEED := 2.2
@@ -25,11 +32,23 @@ func _ready() -> void:
 	shape_node.shape = sphere
 	add_child(shape_node)
 
-	if item_data != null:
+	if item_data != null or _is_ammo_pickup() or _is_health_pickup():
 		_apply_icon()
 
 func _apply_icon() -> void:
-	if _sprite == null or item_data == null:
+	if _sprite == null:
+		return
+	if _is_health_pickup():
+		if not health_icon_path.is_empty() and ResourceLoader.exists(health_icon_path):
+			_sprite.texture = load(health_icon_path)
+		_sprite.modulate = Color("ff6b7d")
+		return
+	if _is_ammo_pickup():
+		if not ammo_icon_path.is_empty() and ResourceLoader.exists(ammo_icon_path):
+			_sprite.texture = load(ammo_icon_path)
+		_sprite.modulate = _get_ammo_color()
+		return
+	if item_data == null:
 		return
 	var tex: Texture2D = item_data.item_icon
 	if tex == null and not item_data.item_icon_path.is_empty():
@@ -81,6 +100,21 @@ func _process(delta: float) -> void:
 		_sprite.rotation.y += ROTATE_SPEED * delta
 
 func interact(interactor: Node) -> void:
+	if _is_health_pickup():
+		if interactor == null or not interactor.has_method("heal"):
+			return
+		if int(interactor.get("current_health")) >= int(interactor.get("max_health")):
+			return
+		interactor.call("heal", health_amount)
+		queue_free()
+		return
+	if _is_ammo_pickup():
+		var manager: WeaponManager = interactor.get("weapon_manager") as WeaponManager
+		if manager == null or ammo_type.is_empty() or ammo_amount <= 0:
+			return
+		manager.add_ammo(ammo_type, ammo_amount)
+		queue_free()
+		return
 	if item_data == null:
 		queue_free()
 		return
@@ -91,6 +125,65 @@ func interact(interactor: Node) -> void:
 		queue_free()
 
 func get_item_snapshot() -> Dictionary:
+	if _is_health_pickup():
+		return {
+			"display_name": _get_health_display_name(),
+			"category": "health",
+			"health_amount": health_amount,
+			"icon_path": health_icon_path,
+			"rarity": ""
+		}
+	if _is_ammo_pickup():
+		return {
+			"display_name": _get_ammo_display_name(),
+			"category": "ammo",
+			"ammo_type": ammo_type,
+			"ammo_amount": ammo_amount,
+			"icon_path": ammo_icon_path,
+			"rarity": ""
+		}
 	if item_data == null:
 		return {}
 	return item_data.to_dict()
+
+func configure_ammo_pickup(new_ammo_type: String, new_ammo_amount: int, new_display_name: String, new_icon_path: String) -> void:
+	ammo_type = new_ammo_type
+	ammo_amount = new_ammo_amount
+	ammo_display_name = new_display_name
+	ammo_icon_path = new_icon_path
+	if _sprite != null:
+		_apply_icon()
+
+func configure_health_pickup(new_health_amount: int, new_display_name: String, new_icon_path: String) -> void:
+	health_amount = new_health_amount
+	health_display_name = new_display_name
+	health_icon_path = new_icon_path
+	if _sprite != null:
+		_apply_icon()
+
+func _is_ammo_pickup() -> bool:
+	return not ammo_type.is_empty() and ammo_amount > 0
+
+func _is_health_pickup() -> bool:
+	return health_amount > 0
+
+func _get_ammo_display_name() -> String:
+	if not ammo_display_name.is_empty():
+		return ammo_display_name
+	return "%s Ammo" % ammo_type.capitalize()
+
+func _get_health_display_name() -> String:
+	if not health_display_name.is_empty():
+		return health_display_name
+	return "Health Pickup"
+
+func _get_ammo_color() -> Color:
+	match ammo_type:
+		"energy":
+			return Color("ffd84d")
+		"shells":
+			return Color("ff8f59")
+		"light":
+			return Color("9dd6ff")
+		_:
+			return Color.WHITE

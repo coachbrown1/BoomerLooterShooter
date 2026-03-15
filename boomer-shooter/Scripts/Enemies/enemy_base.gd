@@ -423,8 +423,35 @@ func background_damage_flash() -> void:
 const BLOOD_PARTICLES_SCENE = preload("res://Scenes/Effects/blood_particles.tscn")
 const ENEMY_GIB_SCENE = preload("res://Scenes/Effects/enemy_gib.tscn")
 const LOOT_PICKUP_SCENE = preload("res://Scenes/Props/loot_pickup.tscn")
+const AMMO_DROP_DEFINITIONS := [
+	{
+		"ammo_type": "light",
+		"amount_range": Vector2i(10, 20),
+		"display_name": "Rifle Ammo",
+		"icon_path": "res://Assets/Pickups/pickup_rifle_ammo.png"
+	},
+	{
+		"ammo_type": "shells",
+		"amount_range": Vector2i(4, 8),
+		"display_name": "Shotgun Shells",
+		"icon_path": "res://Assets/Pickups/pickup_shells_ammo.png"
+	},
+	{
+		"ammo_type": "energy",
+		"amount_range": Vector2i(1, 3),
+		"display_name": "Energy Cells",
+		"icon_path": "res://Assets/Pickups/pickup_energy_ammo.png"
+	}
+]
+const HEALTH_DROP_DEFINITION := {
+	"health_amount_range": Vector2i(12, 30),
+	"display_name": "Health Orb",
+	"icon_path": "res://Assets/Pickups/pickup_health_orb.png"
+}
 
 @export var loot_drop_chance: float = 0.35
+@export var ammo_drop_chance: float = 0.45
+@export var health_drop_chance: float = 0.3
 
 func _on_died() -> void:
 	current_state = State.DEAD
@@ -463,17 +490,130 @@ func _spawn_death_effects() -> void:
 		gib.global_position = spawn_pos + Vector3(randf_range(-0.3, 0.3), randf_range(0.1, 0.5), randf_range(-0.3, 0.3))
 
 func _maybe_spawn_loot() -> void:
-	if randf() > loot_drop_chance:
-		return
-	var catalog := load("res://Data/gear/gear_catalog.tres") as GearCatalogData
-	if catalog == null:
-		return
+	var drop_origin := global_position + Vector3.UP * (actual_height * 0.5)
+	var drop_index := 0
 	var seed_val := hash(str(global_position) + str(Time.get_ticks_msec()))
-	var items := catalog.create_random_items(1, seed_val)
-	if items.is_empty():
+	var players := _get_valid_players()
+
+	if randf() <= loot_drop_chance:
+		var catalog := load("res://Data/gear/gear_catalog.tres") as GearCatalogData
+		if catalog != null:
+			var items := catalog.create_random_items(1, seed_val)
+			if not items.is_empty():
+				_spawn_pickup(items[0], drop_origin, drop_index)
+				drop_index += 1
+
+	if _party_needs_ammo(players) and randf() <= ammo_drop_chance:
+		if _spawn_ammo_pickup(drop_origin, drop_index, seed_val, players):
+			drop_index += 1
+
+	if _party_needs_health(players) and randf() <= health_drop_chance:
+		_spawn_health_pickup(drop_origin, drop_index)
+
+func _spawn_pickup(item: InventoryItemData, drop_origin: Vector3, drop_index: int) -> void:
+	if item == null:
 		return
 	var pickup := LOOT_PICKUP_SCENE.instantiate()
-	pickup.set("item_data", items[0])
+	pickup.set("item_data", item)
 	get_tree().current_scene.add_child(pickup)
-	var dir := Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0)).normalized()
-	pickup.call("launch", global_position + Vector3.UP * (actual_height * 0.5), dir)
+	pickup.call("launch", drop_origin, _random_drop_direction(drop_index))
+
+func _spawn_ammo_pickup(drop_origin: Vector3, drop_index: int, seed_val: int, players: Array[Node]) -> bool:
+	var definition: Dictionary = _select_ammo_drop_definition(seed_val, players)
+	if definition.is_empty():
+		return false
+	var pickup := LOOT_PICKUP_SCENE.instantiate()
+	var amount_range: Vector2i = definition.get("amount_range", Vector2i.ONE)
+	pickup.call(
+		"configure_ammo_pickup",
+		String(definition.get("ammo_type", "")),
+		randi_range(amount_range.x, amount_range.y),
+		String(definition.get("display_name", "Ammo")),
+		String(definition.get("icon_path", ""))
+	)
+	get_tree().current_scene.add_child(pickup)
+	pickup.call("launch", drop_origin, _random_drop_direction(drop_index))
+	return true
+
+func _spawn_health_pickup(drop_origin: Vector3, drop_index: int) -> void:
+	var pickup := LOOT_PICKUP_SCENE.instantiate()
+	var amount_range: Vector2i = HEALTH_DROP_DEFINITION.get("health_amount_range", Vector2i(10, 20))
+	pickup.call(
+		"configure_health_pickup",
+		randi_range(amount_range.x, amount_range.y),
+		String(HEALTH_DROP_DEFINITION.get("display_name", "Health Pickup")),
+		String(HEALTH_DROP_DEFINITION.get("icon_path", ""))
+	)
+	get_tree().current_scene.add_child(pickup)
+	pickup.call("launch", drop_origin, _random_drop_direction(drop_index))
+
+func _select_ammo_drop_definition(seed_val: int, players: Array[Node]) -> Dictionary:
+	var available: Array[Dictionary] = []
+	var eligible_ammo_types := _get_party_eligible_ammo_types(players)
+	for definition_variant in AMMO_DROP_DEFINITIONS:
+		if typeof(definition_variant) != TYPE_DICTIONARY:
+			continue
+		var definition: Dictionary = definition_variant
+		var ammo_type := String(definition.get("ammo_type", ""))
+		if ammo_type == "arrows" or not eligible_ammo_types.has(ammo_type):
+			continue
+		available.append(definition)
+	if available.is_empty():
+		return {}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_val ^ 0x5f3759df
+	return (available[rng.randi_range(0, available.size() - 1)] as Dictionary).duplicate(true)
+
+func _random_drop_direction(drop_index: int) -> Vector3:
+	var angle := randf_range(0.0, TAU) + (float(drop_index) * 0.8)
+	return Vector3(cos(angle), 0.0, sin(angle)).normalized()
+
+func _get_valid_players() -> Array[Node]:
+	var results: Array[Node] = []
+	for player_variant in get_tree().get_nodes_in_group("player"):
+		if player_variant is Node and is_instance_valid(player_variant):
+			results.append(player_variant)
+	return results
+
+func _party_needs_health(players: Array[Node]) -> bool:
+	for player in players:
+		var current_health := int(player.get("current_health"))
+		var max_health := int(player.get("max_health"))
+		if current_health > 0 and current_health < max_health:
+			return true
+	return false
+
+func _party_needs_ammo(players: Array[Node]) -> bool:
+	return not _get_party_eligible_ammo_types(players).is_empty()
+
+func _get_party_eligible_ammo_types(players: Array[Node]) -> Array[String]:
+	var eligible: Array[String] = []
+	for player in players:
+		var inventory: InventorySystem = player.get("inventory_system") as InventorySystem
+		var manager: WeaponManager = player.get("weapon_manager") as WeaponManager
+		if inventory == null or manager == null:
+			continue
+		for item_variant in inventory.weapons:
+			if item_variant == null:
+				continue
+			var item: InventoryItemData = item_variant
+			var weapon_key := String(item.weapon_key)
+			if weapon_key.is_empty():
+				continue
+			var ammo_type := _get_ammo_type_for_weapon_key(manager, weapon_key)
+			if ammo_type.is_empty() or ammo_type == "none" or ammo_type == "arrows":
+				continue
+			if not eligible.has(ammo_type):
+				eligible.append(ammo_type)
+	return eligible
+
+func _get_ammo_type_for_weapon_key(manager: WeaponManager, weapon_key: String) -> String:
+	if manager == null:
+		return ""
+	for weapon in manager.weapons:
+		if weapon == null:
+			continue
+		if manager.get_weapon_key_for_weapon(weapon) != weapon_key:
+			continue
+		return weapon.ammo_type
+	return ""

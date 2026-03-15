@@ -22,10 +22,10 @@ var _equipment_stats: Dictionary = {}
 # "energy" is for plasma/fireball
 # "arrows" is for crossbow
 var ammo_inventory: Dictionary = {
-	"light": 100,
+	"light": 60,
 	"shells": 20,
-	"energy": 50,
-	"arrows": 15
+	"energy": 5,
+	"arrows": 0
 }
 
 signal ammo_changed(current, reserve, type)
@@ -142,7 +142,8 @@ func _update_hud() -> void:
 				current_weapon.current_mag,
 				displayed_mag_size,
 				get_ammo(current_weapon.ammo_type),
-				current_weapon.ammo_type == "none"
+				current_weapon.ammo_type == "none",
+				current_weapon.has_infinite_reserve_ammo() if current_weapon.has_method("has_infinite_reserve_ammo") else false
 			)
 
 func set_inventory_system(inventory: InventorySystem) -> void:
@@ -193,6 +194,7 @@ func apply_equipment_stats(stats: Dictionary) -> void:
 			continue
 		if weapon.has_method("set_equipment_stats"):
 			weapon.set_equipment_stats(_equipment_stats)
+	_refresh_weapon_item_stats()
 
 func get_current_weapon_slot() -> int:
 	return current_weapon_index
@@ -258,6 +260,8 @@ func _on_weapon_slots_changed(weapon_items: Array) -> void:
 		var weapon: Weapon = _weapon_key_to_weapon.get(key)
 		_slot_weapons[i] = weapon
 
+	_refresh_weapon_item_stats()
+
 	if current_weapon != null:
 		var mapped_index := _find_slot_index_for_weapon(current_weapon)
 		if mapped_index == -1:
@@ -279,6 +283,24 @@ func _on_weapon_slots_changed(weapon_items: Array) -> void:
 
 	_select_first_available_weapon()
 	_update_hud()
+
+func _refresh_weapon_item_stats() -> void:
+	var stats_by_key: Dictionary = {}
+	if inventory_system != null:
+		for item_variant in inventory_system.weapons:
+			if item_variant == null:
+				continue
+			var item: InventoryItemData = item_variant
+			var weapon_key := String(item.weapon_key)
+			if weapon_key.is_empty():
+				continue
+			stats_by_key[weapon_key] = item.get_total_stats()
+
+	for weapon in weapons:
+		if weapon == null or not weapon.has_method("set_weapon_item_stats"):
+			continue
+		var key := get_weapon_key_for_weapon(weapon)
+		weapon.call("set_weapon_item_stats", stats_by_key.get(key, {}))
 
 func _sync_default_slot_weapons() -> void:
 	_slot_weapons.resize(4)

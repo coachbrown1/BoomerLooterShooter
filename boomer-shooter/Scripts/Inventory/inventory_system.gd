@@ -18,6 +18,7 @@ const STARTER_GEAR_IDS: Array[StringName] = [
 	&"legs_raider_greaves_common",
 	&"feet_strider_boots_common"
 ]
+const STARTER_WEAPON_KEY: StringName = &"crossbow"
 
 signal inventory_changed(snapshot: Dictionary)
 signal weapon_slots_changed(weapon_items: Array)
@@ -58,17 +59,9 @@ func initialize_with_weapon_manager(manager: WeaponManager) -> void:
 	if _weapon_manager == null:
 		return
 
-	var live_weapons: Array = _weapon_manager.get_weapons()
-	for i in range(min(live_weapons.size(), WEAPON_SLOT_COUNT)):
-		var weapon: Weapon = live_weapons[i]
-		if weapon == null:
-			continue
-		var item := InventoryItemData.new()
-		item.item_id = StringName("weapon_%s" % _normalize_weapon_name(weapon.weapon_name))
-		item.display_name = weapon.weapon_name
-		item.category = &"weapon"
-		item.weapon_key = StringName(_weapon_manager.get_weapon_key_for_weapon(weapon))
-		weapons[i] = item
+	var starter_weapon := _create_weapon_item(STARTER_WEAPON_KEY, "Common")
+	if starter_weapon != null:
+		weapons[0] = starter_weapon
 
 	_seed_starter_gear_if_needed()
 
@@ -101,6 +94,32 @@ func get_slot_snapshot() -> Dictionary:
 		"chest_name": get_active_chest_name()
 	}
 
+## Restores inventory state from a snapshot produced by get_slot_snapshot().
+func apply_slot_snapshot(snapshot: Dictionary) -> void:
+	if snapshot.is_empty():
+		return
+
+	var equip_data: Dictionary = snapshot.get("equipment", {})
+	for slot_name in EQUIPMENT_SLOT_NAMES:
+		var raw: Variant = equip_data.get(String(slot_name), null)
+		equipment[slot_name] = InventoryItemData.from_dict(raw) if raw is Dictionary else null
+
+	var weapon_data: Array = snapshot.get("weapons", [])
+	weapons.resize(WEAPON_SLOT_COUNT)
+	for i in range(WEAPON_SLOT_COUNT):
+		var raw: Variant = weapon_data[i] if i < weapon_data.size() else null
+		weapons[i] = InventoryItemData.from_dict(raw) if raw is Dictionary else null
+
+	var storage_data: Array = snapshot.get("storage", [])
+	storage.resize(STORAGE_SLOT_COUNT)
+	for i in range(STORAGE_SLOT_COUNT):
+		var raw: Variant = storage_data[i] if i < storage_data.size() else null
+		storage[i] = InventoryItemData.from_dict(raw) if raw is Dictionary else null
+
+	_emit_inventory_changed()
+	_emit_weapon_slots_changed()
+	_emit_equipment_stats_changed()
+
 func try_move_item(from_slot: SlotRef, to_slot: SlotRef) -> bool:
 	if not _is_valid_slot(from_slot) or not _is_valid_slot(to_slot):
 		return false
@@ -115,6 +134,10 @@ func try_move_item(from_slot: SlotRef, to_slot: SlotRef) -> bool:
 
 	var destination_item: InventoryItemData = _get_item(to_slot)
 	if destination_item != null and not _can_place_item_in_slot(destination_item, from_slot):
+		return false
+	if not _can_assign_weapon_after_move(source_item, from_slot, to_slot):
+		return false
+	if destination_item != null and not _can_assign_weapon_after_move(destination_item, to_slot, from_slot):
 		return false
 
 	_set_item(to_slot, source_item)
@@ -313,6 +336,39 @@ func try_add_to_storage(item: InventoryItemData) -> bool:
 			_emit_inventory_changed()
 			return true
 	return false
+
+func _create_weapon_item(weapon_key: StringName, rarity: String) -> InventoryItemData:
+	if gear_catalog != null:
+		return gear_catalog.create_weapon_item(weapon_key, rarity)
+	var item := InventoryItemData.new()
+	item.item_id = StringName("weapon_%s_%s" % [String(weapon_key), rarity.to_lower()])
+	item.display_name = String(weapon_key).capitalize()
+	item.category = &"weapon"
+	item.weapon_key = weapon_key
+	item.stats = {"rarity": rarity}
+	item.ensure_runtime_defaults()
+	return item
+
+func _can_assign_weapon_after_move(item: InventoryItemData, from_slot: SlotRef, to_slot: SlotRef) -> bool:
+	if item == null or item.category != &"weapon" or to_slot.section != &"weapons":
+		return true
+	var ignore_indices: Array[int] = []
+	if from_slot != null and from_slot.section == &"weapons":
+		ignore_indices.append(from_slot.index)
+	return _is_weapon_key_available_for_slot(String(item.weapon_key), to_slot.index, ignore_indices)
+
+func _is_weapon_key_available_for_slot(weapon_key: String, target_slot_index: int, ignore_indices: Array[int]) -> bool:
+	if weapon_key.is_empty():
+		return false
+	for i in range(weapons.size()):
+		if i == target_slot_index or ignore_indices.has(i):
+			continue
+		var slotted_item: InventoryItemData = weapons[i]
+		if slotted_item == null:
+			continue
+		if String(slotted_item.weapon_key) == weapon_key:
+			return false
+	return true
 
 func _normalize_weapon_name(raw_name: String) -> String:
 	return raw_name.strip_edges().to_lower().replace(" ", "_")

@@ -1,31 +1,42 @@
 extends "res://addons/gut/test.gd"
 
 const InventorySystemScript = preload("res://Scripts/Inventory/inventory_system.gd")
+const WeaponManagerScript = preload("res://Scripts/Weapons/weapon_manager.gd")
 
 const CATALOG_PATH := "res://Data/gear/gear_catalog.tres"
 const EXPECTED_RARITIES := ["Common", "Uncommon", "Rare", "Epic", "Legendary"]
 const EXPECTED_WEAPON_KEYS := ["rifle", "shotgun", "crossbow", "fireball"]
 const EXPECTED_AMMO_KEYS := ["shells", "arrows", "energy"]
+const EXPECTED_ARMOR_ITEM_COUNT := 75
+const EXPECTED_WEAPON_ITEM_COUNT := 20
 
 func test_gear_catalog_loads_with_expected_item_count() -> void:
 	var catalog = load(CATALOG_PATH)
 	assert_not_null(catalog)
 	assert_eq(catalog.lines.size(), 15)
-	assert_eq(catalog.get_all_items().size(), 75)
+	assert_eq(catalog.get_all_items().size(), EXPECTED_ARMOR_ITEM_COUNT + EXPECTED_WEAPON_ITEM_COUNT)
 
-func test_every_item_uses_valid_slot_and_armor_category() -> void:
+func test_every_item_uses_valid_slot_and_category() -> void:
 	var catalog = load(CATALOG_PATH)
 	var valid_slots: Array = InventorySystemScript.EQUIPMENT_SLOT_NAMES
 	for line in catalog.lines:
 		assert_not_null(line)
 		assert_true(valid_slots.has(line.slot_name), "Unexpected line slot on %s" % line.piece_name)
 		assert_eq(line.variants.size(), EXPECTED_RARITIES.size())
+	var weapon_count := 0
 	for item in catalog.get_all_items():
 		assert_not_null(item)
-		assert_eq(item.category, &"armor")
-		assert_true(valid_slots.has(item.equipment_slot), "Unexpected slot on %s" % item.display_name)
+		if item.category == &"armor":
+			assert_true(valid_slots.has(item.equipment_slot), "Unexpected slot on %s" % item.display_name)
+		elif item.category == &"weapon":
+			weapon_count += 1
+			assert_true(EXPECTED_WEAPON_KEYS.has(String(item.weapon_key)), "Unexpected weapon key on %s" % item.display_name)
+			assert_eq(item.equipment_slot, StringName(""))
+		else:
+			fail_test("Unexpected category on %s: %s" % [item.display_name, String(item.category)])
 		assert_true(item.stats.has("rarity"), "Missing rarity on %s" % item.display_name)
 		assert_ne(String(item.to_dict().get("icon_path", "")), "", "Missing icon path on %s" % item.display_name)
+	assert_eq(weapon_count, EXPECTED_WEAPON_ITEM_COUNT)
 
 func test_each_lineage_has_five_rarity_variants_with_non_decreasing_stats() -> void:
 	var catalog = load(CATALOG_PATH)
@@ -178,3 +189,43 @@ func test_generated_items_use_implicits_and_random_affixes() -> void:
 
 	assert_true(saw_affixed_item)
 	assert_true(saw_different_rolls)
+
+func test_weapon_lineages_cover_all_rarities() -> void:
+	var catalog = load(CATALOG_PATH)
+	var weapon_items_by_key := {}
+	for item in catalog.get_all_items():
+		if item.category != &"weapon":
+			continue
+		var weapon_key := String(item.weapon_key)
+		var rarity := String(item.stats.get("rarity", ""))
+		var rarity_map: Dictionary = weapon_items_by_key.get(weapon_key, {})
+		rarity_map[rarity] = item
+		weapon_items_by_key[weapon_key] = rarity_map
+
+	for weapon_key in EXPECTED_WEAPON_KEYS:
+		assert_true(weapon_items_by_key.has(weapon_key), "Missing weapon lineage for %s" % weapon_key)
+		var rarity_map: Dictionary = weapon_items_by_key.get(weapon_key, {})
+		assert_eq(rarity_map.size(), EXPECTED_RARITIES.size(), "Wrong rarity count for weapon %s" % weapon_key)
+		for rarity in EXPECTED_RARITIES:
+			assert_true(rarity_map.has(rarity), "Missing %s weapon rarity for %s" % [rarity, weapon_key])
+
+func test_random_loot_pool_includes_weapons() -> void:
+	var catalog = load(CATALOG_PATH)
+	var saw_weapon := false
+	for item in catalog.create_random_items(20, 424242):
+		if item != null and item.category == &"weapon":
+			saw_weapon = true
+			break
+	assert_true(saw_weapon)
+
+func test_inventory_starts_with_only_crossbow_equipped() -> void:
+	var inventory = autofree(InventorySystemScript.new())
+	var weapon_manager = autofree(WeaponManagerScript.new())
+	inventory.gear_catalog = load(CATALOG_PATH)
+	inventory._ready()
+	inventory.initialize_with_weapon_manager(weapon_manager)
+
+	assert_not_null(inventory.weapons[0])
+	assert_eq(String(inventory.weapons[0].weapon_key), "crossbow")
+	for i in range(1, inventory.weapons.size()):
+		assert_null(inventory.weapons[i], "Unexpected starter weapon in slot %d" % i)

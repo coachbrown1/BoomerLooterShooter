@@ -135,12 +135,14 @@ func update_ammo(ammo: int, max_ammo: int) -> void:
 	if ammo_label:
 		ammo_label.text = "Ammo: " + str(ammo) + " / " + str(max_ammo)
 
-func update_ammo_display(current_mag: int, mag_size: int, reserve: int, is_infinite: bool) -> void:
+func update_ammo_display(current_mag: int, mag_size: int, reserve: int, is_infinite: bool, has_infinite_reserve: bool = false) -> void:
 	if not is_node_ready():
 		await ready
 	if ammo_label:
 		if is_infinite:
 			ammo_label.text = "Ammo: \u221E / \u221E" # Infinity symbol
+		elif has_infinite_reserve:
+			ammo_label.text = "Ammo: %d / %d | \u221E" % [current_mag, mag_size]
 		else:
 			ammo_label.text = "Ammo: %d / %d | %d" % [current_mag, mag_size, reserve]
 	_configure_bottom_hud_layout()
@@ -700,6 +702,17 @@ func _build_item_tooltip(item_snapshot: Dictionary) -> String:
 		var weapon_key := String(item_snapshot.get("weapon_key", ""))
 		if not weapon_key.is_empty():
 			lines.append("Weapon: %s" % weapon_key.capitalize())
+	elif category == "ammo":
+		var ammo_type := String(item_snapshot.get("ammo_type", ""))
+		var ammo_amount := int(item_snapshot.get("ammo_amount", 0))
+		if not ammo_type.is_empty():
+			lines.append("Ammo Type: %s" % ammo_type.capitalize())
+		if ammo_amount > 0:
+			lines.append("Amount: +%d" % ammo_amount)
+	elif category == "health":
+		var health_amount := int(item_snapshot.get("health_amount", 0))
+		if health_amount > 0:
+			lines.append("Restore: +%d Health" % health_amount)
 
 	var implicit_stats: Dictionary = item_snapshot.get("implicit_stats", {})
 	var affixes: Array = item_snapshot.get("affixes", [])

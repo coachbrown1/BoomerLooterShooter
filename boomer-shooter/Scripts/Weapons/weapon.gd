@@ -11,6 +11,7 @@ class_name Weapon
 @export var ammo_type: String = "light" # "light", "shells", "energy", "arrows", "none"
 @export var mag_size: int = 30
 @export var reload_time: float = 1.0
+@export var infinite_reserve_ammo: bool = false
 var current_mag: int = 0
 var is_reloading: bool = false
 
@@ -42,6 +43,7 @@ var _next_fire_ready_time: float = 0.0
 var sprite_origin_z: float = 0.0
 var weapon_manager: WeaponManager = null
 var _equipment_stats: Dictionary = {}
+var _weapon_item_stats: Dictionary = {}
 var _base_damage: int = 0
 var _base_reload_time: float = 0.0
 var _base_spread_angle: float = 0.0
@@ -191,6 +193,13 @@ func set_equipment_stats(stats: Dictionary) -> void:
 	_equipment_stats = stats.duplicate(true)
 	current_mag = mini(current_mag, _get_effective_mag_size())
 
+func set_weapon_item_stats(stats: Dictionary) -> void:
+	_weapon_item_stats = stats.duplicate(true)
+	current_mag = mini(current_mag, _get_effective_mag_size())
+
+func has_infinite_reserve_ammo() -> bool:
+	return infinite_reserve_ammo
+
 func _capture_base_stats() -> void:
 	_base_damage = damage
 	_base_reload_time = reload_time
@@ -202,7 +211,7 @@ func _capture_base_stats() -> void:
 func can_reload() -> bool:
 	if ammo_type == "none" or is_reloading or current_mag >= _get_effective_mag_size():
 		return false
-	if weapon_manager and weapon_manager.get_ammo(ammo_type) <= 0:
+	if not infinite_reserve_ammo and weapon_manager and weapon_manager.get_ammo(ammo_type) <= 0:
 		return false
 	return true
 
@@ -239,10 +248,11 @@ func reload(request_authority: bool = true) -> void:
 		# Perform ammo math
 		tween.tween_callback(func():
 			var ammo_needed = _get_effective_mag_size() - current_mag
-			var reserve = weapon_manager.get_ammo(ammo_type)
-			var ammo_to_take = min(ammo_needed, reserve)
+			var reserve = INF if infinite_reserve_ammo else weapon_manager.get_ammo(ammo_type)
+			var ammo_to_take = ammo_needed if infinite_reserve_ammo else min(ammo_needed, int(reserve))
 
-			weapon_manager.consume_ammo(ammo_type, ammo_to_take)
+			if not infinite_reserve_ammo:
+				weapon_manager.consume_ammo(ammo_type, ammo_to_take)
 			current_mag += ammo_to_take
 
 			# Force HUD update
@@ -262,9 +272,10 @@ func perform_authoritative_reload() -> bool:
 		return false
 	is_reloading = false
 	var ammo_needed = _get_effective_mag_size() - current_mag
-	var reserve = weapon_manager.get_ammo(ammo_type)
-	var ammo_to_take = min(ammo_needed, reserve)
-	weapon_manager.consume_ammo(ammo_type, ammo_to_take)
+	var reserve = INF if infinite_reserve_ammo else weapon_manager.get_ammo(ammo_type)
+	var ammo_to_take = ammo_needed if infinite_reserve_ammo else min(ammo_needed, int(reserve))
+	if not infinite_reserve_ammo:
+		weapon_manager.consume_ammo(ammo_type, ammo_to_take)
 	current_mag += ammo_to_take
 	can_fire = true
 	return true
@@ -499,24 +510,24 @@ func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3, player_rid: RID, s
 func _get_effective_damage() -> int:
 	var exact_key := _get_exact_weapon_key()
 	var family_key := _get_damage_family_key(exact_key)
-	var additive_bonus := float(_equipment_stats.get("weapon_damage_add", 0.0))
-	var multiplicative_bonus := float(_equipment_stats.get("weapon_damage_mult", 0.0))
+	var additive_bonus := _get_stat_total("weapon_damage_add")
+	var multiplicative_bonus := _get_stat_total("weapon_damage_mult")
 
 	if not family_key.is_empty():
-		additive_bonus += float(_equipment_stats.get("%s_damage_add" % family_key, 0.0))
-		multiplicative_bonus += float(_equipment_stats.get("%s_damage_mult" % family_key, 0.0))
+		additive_bonus += _get_stat_total("%s_damage_add" % family_key)
+		multiplicative_bonus += _get_stat_total("%s_damage_mult" % family_key)
 	if not exact_key.is_empty():
-		additive_bonus += float(_equipment_stats.get("%s_damage_add" % exact_key, 0.0))
-		multiplicative_bonus += float(_equipment_stats.get("%s_damage_mult" % exact_key, 0.0))
+		additive_bonus += _get_stat_total("%s_damage_add" % exact_key)
+		multiplicative_bonus += _get_stat_total("%s_damage_mult" % exact_key)
 
 	return maxi(1, int(round((float(_base_damage) + additive_bonus) * (1.0 + multiplicative_bonus))))
 
 func _get_effective_reload_time() -> float:
-	var speed_bonus := maxf(0.0, float(_equipment_stats.get("reload_speed_mult", 0.0)))
+	var speed_bonus := maxf(0.0, _get_stat_total("reload_speed_mult"))
 	return maxf(0.1, _base_reload_time / (1.0 + speed_bonus))
 
 func _get_effective_spread_angle() -> float:
-	var spread_reduction := clampf(float(_equipment_stats.get("spread_reduction", 0.0)), 0.0, 0.95)
+	var spread_reduction := clampf(_get_stat_total("spread_reduction"), 0.0, 0.95)
 	return maxf(0.0, _base_spread_angle * (1.0 - spread_reduction))
 
 func get_effective_mag_size() -> int:
@@ -525,17 +536,20 @@ func get_effective_mag_size() -> int:
 func _get_effective_mag_size() -> int:
 	var exact_key := _get_exact_weapon_key()
 	var family_key := _get_damage_family_key(exact_key)
-	var additive_bonus := float(_equipment_stats.get("mag_size_add", 0.0))
-	var multiplicative_bonus := float(_equipment_stats.get("mag_size_mult", 0.0))
+	var additive_bonus := _get_stat_total("mag_size_add")
+	var multiplicative_bonus := _get_stat_total("mag_size_mult")
 
 	if not family_key.is_empty():
-		additive_bonus += float(_equipment_stats.get("%s_mag_size_add" % family_key, 0.0))
-		multiplicative_bonus += float(_equipment_stats.get("%s_mag_size_mult" % family_key, 0.0))
+		additive_bonus += _get_stat_total("%s_mag_size_add" % family_key)
+		multiplicative_bonus += _get_stat_total("%s_mag_size_mult" % family_key)
 	if not exact_key.is_empty():
-		additive_bonus += float(_equipment_stats.get("%s_mag_size_add" % exact_key, 0.0))
-		multiplicative_bonus += float(_equipment_stats.get("%s_mag_size_mult" % exact_key, 0.0))
+		additive_bonus += _get_stat_total("%s_mag_size_add" % exact_key)
+		multiplicative_bonus += _get_stat_total("%s_mag_size_mult" % exact_key)
 
 	return maxi(1, int(round((float(mag_size) + additive_bonus) * (1.0 + multiplicative_bonus))))
+
+func _get_stat_total(stat_key: String) -> float:
+	return float(_equipment_stats.get(stat_key, 0.0)) + float(_weapon_item_stats.get(stat_key, 0.0))
 
 func _get_exact_weapon_key() -> String:
 	if weapon_manager != null:

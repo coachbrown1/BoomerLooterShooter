@@ -160,6 +160,15 @@ func take_damage(amount: int) -> void:
 	if current_health <= 0:
 		print("Player Died!")
 
+func heal(amount: int) -> void:
+	if current_health <= 0 or amount <= 0:
+		return
+	current_health = mini(max_health, current_health + amount)
+	if _is_local_controlled:
+		var hud = _get_hud()
+		if hud:
+			hud.update_health(current_health)
+
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
