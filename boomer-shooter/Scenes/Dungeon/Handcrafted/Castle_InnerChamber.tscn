@@ -5,8 +5,7 @@
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/DungeonWallTile.tscn" id="4_wall_tile"]
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/DungeonFloorTile.tscn" id="5_floor_tile"]
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/HandcraftedEnemySpawner.tscn" id="6_enemy_spawner"]
-[ext_resource type="PackedScene" path="res://Scenes/Enemies/death_knight_boss.tscn" id="7_umd4n"]
-[ext_resource type="PackedScene" path="res://Scenes/Enemies/death_knight.tscn" id="8_umd4n"]
+[ext_resource type="PackedScene" uid="uid://cxltf3ak1243t" path="res://Scenes/Enemies/death_knight_boss.tscn" id="7_umd4n"]
 [ext_resource type="Script" uid="uid://t53xeyjn3fuq" path="res://Scripts/Dungeon/handcrafted_room_layout.gd" id="9_room_layout"]
 
 [node name="CastleInnerChamber" type="Node3D" unique_id=235771710]
@@ -230,4 +229,4 @@ enemy_scene = ExtResource("7_umd4n")
 
 [node name="EnemySpawnerArcher" parent="." unique_id=1305277284 instance=ExtResource("6_enemy_spawner")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -4.5)
-enemy_scene = ExtResource("8_umd4n")
+enemy_scene = ExtResource("7_umd4n")
