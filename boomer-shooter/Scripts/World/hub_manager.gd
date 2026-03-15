@@ -80,8 +80,21 @@ func _show_dungeon_config_menu() -> void:
 	var menu := DungeonConfigMenu.new()
 	add_child(menu)
 	menu.confirmed.connect(_on_dungeon_config_confirmed)
+	menu.cancelled.connect(_on_dungeon_config_cancelled)
+	var local := NetworkPlayerManager.get_local_player()
+	if is_instance_valid(local) and local.has_method("set_gameplay_input_enabled"):
+		local.call("set_gameplay_input_enabled", false)
+
+func _restore_player_input() -> void:
+	var local := NetworkPlayerManager.get_local_player()
+	if is_instance_valid(local) and local.has_method("set_gameplay_input_enabled"):
+		local.call("set_gameplay_input_enabled", true)
+
+func _on_dungeon_config_cancelled() -> void:
+	_restore_player_input()
 
 func _on_dungeon_config_confirmed(biome: String, grid_min: int, grid_max: int, seed_val: int) -> void:
+	_restore_player_input()
 	if _entering_dungeon:
 		return
 	GameState.dungeon_biome_override = biome

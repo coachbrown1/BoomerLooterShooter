@@ -3,9 +3,18 @@ extends CanvasLayer
 @onready var screen_fx = $ScreenFX
 @onready var _bottom_margin: MarginContainer = $MarginContainer
 @onready var _bottom_row: BoxContainer = $MarginContainer/HBoxContainer
-@onready var health_label = $MarginContainer/HBoxContainer/HealthLabel
-@onready var ammo_label = $MarginContainer/HBoxContainer/AmmoLabel
+@onready var health_label: Label = $MarginContainer/HBoxContainer/HealthRow/HealthLabel
+@onready var ammo_label: Label = $MarginContainer/HBoxContainer/AmmoRow/AmmoLabel
+@onready var _health_icon: TextureRect = $MarginContainer/HBoxContainer/HealthRow/HealthIcon
+@onready var _ammo_icon: TextureRect = $MarginContainer/HBoxContainer/AmmoRow/AmmoIcon
 const SLOT_BUTTON_SCRIPT = preload("res://Scripts/UI/inventory_slot_button.gd")
+const HUD_HEART_ICON := "res://Assets/Icons/UI/hud_heart_icon.png"
+const AMMO_ICON_PATHS: Dictionary = {
+	"light": "res://Assets/Pickups/pickup_rifle_ammo.png",
+	"shells": "res://Assets/Pickups/pickup_shells_ammo.png",
+	"energy": "res://Assets/Pickups/pickup_energy_ammo.png",
+	"arrows": "res://Assets/Icons/Weapons/icon_crossbow.png",
+}
 
 const EQUIPMENT_LABELS: Dictionary = {
 	&"helmet": "Helmet",
@@ -97,6 +106,7 @@ var _world_item_tooltip_label: Label = null
 func _ready() -> void:
 	# Print out a message so the user knows about the debug key
 	print("Debug: Press 'G' to toggle Screen Effects (Saturation/Vignette)")
+	_apply_hud_icons()
 	_ensure_session_role_label()
 	_ensure_teammate_health_label()
 	_configure_bottom_hud_layout()
@@ -127,24 +137,26 @@ func update_health(health: int) -> void:
 	if not is_node_ready():
 		await ready
 	if health_label:
-		health_label.text = "Health: " + str(health)
+		health_label.text = str(health)
 
-func update_ammo(ammo: int, max_ammo: int) -> void:
+func update_ammo(ammo: int, max_ammo: int, ammo_type: String = "light") -> void:
 	if not is_node_ready():
 		await ready
 	if ammo_label:
-		ammo_label.text = "Ammo: " + str(ammo) + " / " + str(max_ammo)
+		ammo_label.text = "%d / %d" % [ammo, max_ammo]
+	_update_ammo_icon(ammo_type)
 
-func update_ammo_display(current_mag: int, mag_size: int, reserve: int, is_infinite: bool, has_infinite_reserve: bool = false) -> void:
+func update_ammo_display(current_mag: int, mag_size: int, reserve: int, is_infinite: bool, has_infinite_reserve: bool = false, ammo_type: String = "light") -> void:
 	if not is_node_ready():
 		await ready
 	if ammo_label:
 		if is_infinite:
-			ammo_label.text = "Ammo: \u221E / \u221E" # Infinity symbol
+			ammo_label.text = "\u221E / \u221E" # Infinity symbol
 		elif has_infinite_reserve:
-			ammo_label.text = "Ammo: %d / %d | \u221E" % [current_mag, mag_size]
+			ammo_label.text = "%d / %d | \u221E" % [current_mag, mag_size]
 		else:
-			ammo_label.text = "Ammo: %d / %d | %d" % [current_mag, mag_size, reserve]
+			ammo_label.text = "%d / %d | %d" % [current_mag, mag_size, reserve]
+	_update_ammo_icon(ammo_type)
 	_configure_bottom_hud_layout()
 
 func _ensure_teammate_health_label() -> void:
@@ -163,7 +175,7 @@ func _ensure_teammate_health_label() -> void:
 
 	var insert_index := _bottom_row.get_child_count()
 	if ammo_label != null:
-		insert_index = ammo_label.get_index()
+		insert_index = ammo_label.get_parent().get_index()
 	_bottom_row.add_child(_teammate_health_label)
 	_bottom_row.move_child(_teammate_health_label, insert_index)
 
@@ -953,3 +965,31 @@ func _configure_bottom_hud_layout() -> void:
 	_bottom_margin.offset_right = 0.0
 	_bottom_margin.offset_bottom = -42.0
 	_bottom_margin.offset_top = _bottom_margin.offset_bottom - float(bar_height)
+
+func _apply_hud_icons() -> void:
+	if _health_icon != null:
+		var health_texture := _load_texture(HUD_HEART_ICON)
+		if health_texture != null:
+			_health_icon.texture = health_texture
+	if _ammo_icon != null and _ammo_icon.texture == null:
+		_update_ammo_icon("light")
+
+func _update_ammo_icon(ammo_type: String) -> void:
+	if _ammo_icon == null:
+		return
+	var normalized_type := ammo_type.strip_edges().to_lower()
+	if normalized_type == "none":
+		_ammo_icon.visible = false
+		return
+	var icon_path := String(AMMO_ICON_PATHS.get(normalized_type, AMMO_ICON_PATHS.get("light", "")))
+	var texture := _load_texture(icon_path)
+	if texture == null:
+		_ammo_icon.visible = false
+		return
+	_ammo_icon.texture = texture
+	_ammo_icon.visible = true
+
+func _load_texture(path: String) -> Texture2D:
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return null
+	return load(path) as Texture2D

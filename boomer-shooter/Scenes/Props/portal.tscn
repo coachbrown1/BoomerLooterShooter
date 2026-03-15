@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://i8gs3l313c1t" path="res://Assets/Environment/portal_spritesheet.png" id="2_nd2cl"]
 
 [sub_resource type="SphereShape3D" id="SphereShape_portal"]
-radius = 1.8
+radius = 0.8
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_3eer7"]
 atlas = ExtResource("2_nd2cl")

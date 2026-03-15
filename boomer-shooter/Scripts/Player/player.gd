@@ -36,6 +36,7 @@ var _network_target_yaw: float = 0.0
 var _network_target_pitch: float = 0.0
 var _has_network_snapshot: bool = false
 var _local_setup_complete: bool = false
+var _gameplay_input_enabled: bool = true
 
 const FULLSCREEN_TOGGLE_KEYS: Array[Key] = [KEY_F11]
 const WINDOWED_SIZE := Vector2i(1280, 720)
@@ -92,6 +93,11 @@ func set_network_peer_id(peer_id: int) -> void:
 
 func get_network_peer_id() -> int:
 	return network_peer_id
+
+func set_gameplay_input_enabled(enabled: bool) -> void:
+	_gameplay_input_enabled = enabled
+	if weapon_manager:
+		weapon_manager.set_input_enabled(enabled and _is_local_controlled)
 
 func is_local_controlled() -> bool:
 	return _is_local_controlled
@@ -177,7 +183,7 @@ func _input(event: InputEvent) -> void:
 			_toggle_window_mode()
 			return
 
-	if not _is_local_controlled:
+	if not _is_local_controlled or not _gameplay_input_enabled:
 		return
 	if event.is_action_pressed("inventory_toggle"):
 		if event is InputEventKey and (event as InputEventKey).echo:
@@ -218,19 +224,22 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 
-	if Input.is_action_just_pressed("interact") and not _is_inventory_open():
-		_try_interact()
+	if _gameplay_input_enabled:
+		if Input.is_action_just_pressed("interact") and not _is_inventory_open():
+			_try_interact()
 
-	if Input.is_action_just_pressed("jump") and is_on_floor() and not _is_inventory_open():
-		velocity.y = jump_velocity
+		if Input.is_action_just_pressed("jump") and is_on_floor() and not _is_inventory_open():
+			velocity.y = jump_velocity
 
-	var input_dir := Vector2.ZERO if _is_inventory_open() else Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var input_dir := Vector2.ZERO
+	if _gameplay_input_enabled and not _is_inventory_open():
+		input_dir = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
-	
+
 	var current_speed = move_speed
-	if Input.is_action_pressed("sprint") and not _is_inventory_open():
+	if _gameplay_input_enabled and Input.is_action_pressed("sprint") and not _is_inventory_open():
 		current_speed *= sprint_multiplier
-		
+
 	if direction:
 		velocity.x = direction.x * current_speed
 		velocity.z = direction.z * current_speed
@@ -238,7 +247,7 @@ func _physics_process(delta: float) -> void:
 		velocity.x = move_toward(velocity.x, 0, current_speed)
 		velocity.z = move_toward(velocity.z, 0, current_speed)
 
-	_update_fov(delta, input_dir.length() > 0.1 and Input.is_action_pressed("sprint") and not _is_inventory_open())
+	_update_fov(delta, _gameplay_input_enabled and input_dir.length() > 0.1 and Input.is_action_pressed("sprint") and not _is_inventory_open())
 	_update_visuals(delta, input_dir, current_speed)
 	move_and_slide()
 

@@ -172,7 +172,7 @@ transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 28, 0, 15)
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 28, 0, 19.5)
 
 [node name="Portal" parent="NavigationRegion3D" unique_id=182651702 instance=ExtResource("5_portal")]
-transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 15, 1.6, 0.45)
+transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 15, 1.6, 2.5)
 
 [node name="PlayerSpawn_0" type="Marker3D" parent="." unique_id=2118568762]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 1, 21.963017)

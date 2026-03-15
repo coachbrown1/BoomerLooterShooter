@@ -42,12 +42,12 @@ func _apply_icon() -> void:
 	if _is_health_pickup():
 		if not health_icon_path.is_empty() and ResourceLoader.exists(health_icon_path):
 			_sprite.texture = load(health_icon_path)
-		_sprite.modulate = Color("ff6b7d")
+		_sprite.modulate = Color.WHITE
 		return
 	if _is_ammo_pickup():
 		if not ammo_icon_path.is_empty() and ResourceLoader.exists(ammo_icon_path):
 			_sprite.texture = load(ammo_icon_path)
-		_sprite.modulate = _get_ammo_color()
+		_sprite.modulate = Color.WHITE
 		return
 	if item_data == null:
 		return
@@ -193,14 +193,3 @@ func _get_health_display_name() -> String:
 	if not health_display_name.is_empty():
 		return health_display_name
 	return "Health Pickup"
-
-func _get_ammo_color() -> Color:
-	match ammo_type:
-		"energy":
-			return Color("ffd84d")
-		"shells":
-			return Color("ff8f59")
-		"light":
-			return Color("9dd6ff")
-		_:
-			return Color.WHITE

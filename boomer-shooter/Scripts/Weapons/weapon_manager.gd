@@ -143,7 +143,8 @@ func _update_hud() -> void:
 				displayed_mag_size,
 				get_ammo(current_weapon.ammo_type),
 				current_weapon.ammo_type == "none",
-				current_weapon.has_infinite_reserve_ammo() if current_weapon.has_method("has_infinite_reserve_ammo") else false
+				current_weapon.has_infinite_reserve_ammo() if current_weapon.has_method("has_infinite_reserve_ammo") else false,
+				current_weapon.ammo_type
 			)
 
 func set_inventory_system(inventory: InventorySystem) -> void:
