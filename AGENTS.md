@@ -85,6 +85,7 @@ This file is the canonical instruction set for any AI agent working in this repo
   - `projectile-damage-replication`
   - `enemy-damage-replication`
   - `enemy-death-replication`
+  - `enemy-loot-replication`
   - `enemy-animation-replication`
   - `long-run-soak`
   - `shared-chest`
@@ -192,6 +193,15 @@ This file is the canonical instruction set for any AI agent working in this repo
   - has the client kill a live networked enemy through the host-authoritative rifle fire path
   - confirms the host observes both enemy death and later despawn
   - confirms the client sees the replicated death state before the proxy is removed
+- For enemy loot replication, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'enemy-loot-replication'
+  ```
+- What `enemy-loot-replication` does:
+  - launches a local headless host and client
+  - has the client kill a live networked enemy through the host-authoritative rifle fire path
+  - confirms the host observes a loot pickup spawned from that enemy death
+  - confirms the client also observes the replicated loot pickup
 - For enemy animation replication, run:
   ```powershell
   & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'enemy-animation-replication'
@@ -212,4 +222,4 @@ This file is the canonical instruction set for any AI agent working in this repo
   - verifies player replication and enemy replication continue producing updates during the soak
 - Harness artifacts are written under `boomer-shooter/.tmp/mp_verify_*`.
 - If the harness fails, inspect `launcher.log`, `host.log`, `host.err.log`, `client.log`, `client.err.log`, and any `*_error.json` files in that run directory.
-- Current automated coverage includes client spawn/floor stability, player roster/snapshot replication, player health replication, client disconnect cleanup, door interaction replication, weapon fire/reload state sync, replicated weapon visual effects, authoritative projectile damage replication, authoritative enemy damage replication, enemy death/despawn replication, enemy animation replication, a long-run multiplayer soak pass, and shared chest loot/chest sync behavior. It does not validate all multiplayer systems.
+- Current automated coverage includes client spawn/floor stability, player roster/snapshot replication, player health replication, client disconnect cleanup, door interaction replication, weapon fire/reload state sync, replicated weapon visual effects, authoritative projectile damage replication, authoritative enemy damage replication, enemy death/despawn replication, enemy loot replication, enemy animation replication, a long-run multiplayer soak pass, and shared chest loot/chest sync behavior. It does not validate all multiplayer systems.

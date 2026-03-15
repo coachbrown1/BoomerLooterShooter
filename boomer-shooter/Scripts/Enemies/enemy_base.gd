@@ -555,8 +555,15 @@ func _spawn_drop_entry(entry: Dictionary, drop_origin: Vector3, seed_val: int, p
 func _spawn_pickup(item: InventoryItemData, drop_origin: Vector3, drop_index: int) -> void:
 	if item == null:
 		return
+	var dungeon_manager := get_tree().get_first_node_in_group("dungeon_manager")
+	if dungeon_manager != null and dungeon_manager.has_method("spawn_network_item_pickup"):
+		dungeon_manager.call("spawn_network_item_pickup", item.to_dict(), drop_origin, _random_drop_direction(drop_index))
+		return
 	var pickup := LOOT_PICKUP_SCENE.instantiate()
-	pickup.set("item_data", item)
+	if pickup.has_method("configure_item_pickup"):
+		pickup.call("configure_item_pickup", item)
+	else:
+		pickup.set("item_data", item)
 	get_tree().current_scene.add_child(pickup)
 	pickup.call("launch", drop_origin, _random_drop_direction(drop_index))
 
@@ -564,12 +571,25 @@ func _spawn_ammo_pickup(drop_origin: Vector3, drop_index: int, seed_val: int, pl
 	var definition: Dictionary = _select_ammo_drop_definition(seed_val, players)
 	if definition.is_empty():
 		return false
-	var pickup := LOOT_PICKUP_SCENE.instantiate()
 	var amount_range: Vector2i = definition.get("amount_range", Vector2i.ONE)
+	var amount := randi_range(amount_range.x, amount_range.y)
+	var dungeon_manager := get_tree().get_first_node_in_group("dungeon_manager")
+	if dungeon_manager != null and dungeon_manager.has_method("spawn_network_ammo_pickup"):
+		dungeon_manager.call(
+			"spawn_network_ammo_pickup",
+			String(definition.get("ammo_type", "")),
+			amount,
+			String(definition.get("display_name", "Ammo")),
+			String(definition.get("icon_path", "")),
+			drop_origin,
+			_random_drop_direction(drop_index)
+		)
+		return true
+	var pickup := LOOT_PICKUP_SCENE.instantiate()
 	pickup.call(
 		"configure_ammo_pickup",
 		String(definition.get("ammo_type", "")),
-		randi_range(amount_range.x, amount_range.y),
+		amount,
 		String(definition.get("display_name", "Ammo")),
 		String(definition.get("icon_path", ""))
 	)
@@ -578,11 +598,23 @@ func _spawn_ammo_pickup(drop_origin: Vector3, drop_index: int, seed_val: int, pl
 	return true
 
 func _spawn_health_pickup(drop_origin: Vector3, drop_index: int) -> void:
-	var pickup := LOOT_PICKUP_SCENE.instantiate()
 	var amount_range: Vector2i = HEALTH_DROP_DEFINITION.get("health_amount_range", Vector2i(10, 20))
+	var amount := randi_range(amount_range.x, amount_range.y)
+	var dungeon_manager := get_tree().get_first_node_in_group("dungeon_manager")
+	if dungeon_manager != null and dungeon_manager.has_method("spawn_network_health_pickup"):
+		dungeon_manager.call(
+			"spawn_network_health_pickup",
+			amount,
+			String(HEALTH_DROP_DEFINITION.get("display_name", "Health Pickup")),
+			String(HEALTH_DROP_DEFINITION.get("icon_path", "")),
+			drop_origin,
+			_random_drop_direction(drop_index)
+		)
+		return
+	var pickup := LOOT_PICKUP_SCENE.instantiate()
 	pickup.call(
 		"configure_health_pickup",
-		randi_range(amount_range.x, amount_range.y),
+		amount,
 		String(HEALTH_DROP_DEFINITION.get("display_name", "Health Pickup")),
 		String(HEALTH_DROP_DEFINITION.get("icon_path", ""))
 	)

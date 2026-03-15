@@ -21,6 +21,7 @@ var _hover_time := 0.0
 var _sprite: Sprite3D = null
 
 func _ready() -> void:
+	add_to_group("loot_pickup")
 	_sprite = Sprite3D.new()
 	_sprite.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_sprite.pixel_size = 0.001
@@ -91,6 +92,10 @@ func _start_hover() -> void:
 	_hover_base_y = global_position.y
 	_hovering = true
 
+func settle_at(world_pos: Vector3) -> void:
+	global_position = world_pos
+	_start_hover()
+
 func _process(delta: float) -> void:
 	if not _hovering:
 		return
@@ -158,6 +163,18 @@ func configure_health_pickup(new_health_amount: int, new_display_name: String, n
 	health_amount = new_health_amount
 	health_display_name = new_display_name
 	health_icon_path = new_icon_path
+	if _sprite != null:
+		_apply_icon()
+
+func configure_item_pickup(new_item_data: InventoryItemData) -> void:
+	item_data = new_item_data
+	ammo_type = ""
+	ammo_amount = 0
+	ammo_display_name = ""
+	ammo_icon_path = ""
+	health_amount = 0
+	health_display_name = ""
+	health_icon_path = ""
 	if _sprite != null:
 		_apply_icon()
 

@@ -18,6 +18,7 @@ class_name DungeonManager
 
 const SNAPSHOT_INTERVAL: float = 0.05
 const CASTLE_INNER_CHAMBER_SCENE_PATH := "res://Scenes/Dungeon/Handcrafted/Castle_InnerChamber.tscn"
+const LOOT_PICKUP_SCENE: PackedScene = preload("res://Scenes/Props/loot_pickup.tscn")
 
 var _generator: DungeonGenerator
 var _builder: DungeonBuilder
@@ -35,6 +36,8 @@ var _snapshot_timer: float = 0.0
 var _enemy_by_network_id: Dictionary = {}
 var _enemy_network_id_by_instance_id: Dictionary = {}
 var _next_enemy_network_id: int = 1
+var _loot_pickup_by_network_id: Dictionary = {}
+var _next_loot_pickup_network_id: int = 1
 var _chest_viewers_by_path: Dictionary = {}
 var _leave_session_ui: CanvasLayer = null
 var _floor_sync_in_progress := false
@@ -116,6 +119,9 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 	_chest_viewers_by_path.clear()
 	_enemy_by_network_id.clear()
 	_enemy_network_id_by_instance_id.clear()
+	_next_enemy_network_id = 1
+	_loot_pickup_by_network_id.clear()
+	_next_loot_pickup_network_id = 1
 	_handcrafted_room_overlays_by_id.clear()
 	_suppressed_enemies_by_room_id.clear()
 	_reset_debug_network_visual_counts()
@@ -194,6 +200,8 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 			_enemy_by_network_id.clear()
 			_enemy_network_id_by_instance_id.clear()
 			_next_enemy_network_id = 1
+			_loot_pickup_by_network_id.clear()
+			_next_loot_pickup_network_id = 1
 
 		# Place exit portal in exit room
 		_place_exit(biome_data)
@@ -1170,6 +1178,14 @@ func _apply_interaction(interactor: Node, target: Node) -> void:
 			else:
 				rpc_id(interactor_peer, "rpc_open_chest_for_local_player", chest_path, items, chest_pos)
 		return
+	if target is LootPickup:
+		var loot_id := int(target.get_meta("network_loot_id", -1))
+		target.interact(interactor)
+		if loot_id >= 0 and (not is_instance_valid(target) or target.is_queued_for_deletion()):
+			_loot_pickup_by_network_id.erase(loot_id)
+			if _session_multiplayer and _session_host:
+				rpc("rpc_despawn_loot_pickup", loot_id)
+		return
 	if target.has_method("interact"):
 		target.interact(interactor)
 
@@ -1219,6 +1235,9 @@ func _find_interaction_target_by_position(world_pos: Vector3) -> Node:
 	var door := _find_door_by_position(world_pos)
 	if door != null:
 		return door
+	var loot := _find_loot_pickup_by_position(world_pos)
+	if loot != null:
+		return loot
 	return null
 
 func _find_door_by_position(world_pos: Vector3, max_distance: float = 4.0) -> DungeonDoor:
@@ -1355,6 +1374,163 @@ func _register_network_enemy(enemy: EnemyBase) -> void:
 			continue
 		rpc_id(peer_id, "rpc_spawn_enemy", enemy_id, enemy.scene_file_path, enemy.global_position)
 
+func spawn_network_item_pickup(item_payload: Dictionary, drop_origin: Vector3, launch_direction: Vector3) -> void:
+	if _session_multiplayer and not _session_host:
+		return
+	var payload := {
+		"kind": "item",
+		"item_data": item_payload.duplicate(true),
+		"drop_origin": drop_origin,
+		"launch_direction": launch_direction,
+	}
+	_spawn_network_loot_pickup(payload, true)
+
+func spawn_network_ammo_pickup(ammo_type: String, ammo_amount: int, display_name: String, icon_path: String, drop_origin: Vector3, launch_direction: Vector3) -> void:
+	if _session_multiplayer and not _session_host:
+		return
+	var payload := {
+		"kind": "ammo",
+		"ammo_type": ammo_type,
+		"ammo_amount": ammo_amount,
+		"display_name": display_name,
+		"icon_path": icon_path,
+		"drop_origin": drop_origin,
+		"launch_direction": launch_direction,
+	}
+	_spawn_network_loot_pickup(payload, true)
+
+func spawn_network_health_pickup(health_amount: int, display_name: String, icon_path: String, drop_origin: Vector3, launch_direction: Vector3) -> void:
+	if _session_multiplayer and not _session_host:
+		return
+	var payload := {
+		"kind": "health",
+		"health_amount": health_amount,
+		"display_name": display_name,
+		"icon_path": icon_path,
+		"drop_origin": drop_origin,
+		"launch_direction": launch_direction,
+	}
+	_spawn_network_loot_pickup(payload, true)
+
+func _spawn_network_loot_pickup(payload: Dictionary, play_launch: bool) -> void:
+	var pickup := _instantiate_loot_pickup_from_payload(payload, play_launch)
+	if pickup == null:
+		return
+	var loot_id := _register_network_loot_pickup(pickup)
+	var sync_payload := _build_loot_pickup_payload(pickup)
+	if _session_multiplayer and _session_host:
+		for peer_id in _get_network_connected_peer_ids():
+			if not _is_peer_floor_sync_ready(peer_id):
+				continue
+			rpc_id(peer_id, "rpc_spawn_loot_pickup", loot_id, sync_payload, play_launch)
+
+func _instantiate_loot_pickup_from_payload(payload: Dictionary, play_launch: bool) -> LootPickup:
+	var pickup_variant: Variant = LOOT_PICKUP_SCENE.instantiate()
+	if not (pickup_variant is LootPickup):
+		if pickup_variant is Node:
+			(pickup_variant as Node).queue_free()
+		return null
+	var pickup: LootPickup = pickup_variant
+	var kind := String(payload.get("kind", ""))
+	match kind:
+		"item":
+			var item_payload: Dictionary = payload.get("item_data", {})
+			var item_data := InventoryItemData.from_dict(item_payload)
+			if item_data == null:
+				pickup.queue_free()
+				return null
+			pickup.configure_item_pickup(item_data)
+		"ammo":
+			pickup.configure_ammo_pickup(
+				String(payload.get("ammo_type", "")),
+				int(payload.get("ammo_amount", 0)),
+				String(payload.get("display_name", "Ammo")),
+				String(payload.get("icon_path", ""))
+			)
+		"health":
+			pickup.configure_health_pickup(
+				int(payload.get("health_amount", 0)),
+				String(payload.get("display_name", "Health Pickup")),
+				String(payload.get("icon_path", ""))
+			)
+		_:
+			pickup.queue_free()
+			return null
+	var scene_root := get_tree().current_scene
+	if scene_root == null:
+		pickup.queue_free()
+		return null
+	scene_root.add_child(pickup)
+	if play_launch:
+		pickup.launch(
+			payload.get("drop_origin", Vector3.ZERO),
+			payload.get("launch_direction", Vector3.ZERO)
+		)
+	else:
+		pickup.settle_at(payload.get("settled_position", Vector3.ZERO))
+	return pickup
+
+func _register_network_loot_pickup(pickup: LootPickup, forced_loot_id: int = -1) -> int:
+	if pickup == null:
+		return -1
+	var loot_id := forced_loot_id
+	if loot_id < 0:
+		loot_id = _next_loot_pickup_network_id
+		_next_loot_pickup_network_id += 1
+	else:
+		_next_loot_pickup_network_id = maxi(_next_loot_pickup_network_id, loot_id + 1)
+	_loot_pickup_by_network_id[loot_id] = pickup
+	pickup.set_meta("network_loot_id", loot_id)
+	pickup.name = "NetworkLootPickup_%d" % loot_id
+	return loot_id
+
+func _build_loot_pickup_payload(pickup: LootPickup) -> Dictionary:
+	if pickup == null:
+		return {}
+	var payload := {
+		"drop_origin": pickup.global_position,
+		"launch_direction": Vector3.ZERO,
+		"settled_position": pickup.global_position,
+	}
+	if pickup._is_health_pickup():
+		payload["kind"] = "health"
+		payload["health_amount"] = pickup.health_amount
+		payload["display_name"] = pickup.health_display_name
+		payload["icon_path"] = pickup.health_icon_path
+	elif pickup._is_ammo_pickup():
+		payload["kind"] = "ammo"
+		payload["ammo_type"] = pickup.ammo_type
+		payload["ammo_amount"] = pickup.ammo_amount
+		payload["display_name"] = pickup.ammo_display_name
+		payload["icon_path"] = pickup.ammo_icon_path
+	else:
+		payload["kind"] = "item"
+		payload["item_data"] = pickup.get_item_snapshot()
+	return payload
+
+func _send_all_loot_pickups_to_peer(peer_id: int) -> void:
+	for loot_id_variant in _loot_pickup_by_network_id.keys():
+		var loot_id := int(loot_id_variant)
+		var pickup = _loot_pickup_by_network_id.get(loot_id, null)
+		if not is_instance_valid(pickup):
+			continue
+		rpc_id(peer_id, "rpc_spawn_loot_pickup", loot_id, _build_loot_pickup_payload(pickup), false)
+
+func _find_loot_pickup_by_position(world_pos: Vector3, max_distance: float = 2.0) -> LootPickup:
+	var closest: LootPickup = null
+	var closest_dist_sq := max_distance * max_distance
+	for pickup_variant in get_tree().get_nodes_in_group("loot_pickup"):
+		if not (pickup_variant is LootPickup):
+			continue
+		var pickup: LootPickup = pickup_variant
+		if not is_instance_valid(pickup):
+			continue
+		var dist_sq := pickup.global_position.distance_squared_to(world_pos)
+		if dist_sq <= closest_dist_sq:
+			closest = pickup
+			closest_dist_sq = dist_sq
+	return closest
+
 func _on_network_enemy_died(enemy_id: int) -> void:
 	rpc("rpc_mark_enemy_dead", enemy_id)
 	await get_tree().create_timer(0.65).timeout
@@ -1459,6 +1635,7 @@ func rpc_client_finished_floor_sync(peer_id: int) -> void:
 	_set_peer_floor_sync_ready(peer_id, true)
 	_send_player_roster_to_peer(peer_id)
 	_send_all_enemies_to_peer(peer_id)
+	_send_all_loot_pickups_to_peer(peer_id)
 
 @rpc("any_peer", "reliable")
 func rpc_request_weapon_fire(peer_id: int, weapon_slot: int, weapon_key: String, cam_origin: Vector3, cam_forward: Vector3, shot_id: int) -> void:
@@ -1702,6 +1879,26 @@ func rpc_despawn_enemy(enemy_id: int) -> void:
 	if is_instance_valid(enemy):
 		enemy.queue_free()
 	_enemy_by_network_id.erase(enemy_id)
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_spawn_loot_pickup(loot_id: int, payload: Dictionary, play_launch: bool = true) -> void:
+	if _session_host:
+		return
+	var existing = _loot_pickup_by_network_id.get(loot_id, null)
+	if is_instance_valid(existing):
+		existing.queue_free()
+	_loot_pickup_by_network_id.erase(loot_id)
+	var pickup := _instantiate_loot_pickup_from_payload(payload, play_launch)
+	if pickup == null:
+		return
+	_register_network_loot_pickup(pickup, loot_id)
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_despawn_loot_pickup(loot_id: int) -> void:
+	var pickup = _loot_pickup_by_network_id.get(loot_id, null)
+	if is_instance_valid(pickup):
+		pickup.queue_free()
+	_loot_pickup_by_network_id.erase(loot_id)
 
 @rpc("authority", "call_remote", "unreliable")
 func rpc_receive_enemy_snapshots(snapshots: Array) -> void:

@@ -324,6 +324,25 @@ switch ($scenarioKey) {
             throw "Client did not observe replicated enemy death/despawn. Output dir: $verifyDir"
         }
     }
+    "enemy-loot-replication" {
+        $hostEnemyLootPath = Join-Path $verifyDir "host_enemy_loot.json"
+        $clientEnemyLootPath = Join-Path $verifyDir "client_enemy_loot.json"
+        foreach ($path in @($hostEnemyLootPath, $clientEnemyLootPath)) {
+            if (-not (Test-Path $path)) {
+                throw "Expected verifier output missing: $path"
+            }
+        }
+
+        $hostEnemyLoot = Get-Content $hostEnemyLootPath -Raw | ConvertFrom-Json
+        $clientEnemyLoot = Get-Content $clientEnemyLootPath -Raw | ConvertFrom-Json
+
+        if (-not $hostEnemyLoot.passed) {
+            throw "Host did not observe authoritative enemy loot spawn. Output dir: $verifyDir"
+        }
+        if (-not $clientEnemyLoot.passed) {
+            throw "Client did not observe replicated enemy loot. Output dir: $verifyDir"
+        }
+    }
     "enemy-animation-replication" {
         $hostEnemyAnimationPath = Join-Path $verifyDir "host_enemy_animation.json"
         $clientEnemyAnimationPath = Join-Path $verifyDir "client_enemy_animation.json"
@@ -398,6 +417,7 @@ $label = switch ($scenarioKey) {
     "projectile-damage-replication" { "Multiplayer projectile damage replication verification PASS" }
     "enemy-damage-replication" { "Multiplayer enemy damage replication verification PASS" }
     "enemy-death-replication" { "Multiplayer enemy death replication verification PASS" }
+    "enemy-loot-replication" { "Multiplayer enemy loot replication verification PASS" }
     "enemy-animation-replication" { "Multiplayer enemy animation replication verification PASS" }
     "long-run-soak" { "Multiplayer long-run soak verification PASS" }
     default { "Multiplayer verification PASS" }
