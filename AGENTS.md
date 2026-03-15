@@ -4,12 +4,6 @@ This file is the canonical instruction set for any AI agent working in this repo
 
 ## 1. Git And Branch Safety
 
-- Before doing any work, sync remote state first:
-  - Run `git fetch origin`.
-  - Inspect the current branch and worktree with `git status --short --branch`.
-  - Check whether the branch is ahead, behind, or diverged before editing files.
-- If the worktree is clean and the current branch is behind its remote, update from remote before making changes.
-- If local uncommitted changes, conflicts, or branch divergence make an update risky, stop and report the state instead of forcing a pull, merge, or rebase.
 - Never use destructive Git commands such as `git reset --hard`, `git checkout --`, force-push, or history rewriting unless the user explicitly asks for them.
 - Never overwrite, revert, or discard changes you did not make unless the user explicitly instructs you to do so.
 
