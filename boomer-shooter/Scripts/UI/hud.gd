@@ -108,7 +108,7 @@ const RARITY_BORDER_COLORS: Dictionary = {
 	"Legendary": Color("ff9f2f")
 }
 const WEAPON_ICON_PATH := "res://Assets/Icons/Weapons/icon_%s.png"
-const PANEL_DESIRED_SIZE := Vector2(760, 410)
+const PANEL_DESIRED_SIZE := Vector2(1040, 620)
 const WEAPON_SLOT_UI_COUNT := 4
 const STORAGE_SLOT_UI_COUNT := 10
 const CHEST_SLOT_UI_COUNT := 16
@@ -217,14 +217,14 @@ func update_ammo_display(current_mag: int, mag_size: int, reserve: int, is_infin
 	_current_ammo_type = ammo_type
 	_low_ammo_warning = not is_infinite and _current_mag_size_value > 0 and float(_current_mag_value) / float(_current_mag_size_value) <= LOW_AMMO_RATIO
 	if ammo_label:
-		ammo_label.text = "\u221E" if is_infinite else str(_current_mag_value)
-	if _ammo_reserve_label:
 		if is_infinite:
-			_ammo_reserve_label.text = "\u221E / \u221E"
+			ammo_label.text = "\u221E | \u221E"
 		elif has_infinite_reserve:
-			_ammo_reserve_label.text = "%d mag  |  \u221E reserve" % [_current_mag_size_value]
+			ammo_label.text = "%d | \u221E" % _current_mag_value
 		else:
-			_ammo_reserve_label.text = "%d mag  |  %d reserve" % [_current_mag_size_value, _current_reserve_value]
+			ammo_label.text = "%d | %d" % [_current_mag_value, _current_reserve_value]
+	if _ammo_reserve_label:
+		_ammo_reserve_label.visible = false
 	if _ammo_warning_label:
 		_ammo_warning_label.visible = _low_ammo_warning
 	_update_ammo_icon(ammo_type)
@@ -244,18 +244,19 @@ func _ensure_teammate_health_label() -> void:
 	_teammate_health_label.visible = false
 	if health_label and health_label.label_settings != null:
 		_teammate_health_label.label_settings = health_label.label_settings
+	_teammate_health_label.add_theme_font_size_override("font_size", 28)
 
 	if _teammate_module == null:
 		_teammate_module = _create_module_panel()
 		_teammate_module.name = "TeammateModule"
 		_teammate_module.visible = false
-		var margin := _wrap_panel_with_margin(_teammate_module, 14, 12)
+		var margin := _wrap_panel_with_margin(_teammate_module, 18, 14)
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
-		row.add_theme_constant_override("separation", 10)
+		row.add_theme_constant_override("separation", 12)
 		margin.add_child(row)
 		_teammate_icon = TextureRect.new()
-		_teammate_icon.custom_minimum_size = Vector2(28, 28)
+		_teammate_icon.custom_minimum_size = Vector2(38, 38)
 		_teammate_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		_teammate_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		row.add_child(_teammate_icon)
@@ -450,7 +451,7 @@ func _build_inventory_ui() -> void:
 	_inventory_panel.anchor_top = 0.0
 	_inventory_panel.anchor_right = 0.0
 	_inventory_panel.anchor_bottom = 0.0
-	_inventory_panel.custom_minimum_size = Vector2(620, 320)
+	_inventory_panel.custom_minimum_size = Vector2(860, 520)
 	_inventory_panel.size = PANEL_DESIRED_SIZE
 	_inventory_panel.pivot_offset = PANEL_DESIRED_SIZE * 0.5
 	_inventory_panel.add_theme_stylebox_override("panel", _make_frame_texture_style("module", 18, Vector4(18, 18, 18, 18)))
@@ -460,14 +461,14 @@ func _build_inventory_ui() -> void:
 		get_viewport().size_changed.connect(_recenter_inventory_panel)
 
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 8)
-	margin.add_theme_constant_override("margin_top", 8)
-	margin.add_theme_constant_override("margin_right", 8)
-	margin.add_theme_constant_override("margin_bottom", 8)
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_top", 14)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_bottom", 14)
 	_inventory_panel.add_child(margin)
 
 	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 6)
+	root.add_theme_constant_override("separation", 10)
 	margin.add_child(root)
 
 	var title_row := HBoxContainer.new()
@@ -476,14 +477,14 @@ func _build_inventory_ui() -> void:
 
 	var title := Label.new()
 	title.text = "Inventory"
-	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_font_size_override("font_size", 28)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_row.add_child(title)
 
 	var close_button := Button.new()
 	close_button.text = "X"
-	close_button.custom_minimum_size = Vector2(32, 24)
+	close_button.custom_minimum_size = Vector2(44, 36)
 	close_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	close_button.tooltip_text = "Close Inventory"
 	close_button.pressed.connect(_close_inventory_panel)
@@ -492,11 +493,11 @@ func _build_inventory_ui() -> void:
 	_feedback_label = Label.new()
 	_feedback_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_feedback_label.modulate = Color(1, 0.4, 0.4, 1)
-	_feedback_label.add_theme_font_size_override("font_size", 12)
+	_feedback_label.add_theme_font_size_override("font_size", 18)
 	root.add_child(_feedback_label)
 
 	var content_row := HBoxContainer.new()
-	content_row.add_theme_constant_override("separation", 6)
+	content_row.add_theme_constant_override("separation", 12)
 	content_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(content_row)
 
@@ -507,49 +508,49 @@ func _build_inventory_ui() -> void:
 	content_row.add_child(player_panel)
 
 	var player_margin := MarginContainer.new()
-	player_margin.add_theme_constant_override("margin_left", 6)
-	player_margin.add_theme_constant_override("margin_top", 6)
-	player_margin.add_theme_constant_override("margin_right", 6)
-	player_margin.add_theme_constant_override("margin_bottom", 6)
+	player_margin.add_theme_constant_override("margin_left", 12)
+	player_margin.add_theme_constant_override("margin_top", 12)
+	player_margin.add_theme_constant_override("margin_right", 12)
+	player_margin.add_theme_constant_override("margin_bottom", 12)
 	player_panel.add_child(player_margin)
 
 	var player_root := HBoxContainer.new()
-	player_root.add_theme_constant_override("separation", 6)
+	player_root.add_theme_constant_override("separation", 14)
 	player_margin.add_child(player_root)
 
 	var equipment_column := VBoxContainer.new()
-	equipment_column.add_theme_constant_override("separation", 4)
-	equipment_column.custom_minimum_size = Vector2(92, 0)
+	equipment_column.add_theme_constant_override("separation", 8)
+	equipment_column.custom_minimum_size = Vector2(132, 0)
 	player_root.add_child(equipment_column)
 	equipment_column.add_child(_build_section_label("Gear", "armor"))
 	var equipment_grid := GridContainer.new()
 	equipment_grid.columns = 1
-	equipment_grid.add_theme_constant_override("h_separation", 4)
-	equipment_grid.add_theme_constant_override("v_separation", 5)
+	equipment_grid.add_theme_constant_override("h_separation", 6)
+	equipment_grid.add_theme_constant_override("v_separation", 10)
 	equipment_column.add_child(equipment_grid)
 
 	for slot_name in [&"helmet", &"chest", &"arms", &"legs", &"feet"]:
 		var slot_ref := SlotRef.equipment(slot_name)
 		var button := _make_slot_button(slot_ref)
 		var slot_stack := VBoxContainer.new()
-		slot_stack.add_theme_constant_override("separation", 2)
+		slot_stack.add_theme_constant_override("separation", 4)
 		var slot_label := Label.new()
 		slot_label.text = EQUIPMENT_LABELS.get(slot_name, String(slot_name).capitalize())
 		slot_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		slot_label.add_theme_font_size_override("font_size", 11)
+		slot_label.add_theme_font_size_override("font_size", 16)
 		slot_stack.add_child(slot_label)
 		slot_stack.add_child(button)
 		equipment_grid.add_child(slot_stack)
 
 	var weapons_column := VBoxContainer.new()
-	weapons_column.add_theme_constant_override("separation", 4)
-	weapons_column.custom_minimum_size = Vector2(92, 0)
+	weapons_column.add_theme_constant_override("separation", 8)
+	weapons_column.custom_minimum_size = Vector2(120, 0)
 	player_root.add_child(weapons_column)
 	weapons_column.add_child(_build_section_label("Weapons", "weapon"))
 	var weapons_grid := GridContainer.new()
 	weapons_grid.columns = 1
-	weapons_grid.add_theme_constant_override("h_separation", 4)
-	weapons_grid.add_theme_constant_override("v_separation", 4)
+	weapons_grid.add_theme_constant_override("h_separation", 6)
+	weapons_grid.add_theme_constant_override("v_separation", 10)
 	weapons_column.add_child(weapons_grid)
 	for i in range(WEAPON_SLOT_UI_COUNT):
 		var weapon_ref := SlotRef.weapon(i)
@@ -558,14 +559,14 @@ func _build_inventory_ui() -> void:
 
 	var storage_column := VBoxContainer.new()
 	storage_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	storage_column.add_theme_constant_override("separation", 4)
+	storage_column.add_theme_constant_override("separation", 8)
 	player_root.add_child(storage_column)
 	storage_column.add_child(_build_section_label("Storage", "ammo"))
 	var storage_grid := GridContainer.new()
 	storage_grid.columns = 5
 	storage_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	storage_grid.add_theme_constant_override("h_separation", 4)
-	storage_grid.add_theme_constant_override("v_separation", 4)
+	storage_grid.add_theme_constant_override("h_separation", 8)
+	storage_grid.add_theme_constant_override("v_separation", 8)
 	storage_column.add_child(storage_grid)
 	for i in range(STORAGE_SLOT_UI_COUNT):
 		var storage_ref := SlotRef.storage(i)
@@ -574,19 +575,19 @@ func _build_inventory_ui() -> void:
 
 	_chest_panel = PanelContainer.new()
 	_chest_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_chest_panel.custom_minimum_size = Vector2(236, 0)
+	_chest_panel.custom_minimum_size = Vector2(320, 0)
 	_chest_panel.add_theme_stylebox_override("panel", _make_tinted_panel_style(Color(0.20, 0.14, 0.09, 0.95)))
 	content_row.add_child(_chest_panel)
 
 	var chest_margin := MarginContainer.new()
-	chest_margin.add_theme_constant_override("margin_left", 6)
-	chest_margin.add_theme_constant_override("margin_top", 6)
-	chest_margin.add_theme_constant_override("margin_right", 6)
-	chest_margin.add_theme_constant_override("margin_bottom", 6)
+	chest_margin.add_theme_constant_override("margin_left", 12)
+	chest_margin.add_theme_constant_override("margin_top", 12)
+	chest_margin.add_theme_constant_override("margin_right", 12)
+	chest_margin.add_theme_constant_override("margin_bottom", 12)
 	_chest_panel.add_child(chest_margin)
 
 	var chest_root := VBoxContainer.new()
-	chest_root.add_theme_constant_override("separation", 4)
+	chest_root.add_theme_constant_override("separation", 8)
 	chest_margin.add_child(chest_root)
 
 	_chest_section_container = _build_section_label("Shared Chest", "chest")
@@ -594,8 +595,8 @@ func _build_inventory_ui() -> void:
 	chest_root.add_child(_chest_section_container)
 	_chest_grid = GridContainer.new()
 	_chest_grid.columns = 4
-	_chest_grid.add_theme_constant_override("h_separation", 4)
-	_chest_grid.add_theme_constant_override("v_separation", 4)
+	_chest_grid.add_theme_constant_override("h_separation", 8)
+	_chest_grid.add_theme_constant_override("v_separation", 8)
 	chest_root.add_child(_chest_grid)
 	for i in range(CHEST_SLOT_UI_COUNT):
 		var chest_ref := SlotRef.chest(i)
@@ -618,20 +619,20 @@ func _build_inventory_ui() -> void:
 func _build_section_label(text: String, badge_key: String = "") -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", _make_frame_texture_style("title_bar", 14, Vector4(14, 8, 14, 8)))
-	var margin := _wrap_panel_with_margin(panel, 12, 6)
+	var margin := _wrap_panel_with_margin(panel, 16, 10)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
+	row.add_theme_constant_override("separation", 10)
 	margin.add_child(row)
 	if not badge_key.is_empty():
 		var icon := TextureRect.new()
-		icon.custom_minimum_size = Vector2(16, 16)
+		icon.custom_minimum_size = Vector2(22, 22)
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.texture = _make_badge_texture(badge_key)
 		row.add_child(icon)
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_font_size_override("font_size", 20)
 	row.add_child(label)
 	panel.set_meta("title_label", label)
 	return panel
@@ -643,16 +644,16 @@ func _make_slot_button(slot_ref: SlotRef) -> InventorySlotButton:
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.set_slot_ref(slot_ref)
 	if slot_ref.section == &"storage" or slot_ref.section == &"chest":
-		button.custom_minimum_size = Vector2(46, 46)
+		button.custom_minimum_size = Vector2(68, 68)
 		button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		button.expand_icon = true
 	elif slot_ref.section == &"weapons":
-		button.custom_minimum_size = Vector2(64, 64)
+		button.custom_minimum_size = Vector2(84, 84)
 		button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.expand_icon = true
 	else:
-		button.custom_minimum_size = Vector2(54, 54)
+		button.custom_minimum_size = Vector2(76, 76)
 		button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.expand_icon = true
 	button.slot_pressed.connect(_on_slot_button_pressed)
@@ -805,26 +806,26 @@ func _build_world_item_tooltip() -> void:
 	_world_item_tooltip.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_world_item_tooltip.offset_left = 0.0
 	_world_item_tooltip.offset_right = 0.0
-	_world_item_tooltip.offset_top = -168.0
-	_world_item_tooltip.offset_bottom = -116.0
-	_world_item_tooltip.custom_minimum_size = Vector2(320, 52)
+	_world_item_tooltip.offset_top = -206.0
+	_world_item_tooltip.offset_bottom = -130.0
+	_world_item_tooltip.custom_minimum_size = Vector2(460, 76)
 	_world_item_tooltip.add_theme_stylebox_override("panel", _make_frame_texture_style("long_bar", 16, Vector4(18, 10, 18, 10)))
 	add_child(_world_item_tooltip)
 
 	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 16)
-	margin.add_theme_constant_override("margin_right", 16)
-	margin.add_theme_constant_override("margin_top", 8)
-	margin.add_theme_constant_override("margin_bottom", 8)
+	margin.add_theme_constant_override("margin_left", 22)
+	margin.add_theme_constant_override("margin_right", 22)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
 	_world_item_tooltip.add_child(margin)
 
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 14)
 	margin.add_child(row)
 
 	_world_item_tooltip_icon = TextureRect.new()
-	_world_item_tooltip_icon.custom_minimum_size = Vector2(28, 28)
+	_world_item_tooltip_icon.custom_minimum_size = Vector2(40, 40)
 	_world_item_tooltip_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_world_item_tooltip_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	row.add_child(_world_item_tooltip_icon)
@@ -834,11 +835,11 @@ func _build_world_item_tooltip() -> void:
 	row.add_child(text_root)
 
 	_world_item_tooltip_title = Label.new()
-	_world_item_tooltip_title.add_theme_font_size_override("font_size", 16)
+	_world_item_tooltip_title.add_theme_font_size_override("font_size", 24)
 	text_root.add_child(_world_item_tooltip_title)
 
 	_world_item_tooltip_detail = Label.new()
-	_world_item_tooltip_detail.add_theme_font_size_override("font_size", 12)
+	_world_item_tooltip_detail.add_theme_font_size_override("font_size", 18)
 	_world_item_tooltip_detail.modulate = Color(0.86, 0.83, 0.74, 0.95)
 	text_root.add_child(_world_item_tooltip_detail)
 
@@ -1040,8 +1041,8 @@ func _recenter_inventory_panel() -> void:
 	if _inventory_panel == null:
 		return
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-	var panel_width := minf(PANEL_DESIRED_SIZE.x, maxf(320.0, viewport_size.x - 32.0))
-	var panel_height := minf(PANEL_DESIRED_SIZE.y, maxf(280.0, viewport_size.y - 32.0))
+	var panel_width := minf(PANEL_DESIRED_SIZE.x, maxf(620.0, viewport_size.x - 40.0))
+	var panel_height := minf(PANEL_DESIRED_SIZE.y, maxf(420.0, viewport_size.y - 40.0))
 	_inventory_panel.size = Vector2(panel_width, panel_height)
 	_inventory_panel.pivot_offset = _inventory_panel.size * 0.5
 	var panel_size: Vector2 = _inventory_panel.size
@@ -1124,14 +1125,14 @@ func _configure_bottom_hud_layout() -> void:
 	if _bottom_margin == null or _bottom_row == null:
 		return
 	var content_height := _bottom_row.get_combined_minimum_size().y
-	var bar_height := maxi(int(ceil(content_height)) + 28, 100)
+	var bar_height := maxi(int(ceil(content_height)) + 34, 138)
 	_bottom_margin.anchor_left = 0.0
 	_bottom_margin.anchor_top = 1.0
 	_bottom_margin.anchor_right = 0.0
 	_bottom_margin.anchor_bottom = 1.0
-	_bottom_margin.offset_left = 20.0
-	_bottom_margin.offset_right = 220.0
-	_bottom_margin.offset_bottom = -34.0
+	_bottom_margin.offset_left = 28.0
+	_bottom_margin.offset_right = 260.0
+	_bottom_margin.offset_bottom = -28.0
 	_bottom_margin.offset_top = _bottom_margin.offset_bottom - float(bar_height)
 
 func _apply_hud_icons() -> void:
@@ -1142,6 +1143,13 @@ func _apply_hud_icons() -> void:
 		var health_texture := _load_texture(HUD_HEART_ICON)
 		if health_texture != null:
 			_health_icon.texture = health_texture
+		_health_icon.custom_minimum_size = Vector2(60, 60)
+	if health_label != null:
+		health_label.add_theme_font_size_override("font_size", 46)
+	if _ammo_icon != null:
+		_ammo_icon.custom_minimum_size = Vector2(72, 72)
+	if ammo_label != null:
+		ammo_label.add_theme_font_size_override("font_size", 44)
 	if _ammo_icon != null and _ammo_icon.texture == null:
 		_update_ammo_icon("light")
 
@@ -1201,14 +1209,14 @@ func push_status_toast(message: String, icon_key: String = "interact", duration:
 	if _toast_stack == null:
 		return
 	var panel := _create_bar_panel()
-	panel.custom_minimum_size = Vector2(260, 42)
+	panel.custom_minimum_size = Vector2(340, 60)
 	panel.modulate = Color(1, 1, 1, 0)
-	var margin := _wrap_panel_with_margin(panel, 14, 8)
+	var margin := _wrap_panel_with_margin(panel, 18, 12)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 12)
 	margin.add_child(row)
 	var icon := TextureRect.new()
-	icon.custom_minimum_size = Vector2(24, 24)
+	icon.custom_minimum_size = Vector2(32, 32)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.texture = _resolve_icon_texture(icon_key)
@@ -1217,6 +1225,7 @@ func push_status_toast(message: String, icon_key: String = "interact", duration:
 	label.text = message
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 18)
 	row.add_child(label)
 	_toast_stack.add_child(panel)
 	_set_mouse_filter_recursive(panel, Control.MOUSE_FILTER_IGNORE)
@@ -1238,10 +1247,10 @@ func _build_stat_modules() -> void:
 	if _stat_module_row != null:
 		return
 	_bottom_row.alignment = BoxContainer.ALIGNMENT_BEGIN
-	_bottom_row.add_theme_constant_override("separation", 8)
+	_bottom_row.add_theme_constant_override("separation", 12)
 	_stat_module_row = VBoxContainer.new()
 	_stat_module_row.alignment = BoxContainer.ALIGNMENT_BEGIN
-	_stat_module_row.add_theme_constant_override("separation", 10)
+	_stat_module_row.add_theme_constant_override("separation", 12)
 	_bottom_row.add_child(_stat_module_row)
 	_bottom_row.move_child(_stat_module_row, 0)
 	_health_row.get_parent().remove_child(_health_row)
@@ -1254,13 +1263,13 @@ func _build_stat_modules() -> void:
 	_attach_row_to_module(_ammo_module, _ammo_row)
 	_ammo_reserve_label = Label.new()
 	_ammo_reserve_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_ammo_reserve_label.add_theme_font_size_override("font_size", 13)
+	_ammo_reserve_label.add_theme_font_size_override("font_size", 22)
 	_ammo_reserve_label.modulate = Color(0.84, 0.82, 0.75, 0.95)
 	_ammo_module.get_meta("content_root").add_child(_ammo_reserve_label)
 	_ammo_warning_label = Label.new()
 	_ammo_warning_label.text = "LOW"
 	_ammo_warning_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_ammo_warning_label.add_theme_font_size_override("font_size", 12)
+	_ammo_warning_label.add_theme_font_size_override("font_size", 16)
 	_ammo_warning_label.modulate = Color("f6a84d")
 	_ammo_warning_label.visible = false
 	_ammo_module.get_meta("content_root").add_child(_ammo_warning_label)
@@ -1278,23 +1287,24 @@ func _build_center_status() -> void:
 	_center_status_panel.anchor_top = 0.5
 	_center_status_panel.anchor_right = 0.5
 	_center_status_panel.anchor_bottom = 0.5
-	_center_status_panel.offset_left = -120.0
-	_center_status_panel.offset_top = 36.0
-	_center_status_panel.offset_right = 120.0
-	_center_status_panel.offset_bottom = 78.0
+	_center_status_panel.offset_left = -180.0
+	_center_status_panel.offset_top = 52.0
+	_center_status_panel.offset_right = 180.0
+	_center_status_panel.offset_bottom = 118.0
 	add_child(_center_status_panel)
-	var margin := _wrap_panel_with_margin(_center_status_panel, 14, 8)
+	var margin := _wrap_panel_with_margin(_center_status_panel, 18, 12)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 12)
 	margin.add_child(row)
 	_center_status_icon = TextureRect.new()
-	_center_status_icon.custom_minimum_size = Vector2(22, 22)
+	_center_status_icon.custom_minimum_size = Vector2(30, 30)
 	_center_status_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_center_status_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	row.add_child(_center_status_icon)
 	_center_status_label = Label.new()
 	_center_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_center_status_label.add_theme_font_size_override("font_size", 20)
 	row.add_child(_center_status_label)
 	_set_mouse_filter_recursive(_center_status_panel, Control.MOUSE_FILTER_IGNORE)
 
@@ -1306,18 +1316,18 @@ func _build_toast_stack() -> void:
 	_toast_stack.anchor_top = 0.0
 	_toast_stack.anchor_right = 1.0
 	_toast_stack.anchor_bottom = 0.0
-	_toast_stack.offset_left = -290.0
-	_toast_stack.offset_top = 88.0
-	_toast_stack.offset_right = -20.0
-	_toast_stack.offset_bottom = 420.0
+	_toast_stack.offset_left = -380.0
+	_toast_stack.offset_top = 96.0
+	_toast_stack.offset_right = -24.0
+	_toast_stack.offset_bottom = 560.0
 	_toast_stack.alignment = BoxContainer.ALIGNMENT_BEGIN
-	_toast_stack.add_theme_constant_override("separation", 8)
+	_toast_stack.add_theme_constant_override("separation", 10)
 	add_child(_toast_stack)
 	_set_mouse_filter_recursive(_toast_stack, Control.MOUSE_FILTER_IGNORE)
 
 func _create_module_panel() -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(180, 74)
+	panel.custom_minimum_size = Vector2(248, 102)
 	panel.add_theme_stylebox_override("panel", _make_frame_texture_style("module", 18, Vector4(16, 10, 16, 10)))
 	return panel
 
@@ -1345,12 +1355,12 @@ func _set_mouse_filter_recursive(control: Control, filter: Control.MouseFilter) 
 
 func _configure_resource_row(row: HBoxContainer) -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 6)
 
 func _attach_row_to_module(panel: PanelContainer, row: Control) -> void:
-	var margin := _wrap_panel_with_margin(panel, 14, 10)
+	var margin := _wrap_panel_with_margin(panel, 2, 1)
 	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 2)
+	root.add_theme_constant_override("separation", 0)
 	root.alignment = BoxContainer.ALIGNMENT_CENTER
 	margin.add_child(root)
 	root.add_child(row)

@@ -39,7 +39,7 @@ var _local_setup_complete: bool = false
 var _gameplay_input_enabled: bool = true
 
 const FULLSCREEN_TOGGLE_KEYS: Array[Key] = [KEY_F11]
-const WINDOWED_SIZE := Vector2i(1280, 720)
+const WINDOWED_SIZE := Vector2i(1920, 1080)
 const WINDOWED_POSITION := Vector2i(80, 80)
 const LOCAL_PLAYER_VISUAL_LAYER: int = 2
 const REMOTE_PLAYER_VISUAL_LAYER: int = 1
