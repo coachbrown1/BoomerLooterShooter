@@ -122,9 +122,11 @@ func _on_body_entered(body: Node) -> void:
 	if body.has_method("is_local_controlled") and not body.call("is_local_controlled"):
 		return
 	_picked_up = true
-	var dungeon_manager := get_tree().get_first_node_in_group("dungeon_manager")
-	if dungeon_manager != null and dungeon_manager.has_method("request_interaction"):
-		dungeon_manager.call("request_interaction", body, self)
+	var interaction_manager := get_tree().get_first_node_in_group("world_item_drop_manager")
+	if interaction_manager == null:
+		interaction_manager = get_tree().get_first_node_in_group("dungeon_manager")
+	if interaction_manager != null and interaction_manager.has_method("request_interaction"):
+		interaction_manager.call("request_interaction", body, self)
 	else:
 		interact(body)
 

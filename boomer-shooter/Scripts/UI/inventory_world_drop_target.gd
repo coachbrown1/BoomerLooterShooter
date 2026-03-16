@@ -11,7 +11,7 @@ func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	var from_slot: SlotRef = data.get("from_slot")
 	if from_slot == null:
 		return false
-	return from_slot.section == &"storage"
+	return from_slot.section == &"storage" or from_slot.section == &"equipment"
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	var from_slot: SlotRef = data.get("from_slot")

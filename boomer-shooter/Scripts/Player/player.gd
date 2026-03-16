@@ -410,6 +410,10 @@ func _try_interact() -> void:
 		if _is_network_multiplayer_active() and dungeon_manager != null and dungeon_manager.has_method("request_interaction"):
 			dungeon_manager.call("request_interaction", self, collider)
 			return
+		var world_drop_manager = get_tree().get_first_node_in_group("world_item_drop_manager")
+		if _is_network_multiplayer_active() and collider is LootPickup and world_drop_manager != null and world_drop_manager.has_method("request_interaction"):
+			world_drop_manager.call("request_interaction", self, collider)
+			return
 		if collider is DungeonDoor:
 			collider.open()
 		elif collider.has_method("interact"):

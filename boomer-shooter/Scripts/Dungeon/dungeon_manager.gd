@@ -1156,11 +1156,11 @@ func request_sync_active_chest_contents(peer_id: int, chest_path: String, chest_
 	else:
 		rpc_id(1, "rpc_request_sync_chest_contents", peer_id, chest_path, chest_pos, items)
 
-func request_drop_inventory_item(peer_id: int, slot_index: int, drop_origin: Vector3, launch_direction: Vector3) -> void:
+func request_drop_inventory_item(peer_id: int, slot_payload: Dictionary, drop_origin: Vector3, launch_direction: Vector3) -> void:
 	if not _session_multiplayer or _session_host:
-		_handle_drop_inventory_item_request(peer_id, slot_index, drop_origin, launch_direction)
+		_handle_drop_inventory_item_request(peer_id, slot_payload, drop_origin, launch_direction)
 		return
-	rpc_id(1, "rpc_request_drop_inventory_item", peer_id, slot_index, drop_origin, launch_direction)
+	rpc_id(1, "rpc_request_drop_inventory_item", peer_id, slot_payload, drop_origin, launch_direction)
 
 func _apply_interaction(interactor: Node, target: Node) -> void:
 	var resolved_target := _resolve_interaction_target(target)
@@ -1763,12 +1763,12 @@ func rpc_request_close_chest_view(peer_id: int, chest_path: String) -> void:
 	_handle_chest_view_closed(peer_id, chest_path)
 
 @rpc("any_peer", "reliable")
-func rpc_request_drop_inventory_item(peer_id: int, slot_index: int, drop_origin: Vector3, launch_direction: Vector3) -> void:
+func rpc_request_drop_inventory_item(peer_id: int, slot_payload: Dictionary, drop_origin: Vector3, launch_direction: Vector3) -> void:
 	if not _session_host:
 		return
 	if multiplayer.get_remote_sender_id() != peer_id:
 		return
-	_handle_drop_inventory_item_request(peer_id, slot_index, drop_origin, launch_direction)
+	_handle_drop_inventory_item_request(peer_id, slot_payload, drop_origin, launch_direction)
 
 func _emit_pickup_sync_feedback(local_player: Node, previous_inventory_snapshot: Dictionary, current_inventory_snapshot: Dictionary, previous_health: int, current_health: int, previous_ammo_snapshot: Dictionary, current_ammo_snapshot: Dictionary) -> void:
 	if local_player == null or not local_player.has_method("show_hud_toast"):
@@ -1819,15 +1819,18 @@ func _get_ammo_pickup_toast_name(ammo_type: String) -> String:
 		_:
 			return "%s Ammo" % ammo_type.capitalize()
 
-func _handle_drop_inventory_item_request(peer_id: int, slot_index: int, drop_origin: Vector3, launch_direction: Vector3) -> void:
+func _handle_drop_inventory_item_request(peer_id: int, slot_payload: Dictionary, drop_origin: Vector3, launch_direction: Vector3) -> void:
 	var player = _get_player_node_for_peer(peer_id)
 	if not is_instance_valid(player):
 		return
 	var inventory_system: InventorySystem = player.get("inventory_system") as InventorySystem
 	if inventory_system == null:
 		return
+	var slot_ref: SlotRef = inventory_system.call("_slot_ref_from_payload", slot_payload)
+	if slot_ref == null:
+		return
 	var show_toast := not _session_multiplayer or peer_id == _local_peer_id
-	var dropped: bool = bool(inventory_system.call("_drop_storage_item_to_world", slot_index, drop_origin, launch_direction, show_toast))
+	var dropped: bool = bool(inventory_system.call("_drop_item_to_world", slot_ref, drop_origin, launch_direction, show_toast))
 	if not dropped:
 		return
 	if _session_multiplayer and _session_host and peer_id != _local_peer_id:
