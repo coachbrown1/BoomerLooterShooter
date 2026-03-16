@@ -31,6 +31,11 @@ func _run_verification() -> void:
 		get_tree().quit(2)
 		return
 	DirAccess.make_dir_recursive_absolute(verify_dir)
+	var timeout_sec := _get_timeout_sec()
+	if not await _wait_for_world_ready(timeout_sec):
+		_write_json_file(_path_in_dir("error.json"), {"role": _get_role(), "error": "world_not_ready"})
+		get_tree().quit(6)
+		return
 
 	var scenario := String(_cfg.get("scenario", "shared-chest"))
 	match scenario:
@@ -341,7 +346,7 @@ func _run_player_health_replication_verification() -> void:
 		_write_json_file(_path_in_dir("%s_player_health_error.json" % role), {"role": role, "error": "local_player_not_found"})
 		get_tree().quit(110)
 		return
-	var remote_player: Node = _find_remote_player()
+	var remote_player: Node = await _wait_for_remote_player(timeout_sec)
 	if remote_player == null:
 		_write_json_file(_path_in_dir("%s_player_health_error.json" % role), {"role": role, "error": "remote_player_not_found"})
 		get_tree().quit(111)
@@ -1214,11 +1219,17 @@ func _run_enemy_death_replication_host(dungeon_manager: Node, timeout_sec: float
 		return
 	var weapon_data := _read_json_file(_path_in_dir("client_enemy_death_weapon.json"))
 	var shot_damage := maxi(1, int(weapon_data.get("shot_damage", 1)))
+	var max_target_health := maxi(shot_damage * 100, 1000)
 	var target_state := await _wait_for_enemy_state(dungeon_manager, func(state: Dictionary) -> bool:
-		return not bool(state.get("is_proxy", true)) and int(state.get("health", 0)) > 0
+		var health := int(state.get("health", 0))
+		return not bool(state.get("is_proxy", true)) and health > 0 and health <= max_target_health
 	, timeout_sec)
 	if target_state.is_empty():
-		_write_json_file(_path_in_dir("host_enemy_death_error.json"), {"role": "host", "error": "target_enemy_missing"})
+		_write_json_file(_path_in_dir("host_enemy_death_error.json"), {
+			"role": "host",
+			"error": "target_enemy_missing",
+			"max_target_health": max_target_health,
+		})
 		get_tree().quit(106)
 		return
 	var enemy_id := int(target_state.get("id", -1))
@@ -1348,11 +1359,17 @@ func _run_enemy_loot_replication_host(dungeon_manager: Node, timeout_sec: float)
 		return
 	var weapon_data := _read_json_file(_path_in_dir("client_enemy_loot_weapon.json"))
 	var shot_damage := maxi(1, int(weapon_data.get("shot_damage", 1)))
+	var max_target_health := maxi(shot_damage * 100, 1000)
 	var target_state := await _wait_for_enemy_state(dungeon_manager, func(state: Dictionary) -> bool:
-		return not bool(state.get("is_proxy", true)) and int(state.get("health", 0)) > 0
+		var health := int(state.get("health", 0))
+		return not bool(state.get("is_proxy", true)) and health > 0 and health <= max_target_health
 	, timeout_sec)
 	if target_state.is_empty():
-		_write_json_file(_path_in_dir("host_enemy_loot_error.json"), {"role": "host", "error": "target_enemy_missing"})
+		_write_json_file(_path_in_dir("host_enemy_loot_error.json"), {
+			"role": "host",
+			"error": "target_enemy_missing",
+			"max_target_health": max_target_health,
+		})
 		get_tree().quit(173)
 		return
 	var enemy_id := int(target_state.get("id", -1))
@@ -1971,6 +1988,14 @@ func _wait_for_local_player(timeout_sec: float):
 		return null
 	return _find_local_player()
 
+func _wait_for_remote_player(timeout_sec: float):
+	var found := await _wait_for_condition(func() -> bool:
+		return _find_remote_player() != null
+	, timeout_sec)
+	if not found:
+		return null
+	return _find_remote_player()
+
 func _wait_for_player_position(player: Node, expected: Vector3, timeout_sec: float) -> bool:
 	return await _wait_for_condition(func() -> bool:
 		var resolved_player := _refresh_player_reference(player)
@@ -2152,6 +2177,23 @@ func _find_local_player():
 		if player.has_method("is_local_controlled") and bool(player.call("is_local_controlled")):
 			return player
 	return null
+
+func _wait_for_world_ready(timeout_sec: float) -> bool:
+	return await _wait_for_condition(func() -> bool:
+		var dungeon_manager: Node = get_parent()
+		if dungeon_manager == null:
+			return false
+		if dungeon_manager.get("_floor_sync_in_progress"):
+			return false
+		var local_player: Node = _find_local_player()
+		if local_player == null:
+			return false
+		if _get_player_peer_id(local_player) != _get_local_peer_id():
+			return false
+		if not _is_multiplayer_session_active():
+			return true
+		return _get_network_players().size() >= 2 and _find_remote_player() != null
+	, timeout_sec)
 
 func _find_remote_player():
 	var local_peer_id := _get_local_peer_id()
@@ -2372,6 +2414,12 @@ func _get_local_peer_id() -> int:
 	if session == null:
 		return 1
 	return max(1, int(session.call("get_local_peer_id")))
+
+func _is_multiplayer_session_active() -> bool:
+	var session = get_node_or_null("/root/NetworkSession")
+	if session == null:
+		return false
+	return bool(session.call("is_multiplayer_active"))
 
 func _get_player_peer_id(player: Node) -> int:
 	if player == null:

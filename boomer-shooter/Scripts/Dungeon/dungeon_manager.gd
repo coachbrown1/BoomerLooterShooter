@@ -19,6 +19,7 @@ class_name DungeonManager
 const SNAPSHOT_INTERVAL: float = 0.05
 const CASTLE_INNER_CHAMBER_SCENE_PATH := "res://Scenes/Dungeon/Handcrafted/Castle_InnerChamber.tscn"
 const LOOT_PICKUP_SCENE: PackedScene = preload("res://Scenes/Props/loot_pickup.tscn")
+const VERIFIER_DEFAULT_DUNGEON_SEED := 1773666431
 
 var _generator: DungeonGenerator
 var _builder: DungeonBuilder
@@ -74,6 +75,9 @@ func _ready() -> void:
 	grid_size_min = GameState.dungeon_grid_min
 	grid_size_max = maxi(GameState.dungeon_grid_max, grid_size_min)
 	generation_seed = GameState.dungeon_seed
+	if _is_verifier_run() and generation_seed == 0:
+		generation_seed = VERIFIER_DEFAULT_DUNGEON_SEED
+		GameState.dungeon_seed = generation_seed
 
 	generate_floor(floor_number)
 	if _session_multiplayer and _session_host:
@@ -337,11 +341,10 @@ func _place_player() -> void:
 	var look_target: Vector3 = spawn_data.get("look_target", base_pos + Vector3(0.0, 0.0, 1.0)) as Vector3
 	base_pos.y = 1.0
 
-	var spawn_positions: Array[Vector3] = [base_pos]
+	var player_count := 1
 	if _session_multiplayer:
-		var remote_slot_count := _get_network_connected_peer_ids().size()
-		for i in range(remote_slot_count):
-			spawn_positions.append(_offset_spawn_position(base_pos, i + 1))
+		player_count += _get_network_connected_peer_ids().size()
+	var spawn_positions := _build_spawn_positions(base_pos, look_target, player_count)
 
 	if _players_ready_callback.is_valid() and NetworkPlayerManager.players_ready.is_connected(_players_ready_callback):
 		NetworkPlayerManager.players_ready.disconnect(_players_ready_callback)
@@ -842,6 +845,31 @@ func _mark_all_clients_floor_not_ready() -> void:
 	for peer_id in _get_network_connected_peer_ids():
 		_floor_sync_ready_by_peer[int(peer_id)] = false
 
+func _build_floor_sync_config() -> Dictionary:
+	return {
+		"grid_size_min": grid_size_min,
+		"grid_size_max": grid_size_max,
+		"min_start_end_distance_rooms": min_start_end_distance_rooms,
+		"room_size_tiles": room_size_tiles,
+		"corridor_width_tiles": corridor_width_tiles,
+		"corridor_length_tiles": corridor_length_tiles,
+		"biome_override": GameState.dungeon_biome_override,
+	}
+
+func _apply_floor_sync_config(floor_cfg: Dictionary) -> void:
+	if floor_cfg.is_empty():
+		return
+	grid_size_min = int(floor_cfg.get("grid_size_min", grid_size_min))
+	grid_size_max = maxi(int(floor_cfg.get("grid_size_max", grid_size_max)), grid_size_min)
+	min_start_end_distance_rooms = int(floor_cfg.get("min_start_end_distance_rooms", min_start_end_distance_rooms))
+	room_size_tiles = int(floor_cfg.get("room_size_tiles", room_size_tiles))
+	corridor_width_tiles = int(floor_cfg.get("corridor_width_tiles", corridor_width_tiles))
+	corridor_length_tiles = int(floor_cfg.get("corridor_length_tiles", corridor_length_tiles))
+	GameState.dungeon_biome_override = String(floor_cfg.get("biome_override", GameState.dungeon_biome_override))
+	GameState.dungeon_grid_min = grid_size_min
+	GameState.dungeon_grid_max = grid_size_max
+	GameState.dungeon_seed = generation_seed
+
 func _set_peer_floor_sync_ready(peer_id: int, is_ready: bool) -> void:
 	if peer_id <= 1:
 		return
@@ -996,21 +1024,37 @@ func _on_inner_chamber_door_opened(_door: DungeonDoor, room_id: int) -> void:
 			enemy.set_aggro_suppressed(false)
 	_suppressed_enemies_by_room_id.erase(room_id)
 
-func _offset_spawn_position(base_pos: Vector3, index: int) -> Vector3:
-	match index:
-		0:
-			return base_pos
-		1:
-			return base_pos + Vector3(2.0, 0.0, 0.0)
-		2:
-			return base_pos + Vector3(-2.0, 0.0, 0.0)
-		3:
-			return base_pos + Vector3(0.0, 0.0, 2.0)
-		_:
-			return base_pos + Vector3(0.0, 0.0, -2.0)
+func _build_spawn_positions(base_pos: Vector3, _look_target: Vector3, player_count: int) -> Array[Vector3]:
+	var positions: Array[Vector3] = []
+	var desired_count := maxi(1, player_count)
+	var snapped_base_variant: Variant = _snap_spawn_to_floor(base_pos)
+	var snapped_base: Vector3 = snapped_base_variant if snapped_base_variant is Vector3 else base_pos
+	positions.append(snapped_base)
+	while positions.size() < desired_count:
+		positions.append(snapped_base)
+	return positions
+
+func _snap_spawn_to_floor(candidate: Vector3) -> Variant:
+	var space_state := get_world_3d().direct_space_state
+	if space_state == null:
+		return null
+	var query := PhysicsRayQueryParameters3D.create(candidate + Vector3.UP * 4.0, candidate + Vector3.DOWN * 6.0)
+	query.collide_with_areas = false
+	query.collide_with_bodies = true
+	var result := space_state.intersect_ray(query)
+	if result.is_empty():
+		return null
+	var hit_pos: Vector3 = result.get("position", candidate)
+	var hit_normal: Vector3 = result.get("normal", Vector3.UP)
+	if hit_normal.dot(Vector3.UP) < 0.6:
+		return null
+	return Vector3(candidate.x, hit_pos.y + 1.0, candidate.z)
 
 func _get_network_session():
 	return get_node_or_null("/root/NetworkSession")
+
+func _is_verifier_run() -> bool:
+	return OS.get_cmdline_user_args().has("--verify-scenario")
 
 func _is_network_multiplayer_active() -> bool:
 	var session = _get_network_session()
@@ -1049,7 +1093,7 @@ func _sync_floor_to_clients() -> void:
 	if not _session_multiplayer or not _session_host:
 		return
 	_mark_all_clients_floor_not_ready()
-	rpc("rpc_sync_floor_state", floor_number, generation_seed)
+	rpc("rpc_sync_floor_state", floor_number, generation_seed, _build_floor_sync_config())
 
 func request_weapon_fire(peer_id: int, weapon_slot: int, weapon_key: String, cam_origin: Vector3, cam_forward: Vector3, shot_id: int) -> void:
 	if not _session_multiplayer:
@@ -1657,14 +1701,15 @@ func rpc_client_ready_for_sync(peer_id: int) -> void:
 	if sender != peer_id:
 		return
 	_set_peer_floor_sync_ready(peer_id, false)
-	rpc_id(peer_id, "rpc_sync_floor_state", floor_number, generation_seed)
+	rpc_id(peer_id, "rpc_sync_floor_state", floor_number, generation_seed, _build_floor_sync_config())
 
 @rpc("authority", "call_remote", "reliable")
-func rpc_sync_floor_state(remote_floor: int, remote_seed: int) -> void:
+func rpc_sync_floor_state(remote_floor: int, remote_seed: int, floor_cfg: Dictionary = {}) -> void:
 	if _session_host:
 		return
 	floor_number = remote_floor
 	generation_seed = remote_seed
+	_apply_floor_sync_config(floor_cfg)
 	_pending_player_roster.clear()
 	_pending_enemy_spawns.clear()
 	await generate_floor(floor_number)

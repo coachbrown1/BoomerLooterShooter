@@ -98,7 +98,8 @@ catch {
 }
 
 try {
-$deadline = (Get-Date).AddSeconds($TimeoutSec)
+$launcherTimeoutSec = [Math]::Max(($TimeoutSec * 2), $TimeoutSec + 15)
+$deadline = (Get-Date).AddSeconds($launcherTimeoutSec)
 while ((-not $hostProcess.HasExited -or -not $clientProcess.HasExited) -and (Get-Date) -lt $deadline) {
     Start-Sleep -Milliseconds 500
 }
