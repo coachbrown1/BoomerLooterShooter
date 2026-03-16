@@ -8,13 +8,18 @@ signal slot_drop_requested(from_slot: SlotRef, to_slot: SlotRef)
 var slot_ref: SlotRef = null
 var has_item: bool = false
 var _suppress_next_pressed: bool = false
+var _selected: bool = false
 var _base_fill_color := Color(0.13, 0.15, 0.18, 0.95)
 var _empty_border_color := Color(0.28, 0.31, 0.36, 0.85)
 var _rarity_border_color := Color(0.52, 0.55, 0.60, 1.0)
+var _selected_fill_color := Color(0.18, 0.16, 0.10, 0.98)
+var _selected_border_color := Color(0.93, 0.79, 0.38, 1.0)
+var _badge_icon: TextureRect = null
 
 func _ready() -> void:
 	pressed.connect(_on_pressed)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_ensure_badge_icon()
 	_refresh_styles()
 
 func _gui_input(event: InputEvent) -> void:
@@ -35,6 +40,17 @@ func set_has_item(value: bool) -> void:
 func set_rarity_border_color(color: Color) -> void:
 	_rarity_border_color = color
 	_refresh_styles()
+
+func set_selected(value: bool) -> void:
+	_selected = value
+	_refresh_styles()
+
+func set_badge_texture(texture: Texture2D) -> void:
+	_ensure_badge_icon()
+	if _badge_icon == null:
+		return
+	_badge_icon.texture = texture
+	_badge_icon.visible = texture != null
 
 func _on_pressed() -> void:
 	if _suppress_next_pressed:
@@ -82,10 +98,12 @@ func _drop_data(_at_position: Vector2, data: Variant) -> void:
 	slot_drop_requested.emit(from_slot, slot_ref)
 
 func _refresh_styles() -> void:
-	var normal := _make_stylebox(_base_fill_color, _get_current_border_color())
-	var hover := _make_stylebox(_base_fill_color.lightened(0.06), _get_current_border_color().lightened(0.12))
-	var pressed := _make_stylebox(_base_fill_color.darkened(0.08), _get_current_border_color().lightened(0.2))
-	var focus := _make_stylebox(_base_fill_color.lightened(0.04), _get_current_border_color().lightened(0.25), 3)
+	var fill := _selected_fill_color if _selected else _base_fill_color
+	var border := _selected_border_color if _selected else _get_current_border_color()
+	var normal := _make_stylebox(fill, border, 3 if _selected else 2)
+	var hover := _make_stylebox(fill.lightened(0.06), border.lightened(0.12), 3 if _selected else 2)
+	var pressed := _make_stylebox(fill.darkened(0.08), border.lightened(0.2), 3 if _selected else 2)
+	var focus := _make_stylebox(fill.lightened(0.04), border.lightened(0.25), 4 if _selected else 3)
 	add_theme_stylebox_override("normal", normal)
 	add_theme_stylebox_override("hover", hover)
 	add_theme_stylebox_override("pressed", pressed)
@@ -112,3 +130,22 @@ func _make_stylebox(fill_color: Color, border_color: Color, border_width: int = 
 	style.content_margin_right = 4
 	style.content_margin_bottom = 4
 	return style
+
+func _ensure_badge_icon() -> void:
+	if _badge_icon != null:
+		return
+	_badge_icon = TextureRect.new()
+	_badge_icon.name = "BadgeIcon"
+	_badge_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_badge_icon.anchor_left = 0.0
+	_badge_icon.anchor_top = 0.0
+	_badge_icon.anchor_right = 0.0
+	_badge_icon.anchor_bottom = 0.0
+	_badge_icon.offset_left = 4.0
+	_badge_icon.offset_top = 4.0
+	_badge_icon.offset_right = 28.0
+	_badge_icon.offset_bottom = 28.0
+	_badge_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_badge_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_badge_icon.visible = false
+	add_child(_badge_icon)

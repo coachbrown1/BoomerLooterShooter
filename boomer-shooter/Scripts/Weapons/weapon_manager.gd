@@ -66,6 +66,7 @@ func switch_to_weapon(index: int) -> void:
 	current_weapon.show_weapon()
 	weapon_changed.emit(current_weapon)
 	_update_hud()
+	_show_weapon_swap_feedback()
 
 func next_weapon() -> void:
 	_cycle_weapon(1)
@@ -228,6 +229,7 @@ func switch_to_weapon_by_key(raw_key: String) -> bool:
 	current_weapon.show_weapon()
 	weapon_changed.emit(current_weapon)
 	_update_hud()
+	_show_weapon_swap_feedback()
 	return true
 
 func get_ammo_snapshot() -> Dictionary:
@@ -381,3 +383,18 @@ func _get_network_local_peer_id() -> int:
 	if session == null:
 		return 1
 	return int(session.call("get_local_peer_id"))
+
+func _show_weapon_swap_feedback() -> void:
+	if not _is_local_owner() or current_weapon == null:
+		return
+	var ammo_icon_key := current_weapon.ammo_type if current_weapon.ammo_type != "none" else "interact"
+	var huds := _cached_huds
+	if huds.is_empty():
+		huds = get_tree().get_nodes_in_group("hud")
+	for hud in huds:
+		if not is_instance_valid(hud):
+			continue
+		if hud.has_method("show_center_status"):
+			hud.call("show_center_status", current_weapon.weapon_name, ammo_icon_key, 1.0)
+		if hud.has_method("push_status_toast"):
+			hud.call("push_status_toast", "Switched to %s" % current_weapon.weapon_name, ammo_icon_key, 2.0)

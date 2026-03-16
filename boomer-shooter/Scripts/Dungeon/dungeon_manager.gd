@@ -1156,6 +1156,12 @@ func request_sync_active_chest_contents(peer_id: int, chest_path: String, chest_
 	else:
 		rpc_id(1, "rpc_request_sync_chest_contents", peer_id, chest_path, chest_pos, items)
 
+func request_drop_inventory_item(peer_id: int, slot_index: int, drop_origin: Vector3, launch_direction: Vector3) -> void:
+	if not _session_multiplayer or _session_host:
+		_handle_drop_inventory_item_request(peer_id, slot_index, drop_origin, launch_direction)
+		return
+	rpc_id(1, "rpc_request_drop_inventory_item", peer_id, slot_index, drop_origin, launch_direction)
+
 func _apply_interaction(interactor: Node, target: Node) -> void:
 	var resolved_target := _resolve_interaction_target(target)
 	if resolved_target == null:
@@ -1716,6 +1722,12 @@ func rpc_sync_pickup_state(peer_id: int, inventory_snapshot: Dictionary, health:
 	if not is_instance_valid(local_player):
 		return
 	var inventory_system: InventorySystem = local_player.get("inventory_system") as InventorySystem
+	var previous_inventory_snapshot := inventory_system.get_slot_snapshot() if inventory_system != null else {}
+	var previous_health := int(local_player.get("current_health"))
+	var previous_ammo_snapshot := {}
+	var previous_manager: WeaponManager = local_player.get("weapon_manager")
+	if previous_manager != null:
+		previous_ammo_snapshot = previous_manager.get_ammo_snapshot()
 	if inventory_system != null and not inventory_snapshot.is_empty():
 		inventory_system.apply_slot_snapshot(inventory_snapshot)
 	if health >= 0 and local_player.has_method("apply_authoritative_health"):
@@ -1723,6 +1735,7 @@ func rpc_sync_pickup_state(peer_id: int, inventory_snapshot: Dictionary, health:
 	var manager: WeaponManager = local_player.get("weapon_manager")
 	if manager != null and not ammo_snapshot.is_empty():
 		manager.apply_authoritative_weapon_state(weapon_slot, current_mag, ammo_snapshot)
+	_emit_pickup_sync_feedback(local_player, previous_inventory_snapshot, inventory_snapshot, previous_health, health, previous_ammo_snapshot, ammo_snapshot)
 
 @rpc("any_peer", "reliable")
 func rpc_request_interaction(peer_id: int, target_path: String, target_pos: Vector3 = Vector3.ZERO) -> void:
@@ -1748,6 +1761,77 @@ func rpc_request_close_chest_view(peer_id: int, chest_path: String) -> void:
 	if multiplayer.get_remote_sender_id() != peer_id:
 		return
 	_handle_chest_view_closed(peer_id, chest_path)
+
+@rpc("any_peer", "reliable")
+func rpc_request_drop_inventory_item(peer_id: int, slot_index: int, drop_origin: Vector3, launch_direction: Vector3) -> void:
+	if not _session_host:
+		return
+	if multiplayer.get_remote_sender_id() != peer_id:
+		return
+	_handle_drop_inventory_item_request(peer_id, slot_index, drop_origin, launch_direction)
+
+func _emit_pickup_sync_feedback(local_player: Node, previous_inventory_snapshot: Dictionary, current_inventory_snapshot: Dictionary, previous_health: int, current_health: int, previous_ammo_snapshot: Dictionary, current_ammo_snapshot: Dictionary) -> void:
+	if local_player == null or not local_player.has_method("show_hud_toast"):
+		return
+	if current_health > previous_health:
+		local_player.call("show_hud_toast", "+%d Health" % (current_health - previous_health), "health")
+	for ammo_type_variant in current_ammo_snapshot.keys():
+		var ammo_type := String(ammo_type_variant)
+		var previous_amount := int(previous_ammo_snapshot.get(ammo_type, 0))
+		var current_amount := int(current_ammo_snapshot.get(ammo_type, previous_amount))
+		if current_amount > previous_amount:
+			local_player.call("show_hud_toast", "+%d %s" % [current_amount - previous_amount, _get_ammo_pickup_toast_name(ammo_type)], ammo_type)
+	var item_name := _find_new_inventory_item_name(previous_inventory_snapshot, current_inventory_snapshot)
+	if not item_name.is_empty():
+		local_player.call("show_hud_toast", "Picked up %s" % item_name, "loot")
+
+func _find_new_inventory_item_name(previous_snapshot: Dictionary, current_snapshot: Dictionary) -> String:
+	for section_key in ["storage", "weapons", "equipment"]:
+		var previous_section: Variant = previous_snapshot.get(section_key, [] if section_key != "equipment" else {})
+		var current_section: Variant = current_snapshot.get(section_key, [] if section_key != "equipment" else {})
+		if section_key == "equipment":
+			for slot_key_variant in current_section.keys():
+				var slot_key := String(slot_key_variant)
+				var previous_item = previous_section.get(slot_key, null)
+				var current_item = current_section.get(slot_key, null)
+				if previous_item == null and current_item != null:
+					return String(current_item.get("display_name", "Item"))
+			continue
+		var previous_array: Array = previous_section
+		var current_array: Array = current_section
+		for i in range(current_array.size()):
+			var previous_item = previous_array[i] if i < previous_array.size() else null
+			var current_item = current_array[i]
+			if previous_item == null and current_item != null:
+				return String(current_item.get("display_name", "Item"))
+	return ""
+
+func _get_ammo_pickup_toast_name(ammo_type: String) -> String:
+	match ammo_type:
+		"light":
+			return "Rifle Ammo"
+		"shells":
+			return "Shotgun Shells"
+		"energy":
+			return "Energy Cells"
+		"arrows":
+			return "Bolts"
+		_:
+			return "%s Ammo" % ammo_type.capitalize()
+
+func _handle_drop_inventory_item_request(peer_id: int, slot_index: int, drop_origin: Vector3, launch_direction: Vector3) -> void:
+	var player = _get_player_node_for_peer(peer_id)
+	if not is_instance_valid(player):
+		return
+	var inventory_system: InventorySystem = player.get("inventory_system") as InventorySystem
+	if inventory_system == null:
+		return
+	var show_toast := not _session_multiplayer or peer_id == _local_peer_id
+	var dropped: bool = bool(inventory_system.call("_drop_storage_item_to_world", slot_index, drop_origin, launch_direction, show_toast))
+	if not dropped:
+		return
+	if _session_multiplayer and _session_host and peer_id != _local_peer_id:
+		_sync_pickup_state_to_peer(peer_id, player)
 
 @rpc("any_peer", "reliable")
 func rpc_request_sync_chest_contents(peer_id: int, chest_path: String, chest_pos: Vector3, items: Array) -> void:

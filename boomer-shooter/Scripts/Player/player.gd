@@ -366,14 +366,31 @@ func _update_loot_tooltip() -> void:
 	var query := PhysicsRayQueryParameters3D.create(origin, origin + forward * 3.5)
 	query.exclude = [self.get_rid()]
 	query.collide_with_areas = true
-	query.collide_with_bodies = false
+	query.collide_with_bodies = true
 	var result := space_state.intersect_ray(query)
 	var hud := _get_hud()
 	if hud == null:
 		return
-	if result and result.collider.has_method("get_item_snapshot"):
-		hud.show_world_item_tooltip(result.collider.get_item_snapshot())
-	elif hud.has_method("hide_world_item_tooltip"):
+	if result:
+		var collider = result.collider
+		if collider.has_method("get_item_snapshot"):
+			hud.show_world_item_tooltip(collider.get_item_snapshot())
+			return
+		if collider is InteractableChest and hud.has_method("show_interaction_prompt"):
+			var prompt_target := "Shared Chest" if _is_network_multiplayer_active() else "Chest"
+			hud.show_interaction_prompt("Open", prompt_target, "shared_chest" if _is_network_multiplayer_active() else "chest", String(collider.get("chest_name")))
+			return
+		if collider is DungeonDoor and hud.has_method("show_interaction_prompt"):
+			hud.show_interaction_prompt("Open", "Door", "door")
+			return
+		if collider is Portal and hud.has_method("show_interaction_prompt"):
+			hud.show_interaction_prompt("Use", "Portal", "interact")
+			return
+		if collider.has_method("interact") and hud.has_method("show_interaction_prompt"):
+			var target_name := String(collider.get("interact_prompt", collider.name))
+			hud.show_interaction_prompt("Use", target_name, "interact")
+			return
+	if hud.has_method("hide_world_item_tooltip"):
 		hud.hide_world_item_tooltip()
 
 func _try_interact() -> void:
@@ -440,6 +457,13 @@ func _toggle_inventory() -> void:
 			var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
 			if dungeon_manager != null and dungeon_manager.has_method("request_chest_view_closed"):
 				dungeon_manager.call("request_chest_view_closed", network_peer_id, active_chest_path)
+
+func show_hud_toast(message: String, icon_key: String = "interact", duration: float = 2.8) -> void:
+	if not _is_local_controlled:
+		return
+	var hud := _get_hud()
+	if hud and hud.has_method("push_status_toast"):
+		hud.call("push_status_toast", message, icon_key, duration)
 
 func _set_player_visual_layer(layer_number: int) -> void:
 	if visuals == null:

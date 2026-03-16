@@ -19,6 +19,7 @@ var _hovering := false
 var _hover_base_y := 0.0
 var _hover_time := 0.0
 var _sprite: Sprite3D = null
+var _picked_up := false
 
 func _ready() -> void:
 	add_to_group("loot_pickup")
@@ -35,6 +36,11 @@ func _ready() -> void:
 
 	if item_data != null or _is_ammo_pickup() or _is_health_pickup():
 		_apply_icon()
+
+	# Health and ammo auto-collect on walk-over; gear stays as an interact-only pickup.
+	if _is_health_pickup() or _is_ammo_pickup():
+		collision_mask = 2  # player CharacterBody3D is on layer 2
+		body_entered.connect(_on_body_entered)
 
 func _apply_icon() -> void:
 	if _sprite == null:
@@ -104,6 +110,25 @@ func _process(delta: float) -> void:
 	if _sprite:
 		_sprite.rotation.y += ROTATE_SPEED * delta
 
+func _on_body_entered(body: Node) -> void:
+	if _picked_up:
+		return
+	if not body.is_in_group("player"):
+		return
+	# In multiplayer each machine runs its own physics, so remote player bodies
+	# would trigger this on both host and client. Only let the locally-controlled
+	# player fire the pickup; the existing request_interaction RPC path handles
+	# authority and syncing.
+	if body.has_method("is_local_controlled") and not body.call("is_local_controlled"):
+		return
+	_picked_up = true
+	var dungeon_manager := get_tree().get_first_node_in_group("dungeon_manager")
+	if dungeon_manager != null and dungeon_manager.has_method("request_interaction"):
+		dungeon_manager.call("request_interaction", body, self)
+	else:
+		interact(body)
+
+
 func interact(interactor: Node) -> void:
 	if _is_health_pickup():
 		if interactor == null or not interactor.has_method("heal"):
@@ -111,6 +136,8 @@ func interact(interactor: Node) -> void:
 		if int(interactor.get("current_health")) >= int(interactor.get("max_health")):
 			return
 		interactor.call("heal", health_amount)
+		if interactor.has_method("show_hud_toast"):
+			interactor.call("show_hud_toast", "+%d Health" % health_amount, "health")
 		queue_free()
 		return
 	if _is_ammo_pickup():
@@ -118,6 +145,8 @@ func interact(interactor: Node) -> void:
 		if manager == null or ammo_type.is_empty() or ammo_amount <= 0:
 			return
 		manager.add_ammo(ammo_type, ammo_amount)
+		if interactor.has_method("show_hud_toast"):
+			interactor.call("show_hud_toast", "+%d %s" % [ammo_amount, _get_ammo_display_name()], "ammo")
 		queue_free()
 		return
 	if item_data == null:
@@ -127,7 +156,11 @@ func interact(interactor: Node) -> void:
 	if inv == null:
 		return
 	if inv.try_add_to_storage(item_data):
+		if interactor.has_method("show_hud_toast"):
+			interactor.call("show_hud_toast", "Picked up %s" % item_data.display_name, "loot")
 		queue_free()
+	elif interactor.has_method("show_hud_toast"):
+		interactor.call("show_hud_toast", "Inventory Full", "loot")
 
 func get_item_snapshot() -> Dictionary:
 	if _is_health_pickup():

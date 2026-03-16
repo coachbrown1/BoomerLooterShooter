@@ -187,6 +187,7 @@ func open_chest(chest: InteractableChest) -> void:
 			chest_storage[i] = null
 	set_inventory_open(true)
 	_emit_inventory_changed()
+	_push_owner_toast("Opened %s" % chest.chest_name, "shared_chest" if _is_multiplayer_active() else "chest")
 
 func get_equipped_items() -> Array[InventoryItemData]:
 	var results: Array[InventoryItemData] = []
@@ -228,6 +229,7 @@ func refresh_active_chest_from_world() -> void:
 		return
 	chest_storage = _active_chest.get_storage_copy()
 	_emit_inventory_changed()
+	_push_owner_toast("Shared chest updated", "shared_chest")
 
 func _is_valid_slot(slot_ref: SlotRef) -> bool:
 	if slot_ref == null:
@@ -336,6 +338,66 @@ func try_add_to_storage(item: InventoryItemData) -> bool:
 			_emit_inventory_changed()
 			return true
 	return false
+
+func request_drop_storage_item(slot_ref: SlotRef) -> bool:
+	if slot_ref == null or slot_ref.section != &"storage":
+		return false
+	if slot_ref.index < 0 or slot_ref.index >= STORAGE_SLOT_COUNT:
+		return false
+	var item: InventoryItemData = storage[slot_ref.index]
+	if item == null:
+		return false
+	var owner_node := owner
+	if not (owner_node is Node3D):
+		return false
+	var owner_body := owner_node as Node3D
+	var drop_origin := owner_body.global_position + Vector3(0.0, 0.8, 0.0)
+	var launch_direction := -owner_body.global_transform.basis.z.normalized()
+	launch_direction.y = 0.0
+	if launch_direction.length_squared() <= 0.0001:
+		launch_direction = Vector3.FORWARD
+	launch_direction = launch_direction.normalized()
+	var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
+	if dungeon_manager == null:
+		return false
+	var peer_id := 1
+	if owner_node.has_method("get_network_peer_id"):
+		peer_id = int(owner_node.call("get_network_peer_id"))
+	var display_name: String = item.display_name
+	if _is_multiplayer_active():
+		if dungeon_manager.has_method("request_drop_inventory_item"):
+			dungeon_manager.call("request_drop_inventory_item", peer_id, slot_ref.index, drop_origin, launch_direction)
+			_push_owner_toast("Dropped %s" % display_name, "loot")
+			return true
+		return false
+	return _drop_storage_item_to_world(slot_ref.index, drop_origin, launch_direction, true)
+
+func _push_owner_toast(message: String, icon_key: String = "interact") -> void:
+	var owner_node := owner
+	if owner_node != null and owner_node.has_method("show_hud_toast"):
+		owner_node.call("show_hud_toast", message, icon_key)
+
+func _is_multiplayer_active() -> bool:
+	var session = get_node_or_null("/root/NetworkSession")
+	if session == null:
+		return false
+	return bool(session.call("is_multiplayer_active"))
+
+func _drop_storage_item_to_world(slot_index: int, drop_origin: Vector3, launch_direction: Vector3, show_toast: bool = false) -> bool:
+	if slot_index < 0 or slot_index >= STORAGE_SLOT_COUNT:
+		return false
+	var item: InventoryItemData = storage[slot_index]
+	if item == null:
+		return false
+	var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
+	if dungeon_manager == null or not dungeon_manager.has_method("spawn_network_item_pickup"):
+		return false
+	storage[slot_index] = null
+	_emit_inventory_changed()
+	dungeon_manager.call("spawn_network_item_pickup", item.to_dict(), drop_origin, launch_direction)
+	if show_toast:
+		_push_owner_toast("Dropped %s" % item.display_name, "loot")
+	return true
 
 func _create_weapon_item(weapon_key: StringName, rarity: String) -> InventoryItemData:
 	if gear_catalog != null:

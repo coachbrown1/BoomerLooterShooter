@@ -26,6 +26,8 @@ $hostErr = Join-Path $verifyDir "host.err.log"
 $clientLog = Join-Path $verifyDir "client.log"
 $clientErr = Join-Path $verifyDir "client.err.log"
 $launcherLog = Join-Path $verifyDir "launcher.log"
+$hostProcess = $null
+$clientProcess = $null
 
 $engineArgs = @(
     "--headless",
@@ -51,6 +53,36 @@ $clientArgs = $engineArgs + @("--") + @(
     "--verify-role", "client"
 ) + $commonUserArgs
 
+function Stop-VerifierProcess {
+    param(
+        [Parameter(Mandatory = $true)]
+        $Process,
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    if ($null -eq $Process) {
+        return
+    }
+
+    try {
+        if ($Process.HasExited) {
+            return
+        }
+    }
+    catch {
+        return
+    }
+
+    try {
+        Stop-Process -Id $Process.Id -Force -ErrorAction Stop
+        "$Name process force-stopped during verifier cleanup." | Add-Content -Path $launcherLog
+    }
+    catch {
+        "$Name cleanup warning: $($_.Exception.Message)" | Add-Content -Path $launcherLog
+    }
+}
+
 try {
     "Launching host verifier for scenario '$scenarioKey'..." | Set-Content -Path $launcherLog
     $hostProcess = Start-Process -FilePath $GodotExe -ArgumentList $hostArgs -PassThru -RedirectStandardOutput $hostLog -RedirectStandardError $hostErr
@@ -65,6 +97,7 @@ catch {
     throw
 }
 
+try {
 $deadline = (Get-Date).AddSeconds($TimeoutSec)
 while ((-not $hostProcess.HasExited -or -not $clientProcess.HasExited) -and (Get-Date) -lt $deadline) {
     Start-Sleep -Milliseconds 500
@@ -447,3 +480,8 @@ Write-Host $label
 Write-Host "Scenario: $scenarioKey"
 Write-Host "Output dir: $verifyDir"
 "PASS" | Add-Content -Path $launcherLog
+}
+finally {
+    Stop-VerifierProcess -Process $clientProcess -Name "Client"
+    Stop-VerifierProcess -Process $hostProcess -Name "Host"
+}
