@@ -203,10 +203,10 @@ func _input(event: InputEvent) -> void:
 			inventory_system.set_inventory_open(false)
 			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 			return
-		if Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
-			Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-		else:
-			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		var hud = _get_hud()
+		if hud != null and hud.has_method("toggle_pause_menu"):
+			hud.call("toggle_pause_menu")
+			return
 
 func _physics_process(delta: float) -> void:
 	if not _is_local_controlled and _is_network_host() and network_peer_id == 1:

@@ -113,6 +113,12 @@ const WEAPON_SLOT_UI_COUNT := 4
 const STORAGE_SLOT_UI_COUNT := 10
 const CHEST_SLOT_UI_COUNT := 16
 const TEAMMATE_REFRESH_INTERVAL := 0.2
+const RESOLUTION_OPTIONS := [
+	Vector2i(1280, 720),
+	Vector2i(1600, 900),
+	Vector2i(1920, 1080),
+	Vector2i(2560, 1440),
+]
 
 var _inventory_system: InventorySystem = null
 var _inventory_panel: PanelContainer = null
@@ -159,6 +165,11 @@ var _health_warning_phase: float = 0.0
 var _inventory_open_tween: Tween = null
 var _chest_section_container: PanelContainer = null
 var _world_drop_overlay: Control = null
+var _pause_menu_overlay: ColorRect = null
+var _pause_menu_panel: PanelContainer = null
+var _pause_resolution_option: OptionButton = null
+var _pause_fullscreen_check: CheckBox = null
+var _pause_menu_open: bool = false
 
 func _ready() -> void:
 	# Print out a message so the user knows about the debug key
@@ -174,6 +185,7 @@ func _ready() -> void:
 	_build_world_item_tooltip()
 	_build_center_status()
 	_build_toast_stack()
+	_build_pause_menu()
 	_set_mouse_filter_recursive(_bottom_margin, Control.MOUSE_FILTER_IGNORE)
 	_update_teammate_health_label()
 	set_process(true)
@@ -442,6 +454,29 @@ func _on_inventory_opened_changed(is_open: bool) -> void:
 func set_inventory_panel_visible(is_open: bool) -> void:
 	_on_inventory_opened_changed(is_open)
 
+func toggle_pause_menu() -> void:
+	set_pause_menu_open(not _pause_menu_open)
+
+func set_pause_menu_open(is_open: bool) -> void:
+	if _pause_menu_overlay == null:
+		_build_pause_menu()
+	if _pause_menu_overlay == null:
+		return
+	_pause_menu_open = is_open
+	_pause_menu_overlay.visible = is_open
+	if is_open:
+		_refresh_pause_menu_controls()
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	else:
+		if _inventory_system == null or not _inventory_system.is_inventory_open():
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	var local_player := _find_local_player()
+	if local_player != null and local_player.has_method("set_gameplay_input_enabled"):
+		local_player.call("set_gameplay_input_enabled", not is_open)
+
+func is_pause_menu_open() -> bool:
+	return _pause_menu_open
+
 func _build_inventory_ui() -> void:
 	_inventory_panel = PanelContainer.new()
 	_inventory_panel.name = "InventoryPanel"
@@ -615,6 +650,122 @@ func _build_inventory_ui() -> void:
 	_world_drop_overlay.world_drop_requested.connect(_on_world_drop_requested)
 	add_child(_world_drop_overlay)
 	move_child(_world_drop_overlay, get_child_count() - 2)
+
+func _build_pause_menu() -> void:
+	if _pause_menu_overlay != null:
+		return
+	_pause_menu_overlay = ColorRect.new()
+	_pause_menu_overlay.name = "PauseMenuOverlay"
+	_pause_menu_overlay.visible = false
+	_pause_menu_overlay.color = Color(0.03, 0.03, 0.04, 0.68)
+	_pause_menu_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_pause_menu_overlay.anchor_right = 1.0
+	_pause_menu_overlay.anchor_bottom = 1.0
+	add_child(_pause_menu_overlay)
+	move_child(_pause_menu_overlay, get_child_count() - 1)
+
+	var center := CenterContainer.new()
+	center.anchor_right = 1.0
+	center.anchor_bottom = 1.0
+	_pause_menu_overlay.add_child(center)
+
+	_pause_menu_panel = PanelContainer.new()
+	_pause_menu_panel.custom_minimum_size = Vector2(420, 300)
+	_pause_menu_panel.add_theme_stylebox_override("panel", _make_frame_texture_style("module", 18, Vector4(20, 16, 20, 16)))
+	center.add_child(_pause_menu_panel)
+
+	var margin := _wrap_panel_with_margin(_pause_menu_panel, 18, 16)
+	var root := VBoxContainer.new()
+	root.add_theme_constant_override("separation", 14)
+	margin.add_child(root)
+
+	var title := Label.new()
+	title.text = "Options"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 28)
+	root.add_child(title)
+
+	var resolution_label := Label.new()
+	resolution_label.text = "Resolution"
+	resolution_label.add_theme_font_size_override("font_size", 18)
+	root.add_child(resolution_label)
+
+	_pause_resolution_option = OptionButton.new()
+	_pause_resolution_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_pause_resolution_option.item_selected.connect(_on_pause_resolution_selected)
+	root.add_child(_pause_resolution_option)
+
+	for i in range(RESOLUTION_OPTIONS.size()):
+		var res: Vector2i = RESOLUTION_OPTIONS[i]
+		_pause_resolution_option.add_item("%d x %d" % [res.x, res.y], i)
+
+	_pause_fullscreen_check = CheckBox.new()
+	_pause_fullscreen_check.text = "Fullscreen"
+	_pause_fullscreen_check.add_theme_font_size_override("font_size", 18)
+	_pause_fullscreen_check.toggled.connect(_on_pause_fullscreen_toggled)
+	root.add_child(_pause_fullscreen_check)
+
+	var buttons := VBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 10)
+	root.add_child(buttons)
+
+	var resume_button := Button.new()
+	resume_button.text = "Resume"
+	resume_button.custom_minimum_size = Vector2(0, 42)
+	resume_button.pressed.connect(_on_pause_resume_pressed)
+	buttons.add_child(resume_button)
+
+	var quit_button := Button.new()
+	quit_button.text = "Quit"
+	quit_button.custom_minimum_size = Vector2(0, 42)
+	quit_button.pressed.connect(_on_pause_quit_pressed)
+	buttons.add_child(quit_button)
+
+func _refresh_pause_menu_controls() -> void:
+	if _pause_resolution_option == null or _pause_fullscreen_check == null:
+		return
+	var mode := DisplayServer.window_get_mode()
+	_pause_fullscreen_check.set_pressed_no_signal(mode == DisplayServer.WINDOW_MODE_FULLSCREEN)
+	var current_size := DisplayServer.window_get_size()
+	var selected_index := -1
+	for i in range(RESOLUTION_OPTIONS.size()):
+		if RESOLUTION_OPTIONS[i] == current_size:
+			selected_index = i
+			break
+	if selected_index < 0:
+		selected_index = 2
+	for i in range(_pause_resolution_option.item_count):
+		_pause_resolution_option.select(selected_index)
+		break
+
+func _on_pause_resolution_selected(index: int) -> void:
+	if index < 0 or index >= RESOLUTION_OPTIONS.size():
+		return
+	var size: Vector2i = RESOLUTION_OPTIONS[index]
+	DisplayServer.window_set_size(size)
+	if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_WINDOWED:
+		var screen_size := DisplayServer.screen_get_size()
+		DisplayServer.window_set_position((screen_size - size) / 2)
+
+func _on_pause_fullscreen_toggled(enabled: bool) -> void:
+	if enabled:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		var selected_index := _pause_resolution_option.get_selected_id()
+		if selected_index < 0 or selected_index >= RESOLUTION_OPTIONS.size():
+			selected_index = 2
+		_on_pause_resolution_selected(selected_index)
+
+func _on_pause_resume_pressed() -> void:
+	set_pause_menu_open(false)
+
+func _on_pause_quit_pressed() -> void:
+	set_pause_menu_open(false)
+	var session = _get_network_session()
+	if session != null and bool(session.call("is_multiplayer_active")):
+		session.call("leave_game")
+	get_tree().change_scene_to_file("res://Scenes/System/bootstrap.tscn")
 
 func _build_section_label(text: String, badge_key: String = "") -> PanelContainer:
 	var panel := PanelContainer.new()
