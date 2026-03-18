@@ -5,3 +5,4 @@ __pycache__/
 *.py
 /.claude/worktrees/gifted-meitner
 /.claude/worktrees/elastic-hamilton
+/MaterialMaker
