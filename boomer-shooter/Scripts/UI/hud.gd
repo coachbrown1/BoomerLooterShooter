@@ -50,7 +50,9 @@ const EQUIPMENT_LABELS: Dictionary = {
 	&"chest": "Chest",
 	&"arms": "Arms",
 	&"legs": "Legs",
-	&"feet": "Feet"
+	&"feet": "Feet",
+	&"utility_primary": "Utility I",
+	&"utility_secondary": "Utility II"
 }
 const STAT_LABELS: Dictionary = {
 	"health_add": "Health",
@@ -58,6 +60,8 @@ const STAT_LABELS: Dictionary = {
 	"move_speed_add": "Move Speed",
 	"move_speed_mult": "Move Speed %",
 	"sprint_multiplier": "Sprint Speed",
+	"jump_velocity_add": "Jump Velocity",
+	"air_control_mult": "Air Control %",
 	"damage_reduction": "Damage Reduction",
 	"weapon_damage_add": "Weapon Damage",
 	"weapon_damage_mult": "Weapon Damage %",
@@ -67,6 +71,15 @@ const STAT_LABELS: Dictionary = {
 	"recoil_recovery_mult": "Recoil Recovery %",
 	"spread_reduction": "Spread Reduction",
 	"fov_kick_reduction": "FOV Kick Reduction",
+	"dash_speed_add": "Dash Speed",
+	"dash_distance_add": "Dash Distance",
+	"dash_cooldown_mult": "Dash Cooldown %",
+	"grapple_range_add": "Grapple Range",
+	"grapple_pull_speed_mult": "Grapple Pull %",
+	"jet_fuel_add": "Jet Fuel",
+	"jet_thrust_add": "Jet Thrust",
+	"jet_recharge_mult": "Jet Recharge Delay %",
+	"jet_recharge_rate_mult": "Jet Recharge Rate %",
 	"light_damage_add": "Rifle Damage",
 	"light_damage_mult": "Rifle Damage %",
 	"light_mag_size_add": "Rifle Mag Size",
@@ -152,6 +165,11 @@ var _health_module: PanelContainer = null
 var _ammo_module: PanelContainer = null
 var _ammo_reserve_label: Label = null
 var _ammo_warning_label: Label = null
+var _mobility_module: PanelContainer = null
+var _mobility_name_label: Label = null
+var _mobility_detail_label: Label = null
+var _mobility_meter: ProgressBar = null
+var _current_mobility_status: Dictionary = {}
 var _ui_frame_texture: Texture2D = null
 var _ui_prompt_icon_texture: Texture2D = null
 var _ui_badge_texture: Texture2D = null
@@ -241,6 +259,46 @@ func update_ammo_display(current_mag: int, mag_size: int, reserve: int, is_infin
 		_ammo_warning_label.visible = _low_ammo_warning
 	_update_ammo_icon(ammo_type)
 	_update_ammo_warning_visuals()
+	_configure_bottom_hud_layout()
+
+func update_mobility_status(status: Dictionary) -> void:
+	if not is_node_ready():
+		await ready
+	_current_mobility_status = status.duplicate(true)
+	if _mobility_module == null:
+		return
+	var ability := String(status.get("ability", ""))
+	var item_name := String(status.get("item_name", ""))
+	if ability.is_empty():
+		_mobility_module.visible = false
+		_configure_bottom_hud_layout()
+		return
+	_mobility_module.visible = true
+	if _mobility_name_label != null:
+		_mobility_name_label.text = item_name if not item_name.is_empty() else ability.replace("_", " ").capitalize()
+	if _mobility_detail_label != null:
+		var detail := "Ready"
+		match ability:
+			"dash_pack":
+				var cooldown_ratio := float(status.get("dash_cooldown_ratio", 0.0))
+				detail = "Bursting" if bool(status.get("dash_active", false)) else ("Cooling Down" if cooldown_ratio > 0.01 else "Ready")
+			"grapple_hook":
+				detail = "Latched" if bool(status.get("grapple_active", false)) else "Ready"
+			"jet_pack":
+				detail = "Thrusting" if bool(status.get("jet_active", false)) else "Ready"
+		_mobility_detail_label.text = detail
+	if _mobility_meter != null:
+		var ratio := 1.0
+		match ability:
+			"dash_pack":
+				ratio = 1.0 - float(status.get("dash_cooldown_ratio", 0.0))
+			"grapple_hook":
+				ratio = 1.0 if not bool(status.get("grapple_active", false)) else 0.35
+			"jet_pack":
+				var current_fuel := float(status.get("jet_fuel_current", 0.0))
+				var max_fuel := maxf(0.001, float(status.get("jet_fuel_max", 1.0)))
+				ratio = current_fuel / max_fuel
+		_mobility_meter.value = clampf(ratio, 0.0, 1.0) * 100.0
 	_configure_bottom_hud_layout()
 
 func _ensure_teammate_health_label() -> void:
@@ -564,7 +622,7 @@ func _build_inventory_ui() -> void:
 	equipment_grid.add_theme_constant_override("v_separation", 10)
 	equipment_column.add_child(equipment_grid)
 
-	for slot_name in [&"helmet", &"chest", &"arms", &"legs", &"feet"]:
+	for slot_name in InventorySystem.EQUIPMENT_SLOT_NAMES:
 		var slot_ref := SlotRef.equipment(slot_name)
 		var button := _make_slot_button(slot_ref)
 		var slot_stack := VBoxContainer.new()
@@ -894,7 +952,7 @@ func _refresh_inventory_ui() -> void:
 		var item_snapshot = _get_slot_item_snapshot(slot_ref)
 		var icon_tex := _get_item_icon(item_snapshot, slot_ref)
 		button.icon = icon_tex
-		button.set_badge_texture(null)
+		button.set_badge_texture(_get_badge_texture_for_slot(item_snapshot, slot_ref))
 		if icon_tex != null:
 			button.text = ""
 		else:
@@ -1016,10 +1074,13 @@ func _build_item_tooltip(item_snapshot: Dictionary, slot_ref: SlotRef = null) ->
 		lines.append("Rarity: %s" % rarity)
 
 	var category := String(item_snapshot.get("category", ""))
-	if category == "armor":
+	if category == "armor" or category == "utility":
 		var equipment_slot := StringName(item_snapshot.get("equipment_slot", ""))
 		if equipment_slot != StringName(""):
 			lines.append("Slot: %s" % EQUIPMENT_LABELS.get(equipment_slot, String(equipment_slot).capitalize()))
+		var active_ability := String(item_snapshot.get("active_ability_label", item_snapshot.get("active_ability", "")))
+		if category == "utility" and not active_ability.is_empty():
+			lines.append("Ability: %s" % active_ability.replace("_", " ").capitalize())
 	elif category == "weapon":
 		var weapon_key := String(item_snapshot.get("weapon_key", ""))
 		if not weapon_key.is_empty():
@@ -1074,7 +1135,18 @@ func _build_stat_lines(stats: Dictionary) -> Array[String]:
 		"move_speed_add",
 		"move_speed_mult",
 		"sprint_multiplier",
+		"jump_velocity_add",
+		"air_control_mult",
 		"damage_reduction",
+		"dash_speed_add",
+		"dash_distance_add",
+		"dash_cooldown_mult",
+		"grapple_range_add",
+		"grapple_pull_speed_mult",
+		"jet_fuel_add",
+		"jet_thrust_add",
+		"jet_recharge_mult",
+		"jet_recharge_rate_mult",
 		"weapon_damage_add",
 		"weapon_damage_mult",
 		"mag_size_add",
@@ -1225,10 +1297,14 @@ func _try_quick_transfer_to_player_inventory(from_slot: SlotRef, item_snapshot: 
 	var category := StringName(item_snapshot.get("category", "misc"))
 	var destinations: Array[SlotRef] = []
 
-	if category == &"armor":
-		var equipment_slot := StringName(item_snapshot.get("equipment_slot", ""))
-		if equipment_slot != StringName(""):
-			destinations.append(SlotRef.equipment(equipment_slot))
+	if category == &"armor" or category == &"utility":
+		if category == &"utility":
+			destinations.append(SlotRef.equipment(&"utility_primary"))
+			destinations.append(SlotRef.equipment(&"utility_secondary"))
+		else:
+			var equipment_slot := StringName(item_snapshot.get("equipment_slot", ""))
+			if equipment_slot != StringName(""):
+				destinations.append(SlotRef.equipment(equipment_slot))
 	elif category == &"weapon":
 		for i in range(WEAPON_SLOT_UI_COUNT):
 			destinations.append(SlotRef.weapon(i))
@@ -1249,8 +1325,12 @@ func _try_auto_equip_item(from_slot: SlotRef, item_snapshot: Dictionary) -> bool
 	if from_slot.section != &"storage" and from_slot.section != &"chest":
 		return false
 	var category := StringName(item_snapshot.get("category", "misc"))
-	if category != &"armor":
+	if category != &"armor" and category != &"utility":
 		return false
+	if category == &"utility":
+		if _get_slot_item_snapshot(SlotRef.equipment(&"utility_primary")) == null:
+			return _inventory_system.try_move_item(from_slot, SlotRef.equipment(&"utility_primary"))
+		return _inventory_system.try_move_item(from_slot, SlotRef.equipment(&"utility_secondary"))
 	var equipment_slot := StringName(item_snapshot.get("equipment_slot", ""))
 	if equipment_slot == StringName(""):
 		return false
@@ -1426,8 +1506,33 @@ func _build_stat_modules() -> void:
 	_ammo_module.get_meta("content_root").add_child(_ammo_warning_label)
 	_stat_module_row.add_child(_health_module)
 	_stat_module_row.add_child(_ammo_module)
+	_mobility_module = _create_module_panel()
+	_mobility_module.visible = false
+	var mobility_margin := _wrap_panel_with_margin(_mobility_module, 14, 10)
+	var mobility_root := VBoxContainer.new()
+	mobility_root.alignment = BoxContainer.ALIGNMENT_CENTER
+	mobility_root.add_theme_constant_override("separation", 4)
+	mobility_margin.add_child(mobility_root)
+	_mobility_name_label = Label.new()
+	_mobility_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_mobility_name_label.add_theme_font_size_override("font_size", 22)
+	mobility_root.add_child(_mobility_name_label)
+	_mobility_detail_label = Label.new()
+	_mobility_detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_mobility_detail_label.add_theme_font_size_override("font_size", 16)
+	_mobility_detail_label.modulate = Color(0.84, 0.82, 0.75, 0.95)
+	mobility_root.add_child(_mobility_detail_label)
+	_mobility_meter = ProgressBar.new()
+	_mobility_meter.min_value = 0.0
+	_mobility_meter.max_value = 100.0
+	_mobility_meter.value = 100.0
+	_mobility_meter.show_percentage = false
+	_mobility_meter.custom_minimum_size = Vector2(0, 14)
+	mobility_root.add_child(_mobility_meter)
+	_stat_module_row.add_child(_mobility_module)
 	_set_mouse_filter_recursive(_stat_module_row, Control.MOUSE_FILTER_IGNORE)
 	update_ammo_display(_current_mag_value, _current_mag_size_value, _current_reserve_value, false, false, _current_ammo_type)
+	update_mobility_status(_current_mobility_status)
 
 func _build_center_status() -> void:
 	if _center_status_panel != null:
@@ -1582,7 +1687,7 @@ func _get_badge_texture_for_slot(item_snapshot: Variant, slot_ref: SlotRef) -> T
 		return null
 	if item_snapshot != null:
 		match String(item_snapshot.get("category", "")):
-			"armor":
+			"armor", "utility":
 				return _make_badge_texture("armor")
 			"weapon":
 				return _make_badge_texture("weapon")
@@ -1624,7 +1729,7 @@ func _build_comparison_lines(item_snapshot: Dictionary, slot_ref: SlotRef = null
 	if slot_ref == null:
 		return lines
 	var category := String(item_snapshot.get("category", ""))
-	if category != "armor":
+	if category != "armor" and category != "utility":
 		return lines
 	if slot_ref.section != &"storage" and slot_ref.section != &"chest":
 		return lines

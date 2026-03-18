@@ -6,7 +6,9 @@ const EQUIPMENT_SLOT_NAMES: Array[StringName] = [
 	&"chest",
 	&"arms",
 	&"legs",
-	&"feet"
+	&"feet",
+	&"utility_primary",
+	&"utility_secondary"
 ]
 const WEAPON_SLOT_COUNT: int = 4
 const STORAGE_SLOT_COUNT: int = 10
@@ -16,7 +18,10 @@ const STARTER_GEAR_IDS: Array[StringName] = [
 	&"chest_bruiser_plate_common",
 	&"arms_loader_bracers_common",
 	&"legs_raider_greaves_common",
-	&"feet_strider_boots_common"
+	&"feet_strider_boots_common",
+	&"utility_dash_pack_common",
+	&"utility_grapple_hook_common",
+	&"utility_jet_pack_common"
 ]
 const STARTER_WEAPON_KEY: StringName = &"crossbow"
 
@@ -198,6 +203,9 @@ func get_equipped_items() -> Array[InventoryItemData]:
 		results.append(item)
 	return results
 
+func get_equipped_item(slot_name: StringName) -> InventoryItemData:
+	return equipment.get(slot_name)
+
 func get_equipped_stats() -> Dictionary:
 	var combined: Dictionary = {}
 	for item in get_equipped_items():
@@ -249,7 +257,11 @@ func _is_valid_slot(slot_ref: SlotRef) -> bool:
 func _can_place_item_in_slot(item: InventoryItemData, slot_ref: SlotRef) -> bool:
 	match slot_ref.section:
 		&"equipment":
-			return item.category == &"armor" and item.equipment_slot == slot_ref.slot_name
+			if slot_ref.slot_name == &"utility_primary" or slot_ref.slot_name == &"utility_secondary":
+				return item.category == &"utility"
+			if item.equipment_slot != slot_ref.slot_name:
+				return false
+			return item.category == &"armor"
 		&"weapons":
 			return item.category == &"weapon"
 		&"storage":

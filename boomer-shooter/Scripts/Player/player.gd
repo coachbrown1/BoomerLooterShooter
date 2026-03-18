@@ -27,6 +27,7 @@ var target_recoil: Vector2 = Vector2.ZERO
 @onready var weapon_manager: WeaponManager = $Head/WeaponMount
 @onready var inventory_system: InventorySystem = $InventorySystem
 @onready var visuals: Node3D = $Visuals
+@onready var mobility_controller: Node = $MobilityController
 
 var network_peer_id: int = 0
 var _is_local_controlled: bool = true
@@ -50,6 +51,7 @@ var _base_move_speed: float = 0.0
 var _base_sprint_multiplier: float = 0.0
 var _base_max_health: int = 0
 var _base_recoil_recovery_speed: float = 0.0
+var _base_jump_velocity: float = 0.0
 var _fov_kick_reduction: float = 0.0
 var _damage_reduction: float = 0.0
 
@@ -62,6 +64,9 @@ func _ready() -> void:
 		camera.fov = base_fov
 	_configure_control_mode()
 	_ensure_local_setup()
+	if mobility_controller:
+		mobility_controller.setup(self, head, visuals)
+		mobility_controller.set_input_enabled(_gameplay_input_enabled and _is_local_controlled)
 
 	if inventory_system:
 		inventory_system.initialize_with_weapon_manager(weapon_manager)
@@ -98,6 +103,8 @@ func set_gameplay_input_enabled(enabled: bool) -> void:
 	_gameplay_input_enabled = enabled
 	if weapon_manager:
 		weapon_manager.set_input_enabled(enabled and _is_local_controlled)
+	if mobility_controller:
+		mobility_controller.set_input_enabled(enabled and _is_local_controlled)
 
 func is_local_controlled() -> bool:
 	return _is_local_controlled
@@ -110,6 +117,8 @@ func _configure_control_mode() -> void:
 	if weapon_manager:
 		weapon_manager.set_input_enabled(_is_local_controlled)
 		weapon_manager.set_viewmodel_enabled(_is_local_controlled)
+	if mobility_controller:
+		mobility_controller.set_input_enabled(_is_local_controlled and _gameplay_input_enabled)
 
 	if camera:
 		camera.current = _is_local_controlled
@@ -129,11 +138,13 @@ func _capture_base_stats() -> void:
 	_base_sprint_multiplier = sprint_multiplier
 	_base_max_health = max_health
 	_base_recoil_recovery_speed = recoil_recovery_speed
+	_base_jump_velocity = jump_velocity
 
 func _on_equipment_stats_changed(stats: Dictionary) -> void:
 	move_speed = _apply_add_mult(_base_move_speed, float(stats.get("move_speed_add", 0.0)), float(stats.get("move_speed_mult", 0.0)))
 	sprint_multiplier = _base_sprint_multiplier + float(stats.get("sprint_multiplier", 0.0))
 	recoil_recovery_speed = _base_recoil_recovery_speed * (1.0 + float(stats.get("recoil_recovery_mult", 0.0)))
+	jump_velocity = _apply_add_mult(_base_jump_velocity, float(stats.get("jump_velocity_add", 0.0)), 0.0)
 	_fov_kick_reduction = float(stats.get("fov_kick_reduction", 0.0))
 	_damage_reduction = clampf(float(stats.get("damage_reduction", 0.0)), 0.0, 0.9)
 
@@ -149,6 +160,13 @@ func _on_equipment_stats_changed(stats: Dictionary) -> void:
 
 	if weapon_manager and weapon_manager.has_method("apply_equipment_stats"):
 		weapon_manager.apply_equipment_stats(stats)
+	if mobility_controller:
+		var primary_utility_item: InventoryItemData = null
+		var secondary_utility_item: InventoryItemData = null
+		if inventory_system != null:
+			primary_utility_item = inventory_system.get_equipped_item(&"utility_primary")
+			secondary_utility_item = inventory_system.get_equipped_item(&"utility_secondary")
+		mobility_controller.apply_equipment(stats, primary_utility_item, secondary_utility_item)
 
 func _apply_add_mult(base_value: float, additive_bonus: float, multiplicative_bonus: float) -> float:
 	return (base_value + additive_bonus) * (1.0 + multiplicative_bonus)
@@ -234,18 +252,28 @@ func _physics_process(delta: float) -> void:
 	var input_dir := Vector2.ZERO
 	if _gameplay_input_enabled and not _is_inventory_open():
 		input_dir = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	if mobility_controller:
+		mobility_controller.physics_update(delta, input_dir, _gameplay_input_enabled, _is_inventory_open())
 	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
 	var current_speed = move_speed
 	if _gameplay_input_enabled and Input.is_action_pressed("sprint") and not _is_inventory_open():
 		current_speed *= sprint_multiplier
 
-	if direction:
-		velocity.x = direction.x * current_speed
-		velocity.z = direction.z * current_speed
+	if mobility_controller and (mobility_controller.is_dash_active() or mobility_controller.is_grapple_active()):
+		pass
+	elif direction:
+		if is_on_floor():
+			velocity.x = direction.x * current_speed
+			velocity.z = direction.z * current_speed
+		else:
+			var air_control: float = mobility_controller.get_air_control_multiplier() if mobility_controller != null else 1.0
+			velocity.x = move_toward(velocity.x, direction.x * current_speed, current_speed * air_control * delta * 6.0)
+			velocity.z = move_toward(velocity.z, direction.z * current_speed, current_speed * air_control * delta * 6.0)
 	else:
-		velocity.x = move_toward(velocity.x, 0, current_speed)
-		velocity.z = move_toward(velocity.z, 0, current_speed)
+		if not (mobility_controller and mobility_controller.is_grapple_active()):
+			velocity.x = move_toward(velocity.x, 0, current_speed)
+			velocity.z = move_toward(velocity.z, 0, current_speed)
 
 	_update_fov(delta, _gameplay_input_enabled and input_dir.length() > 0.1 and Input.is_action_pressed("sprint") and not _is_inventory_open())
 	_update_visuals(delta, input_dir, current_speed)
@@ -310,6 +338,8 @@ func build_network_snapshot(include_health: bool = true) -> Dictionary:
 		snapshot["health"] = current_health
 	if weapon_manager:
 		snapshot["current_weapon_index"] = weapon_manager.current_weapon_index
+	if mobility_controller:
+		snapshot["mobility"] = mobility_controller.build_state_snapshot()
 	return snapshot
 
 func apply_network_snapshot(snapshot: Dictionary) -> void:
@@ -332,6 +362,8 @@ func apply_network_snapshot(snapshot: Dictionary) -> void:
 		var target_weapon_index: int = int(snapshot.get("current_weapon_index", -1))
 		if target_weapon_index >= 0 and target_weapon_index != weapon_manager.current_weapon_index:
 			weapon_manager.switch_to_weapon(target_weapon_index)
+	if snapshot.has("mobility") and mobility_controller:
+		mobility_controller.apply_remote_state(snapshot.get("mobility", {}))
 
 	_has_network_snapshot = true
 
@@ -344,6 +376,21 @@ func apply_authoritative_health(value: int) -> void:
 		var hud = _get_hud()
 		if hud:
 			hud.update_health(current_health)
+
+func apply_authoritative_mobility_snapshot(snapshot: Dictionary) -> void:
+	if snapshot.is_empty():
+		return
+	if mobility_controller != null and snapshot.has("mobility"):
+		mobility_controller.apply_remote_state(snapshot.get("mobility", {}))
+	var mobility_state: Dictionary = snapshot.get("mobility", {})
+	var ability := String(mobility_state.get("ability", ""))
+	var mobility_active := bool(mobility_state.get("dash_time_left", 0.0) > 0.0) or bool(mobility_state.get("grapple_active", false)) or bool(mobility_state.get("jet_active", false))
+	if ability.is_empty() and not mobility_active:
+		return
+	if snapshot.has("position"):
+		global_position = global_position.lerp(snapshot.get("position", global_position), 0.6)
+	if snapshot.has("velocity"):
+		velocity = snapshot.get("velocity", velocity)
 
 func _apply_remote_motion(delta: float) -> void:
 	if not _has_network_snapshot:
@@ -528,3 +575,13 @@ func _is_network_host() -> bool:
 	if session == null:
 		return true
 	return bool(session.call("is_host"))
+
+func handle_mobility_request(action: StringName, payload: Dictionary = {}) -> void:
+	if mobility_controller == null:
+		return
+	mobility_controller.handle_authoritative_action(action, payload)
+
+func get_mobility_debug_state() -> Dictionary:
+	if mobility_controller == null:
+		return {}
+	return mobility_controller.get_debug_state()

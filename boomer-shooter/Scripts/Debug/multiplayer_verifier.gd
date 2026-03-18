@@ -67,6 +67,12 @@ func _run_verification() -> void:
 			await _run_loot_pickup_sync_verification()
 		"enemy-animation-replication":
 			await _run_enemy_animation_replication_verification()
+		"mobility-dash-replication":
+			await _run_mobility_dash_replication_verification()
+		"mobility-grapple-replication":
+			await _run_mobility_grapple_replication_verification()
+		"mobility-jetpack-replication":
+			await _run_mobility_jetpack_replication_verification()
 		"long-run-soak":
 			await _run_long_run_soak_verification()
 		_:
@@ -777,6 +783,128 @@ func _run_enemy_animation_replication_verification() -> void:
 		_:
 			_write_json_file(_path_in_dir("error.json"), {"role": role, "error": "invalid_role"})
 			get_tree().quit(5)
+
+func _run_mobility_dash_replication_verification() -> void:
+	await _run_mobility_replication_verification("dash")
+
+func _run_mobility_grapple_replication_verification() -> void:
+	await _run_mobility_replication_verification("grapple")
+
+func _run_mobility_jetpack_replication_verification() -> void:
+	await _run_mobility_replication_verification("jetpack")
+
+func _run_mobility_replication_verification(mode: String) -> void:
+	var role := _get_role()
+	var timeout_sec := _get_timeout_sec()
+	var local_player: Node = await _wait_for_local_player(timeout_sec)
+	if local_player == null:
+		_write_json_file(_path_in_dir("%s_%s_mobility_error.json" % [role, mode]), {"role": role, "error": "local_player_not_found"})
+		get_tree().quit(91)
+		return
+	if not await _wait_for_condition(func() -> bool:
+		return _find_remote_player() != null
+	, timeout_sec):
+		_write_json_file(_path_in_dir("%s_%s_mobility_error.json" % [role, mode]), {"role": role, "error": "remote_player_not_found"})
+		get_tree().quit(92)
+		return
+	_touch_file(_path_in_dir("%s_%s_mobility_ready.flag" % [role, mode]))
+	var other_role := "client" if role == "host" else "host"
+	if not await _wait_for_file(_path_in_dir("%s_%s_mobility_ready.flag" % [other_role, mode]), timeout_sec):
+		_write_json_file(_path_in_dir("%s_%s_mobility_error.json" % [role, mode]), {"role": role, "error": "peer_ready_missing"})
+		get_tree().quit(93)
+		return
+
+	match role:
+		"client":
+			await _run_client_mobility_replication(mode, local_player, timeout_sec)
+		"host":
+			await _run_host_mobility_replication(mode, timeout_sec)
+		_:
+			_write_json_file(_path_in_dir("error.json"), {"role": role, "error": "invalid_role"})
+			get_tree().quit(5)
+
+func _run_client_mobility_replication(mode: String, local_player: Node, timeout_sec: float) -> void:
+	var start_pos: Vector3 = local_player.global_position
+	var action_payload: Dictionary = _build_mobility_request_payload(mode, local_player)
+	_write_json_file(_path_in_dir("client_%s_mobility_start.json" % mode), {
+		"mode": mode,
+		"start_position": _vec3_to_dict(start_pos),
+	})
+	var action := &"dash"
+	match mode:
+		"grapple":
+			action = &"grapple_start"
+		"jetpack":
+			action = &"jet_start"
+	NetworkPlayerManager.request_mobility_action(action, action_payload)
+	if mode == "jetpack":
+		await get_tree().create_timer(0.7).timeout
+		NetworkPlayerManager.request_mobility_action(&"jet_stop", {})
+	var moved := await _wait_for_condition(func() -> bool:
+		return local_player.global_position.distance_to(start_pos) >= 1.0
+	, timeout_sec)
+	if mode == "dash":
+		await get_tree().create_timer(0.4).timeout
+	var debug_state: Dictionary = local_player.call("get_mobility_debug_state") if local_player.has_method("get_mobility_debug_state") else {}
+	_write_json_file(_path_in_dir("client_%s_mobility.json" % mode), {
+		"mode": mode,
+		"passed": moved,
+		"start_position": _vec3_to_dict(start_pos),
+		"end_position": _vec3_to_dict(local_player.global_position),
+		"debug_state": debug_state,
+	})
+	if moved:
+		get_tree().quit(0)
+		return
+	get_tree().quit(94)
+
+func _run_host_mobility_replication(mode: String, timeout_sec: float) -> void:
+	if not await _wait_for_file(_path_in_dir("client_%s_mobility_start.json" % mode), timeout_sec):
+		_write_json_file(_path_in_dir("host_%s_mobility_error.json" % mode), {"role": "host", "error": "client_start_missing"})
+		get_tree().quit(95)
+		return
+	var remote_player: Node = _find_remote_player()
+	if remote_player == null:
+		_write_json_file(_path_in_dir("host_%s_mobility_error.json" % mode), {"role": "host", "error": "remote_player_missing"})
+		get_tree().quit(96)
+		return
+	var start_pos: Vector3 = remote_player.global_position
+	var moved := await _wait_for_condition(func() -> bool:
+		var live_remote: Node = _refresh_player_reference(remote_player)
+		return live_remote != null and live_remote.global_position.distance_to(start_pos) >= 1.0
+	, timeout_sec)
+	var live_remote: Node = _refresh_player_reference(remote_player)
+	var debug_state: Dictionary = live_remote.call("get_mobility_debug_state") if live_remote != null and live_remote.has_method("get_mobility_debug_state") else {}
+	var end_pos: Vector3 = start_pos if live_remote == null else live_remote.global_position
+	_write_json_file(_path_in_dir("host_%s_mobility.json" % mode), {
+		"mode": mode,
+		"passed": moved,
+		"start_position": _vec3_to_dict(start_pos),
+		"end_position": _vec3_to_dict(end_pos),
+		"debug_state": debug_state,
+	})
+	if not await _wait_for_file(_path_in_dir("client_%s_mobility.json" % mode), timeout_sec):
+		_write_json_file(_path_in_dir("host_%s_mobility_error.json" % mode), {"role": "host", "error": "client_result_missing"})
+		get_tree().quit(97)
+		return
+	if moved:
+		get_tree().quit(0)
+		return
+	get_tree().quit(98)
+
+func _build_mobility_request_payload(mode: String, player: Node) -> Dictionary:
+	match mode:
+		"dash":
+			return {"direction": -player.global_transform.basis.z.normalized()}
+		"grapple":
+			var basis: Basis = player.global_transform.basis
+			var direction: Vector3 = (-basis.z + Vector3.DOWN * 0.35).normalized()
+			var origin: Vector3 = player.global_position + Vector3.UP * 1.4
+			return {"origin": origin, "direction": direction}
+		"jetpack":
+			return {}
+		_:
+			return {}
 
 func _run_long_run_soak_verification() -> void:
 	var role := _get_role()

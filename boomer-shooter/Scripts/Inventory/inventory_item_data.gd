@@ -13,6 +13,8 @@ class_name InventoryItemData
 @export var rarity_name: String = ""
 @export var implicit_stats: Dictionary = {}
 @export var affixes: Array[Dictionary] = []
+@export var active_ability: StringName = &""
+@export var active_ability_label: String = ""
 
 func ensure_runtime_defaults() -> void:
 	if rarity_name.is_empty():
@@ -59,7 +61,9 @@ func to_dict() -> Dictionary:
 		"rarity": rarity_name,
 		"implicit_stats": implicit_stats.duplicate(true),
 		"affixes": affixes.duplicate(true),
-		"stats": get_total_stats()
+		"stats": get_total_stats(),
+		"active_ability": String(active_ability),
+		"active_ability_label": active_ability_label,
 	}
 
 static func from_dict(data: Dictionary) -> InventoryItemData:
@@ -75,6 +79,8 @@ static func from_dict(data: Dictionary) -> InventoryItemData:
 	item.item_icon_path = String(data.get("icon_path", ""))
 	if not item.item_icon_path.is_empty() and ResourceLoader.exists(item.item_icon_path):
 		item.item_icon = load(item.item_icon_path)
+	item.active_ability = StringName(data.get("active_ability", ""))
+	item.active_ability_label = String(data.get("active_ability_label", ""))
 
 	var rarity := String(data.get("rarity", ""))
 	var implicit_stats: Dictionary = {}

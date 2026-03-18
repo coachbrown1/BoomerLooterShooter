@@ -224,6 +224,57 @@ switch ($scenarioKey) {
             throw "Client did not converge on replicated player health. Output dir: $verifyDir"
         }
     }
+    "mobility-dash-replication" {
+        $hostPath = Join-Path $verifyDir "host_dash_mobility.json"
+        $clientPath = Join-Path $verifyDir "client_dash_mobility.json"
+        foreach ($path in @($hostPath, $clientPath)) {
+            if (-not (Test-Path $path)) {
+                throw "Expected verifier output missing: $path"
+            }
+        }
+        $hostResult = Get-Content $hostPath -Raw | ConvertFrom-Json
+        $clientResult = Get-Content $clientPath -Raw | ConvertFrom-Json
+        if (-not $hostResult.passed) {
+            throw "Host did not observe replicated dash mobility. Output dir: $verifyDir"
+        }
+        if (-not $clientResult.passed) {
+            throw "Client did not converge on authoritative dash mobility. Output dir: $verifyDir"
+        }
+    }
+    "mobility-grapple-replication" {
+        $hostPath = Join-Path $verifyDir "host_grapple_mobility.json"
+        $clientPath = Join-Path $verifyDir "client_grapple_mobility.json"
+        foreach ($path in @($hostPath, $clientPath)) {
+            if (-not (Test-Path $path)) {
+                throw "Expected verifier output missing: $path"
+            }
+        }
+        $hostResult = Get-Content $hostPath -Raw | ConvertFrom-Json
+        $clientResult = Get-Content $clientPath -Raw | ConvertFrom-Json
+        if (-not $hostResult.passed) {
+            throw "Host did not observe replicated grapple mobility. Output dir: $verifyDir"
+        }
+        if (-not $clientResult.passed) {
+            throw "Client did not converge on authoritative grapple mobility. Output dir: $verifyDir"
+        }
+    }
+    "mobility-jetpack-replication" {
+        $hostPath = Join-Path $verifyDir "host_jetpack_mobility.json"
+        $clientPath = Join-Path $verifyDir "client_jetpack_mobility.json"
+        foreach ($path in @($hostPath, $clientPath)) {
+            if (-not (Test-Path $path)) {
+                throw "Expected verifier output missing: $path"
+            }
+        }
+        $hostResult = Get-Content $hostPath -Raw | ConvertFrom-Json
+        $clientResult = Get-Content $clientPath -Raw | ConvertFrom-Json
+        if (-not $hostResult.passed) {
+            throw "Host did not observe replicated jetpack mobility. Output dir: $verifyDir"
+        }
+        if (-not $clientResult.passed) {
+            throw "Client did not converge on authoritative jetpack mobility. Output dir: $verifyDir"
+        }
+    }
     "client-disconnect" {
         $hostDisconnectPath = Join-Path $verifyDir "host_client_disconnect.json"
         $clientDisconnectPath = Join-Path $verifyDir "client_client_disconnect.json"
@@ -463,6 +514,9 @@ $label = switch ($scenarioKey) {
     "spawn-floor-stability" { "Multiplayer spawn/floor stability verification PASS" }
     "player-replication" { "Multiplayer player replication verification PASS" }
     "player-health-replication" { "Multiplayer player health replication verification PASS" }
+    "mobility-dash-replication" { "Multiplayer dash mobility replication verification PASS" }
+    "mobility-grapple-replication" { "Multiplayer grapple mobility replication verification PASS" }
+    "mobility-jetpack-replication" { "Multiplayer jetpack mobility replication verification PASS" }
     "client-disconnect" { "Multiplayer client disconnect verification PASS" }
     "door-replication" { "Multiplayer door replication verification PASS" }
     "weapon-state-sync" { "Multiplayer weapon state sync verification PASS" }

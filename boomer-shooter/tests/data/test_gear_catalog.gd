@@ -9,12 +9,15 @@ const EXPECTED_WEAPON_KEYS := ["rifle", "shotgun", "crossbow", "fireball"]
 const EXPECTED_AMMO_KEYS := ["shells", "arrows", "energy"]
 const EXPECTED_ARMOR_ITEM_COUNT := 75
 const EXPECTED_WEAPON_ITEM_COUNT := 20
+const EXPECTED_UTILITY_ITEM_COUNT := 15
+const EXPECTED_UTILITY_ABILITIES := ["dash_pack", "grapple_hook", "jet_pack"]
+const LOWER_IS_BETTER_STATS := ["dash_cooldown_mult", "jet_recharge_mult"]
 
 func test_gear_catalog_loads_with_expected_item_count() -> void:
 	var catalog = load(CATALOG_PATH)
 	assert_not_null(catalog)
-	assert_eq(catalog.lines.size(), 15)
-	assert_eq(catalog.get_all_items().size(), EXPECTED_ARMOR_ITEM_COUNT + EXPECTED_WEAPON_ITEM_COUNT)
+	assert_eq(catalog.lines.size(), 18)
+	assert_eq(catalog.get_all_items().size(), EXPECTED_ARMOR_ITEM_COUNT + EXPECTED_WEAPON_ITEM_COUNT + EXPECTED_UTILITY_ITEM_COUNT)
 
 func test_every_item_uses_valid_slot_and_category() -> void:
 	var catalog = load(CATALOG_PATH)
@@ -28,6 +31,9 @@ func test_every_item_uses_valid_slot_and_category() -> void:
 		assert_not_null(item)
 		if item.category == &"armor":
 			assert_true(valid_slots.has(item.equipment_slot), "Unexpected slot on %s" % item.display_name)
+		elif item.category == &"utility":
+			assert_true(valid_slots.has(item.equipment_slot), "Unexpected utility slot on %s" % item.display_name)
+			assert_true(EXPECTED_UTILITY_ABILITIES.has(String(item.active_ability)), "Unexpected utility ability on %s" % item.display_name)
 		elif item.category == &"weapon":
 			weapon_count += 1
 			assert_true(EXPECTED_WEAPON_KEYS.has(String(item.weapon_key)), "Unexpected weapon key on %s" % item.display_name)
@@ -68,7 +74,10 @@ func test_each_lineage_has_five_rarity_variants_with_non_decreasing_stats() -> v
 			for stat_key in all_keys:
 				var previous_value := float(previous_stats.get(stat_key, 0.0))
 				var current_value := float(current_stats.get(stat_key, 0.0))
-				assert_true(current_value >= previous_value, "%s regressed from %s to %s on %s" % [stat_key, previous_value, current_value, item.display_name])
+				if LOWER_IS_BETTER_STATS.has(String(stat_key)):
+					assert_true(current_value <= previous_value, "%s regressed from %s to %s on %s" % [stat_key, previous_value, current_value, item.display_name])
+				else:
+					assert_true(current_value >= previous_value, "%s regressed from %s to %s on %s" % [stat_key, previous_value, current_value, item.display_name])
 			previous_stats = current_stats
 
 func test_catalog_supports_generic_and_targeted_build_paths() -> void:
@@ -78,6 +87,11 @@ func test_catalog_supports_generic_and_targeted_build_paths() -> void:
 	var saw_damage_reduction := false
 	var saw_move_speed_add := false
 	var saw_move_speed_mult := false
+	var saw_jump_velocity_add := false
+	var saw_air_control_mult := false
+	var saw_dash_distance_add := false
+	var saw_grapple_range_add := false
+	var saw_jet_fuel_add := false
 	var saw_weapon_damage_add := false
 	var saw_weapon_damage_mult := false
 	var saw_mag_size_add := false
@@ -101,6 +115,11 @@ func test_catalog_supports_generic_and_targeted_build_paths() -> void:
 		saw_damage_reduction = saw_damage_reduction or stats.has("damage_reduction")
 		saw_move_speed_add = saw_move_speed_add or stats.has("move_speed_add")
 		saw_move_speed_mult = saw_move_speed_mult or stats.has("move_speed_mult")
+		saw_jump_velocity_add = saw_jump_velocity_add or stats.has("jump_velocity_add")
+		saw_air_control_mult = saw_air_control_mult or stats.has("air_control_mult")
+		saw_dash_distance_add = saw_dash_distance_add or stats.has("dash_distance_add")
+		saw_grapple_range_add = saw_grapple_range_add or stats.has("grapple_range_add")
+		saw_jet_fuel_add = saw_jet_fuel_add or stats.has("jet_fuel_add")
 		saw_weapon_damage_add = saw_weapon_damage_add or stats.has("weapon_damage_add")
 		saw_weapon_damage_mult = saw_weapon_damage_mult or stats.has("weapon_damage_mult")
 		saw_mag_size_add = saw_mag_size_add or stats.has("mag_size_add")
@@ -123,6 +142,11 @@ func test_catalog_supports_generic_and_targeted_build_paths() -> void:
 	assert_true(saw_damage_reduction)
 	assert_true(saw_move_speed_add)
 	assert_true(saw_move_speed_mult)
+	assert_true(saw_jump_velocity_add)
+	assert_true(saw_air_control_mult)
+	assert_true(saw_dash_distance_add)
+	assert_true(saw_grapple_range_add)
+	assert_true(saw_jet_fuel_add)
 	assert_true(saw_weapon_damage_add)
 	assert_true(saw_weapon_damage_mult)
 	assert_true(saw_mag_size_add)
@@ -218,6 +242,30 @@ func test_random_loot_pool_includes_weapons() -> void:
 			break
 	assert_true(saw_weapon)
 
+func test_utility_items_define_active_ability_metadata() -> void:
+	var catalog = load(CATALOG_PATH)
+	var utility_count := 0
+	for item in catalog.get_all_items():
+		if item.category != &"utility":
+			continue
+		utility_count += 1
+		assert_true(EXPECTED_UTILITY_ABILITIES.has(String(item.active_ability)))
+		assert_ne(item.active_ability_label, "")
+		assert_eq(item.equipment_slot, &"utility_primary")
+	assert_eq(utility_count, EXPECTED_UTILITY_ITEM_COUNT)
+
+	var generated_dash = catalog.create_item_by_id(&"utility_dash_pack_common")
+	assert_not_null(generated_dash)
+	assert_eq(String(generated_dash.active_ability), "dash_pack")
+
+	var generated_grapple = catalog.create_item_by_id(&"utility_grapple_hook_common")
+	assert_not_null(generated_grapple)
+	assert_eq(String(generated_grapple.active_ability), "grapple_hook")
+
+	var generated_jet = catalog.create_item_by_id(&"utility_jet_pack_common")
+	assert_not_null(generated_jet)
+	assert_eq(String(generated_jet.active_ability), "jet_pack")
+
 func test_inventory_starts_with_only_crossbow_equipped() -> void:
 	var inventory = autofree(InventorySystemScript.new())
 	var weapon_manager = autofree(WeaponManagerScript.new())
@@ -229,3 +277,9 @@ func test_inventory_starts_with_only_crossbow_equipped() -> void:
 	assert_eq(String(inventory.weapons[0].weapon_key), "crossbow")
 	for i in range(1, inventory.weapons.size()):
 		assert_null(inventory.weapons[i], "Unexpected starter weapon in slot %d" % i)
+	assert_eq(String(inventory.storage[5].item_id), "utility_dash_pack_common")
+	assert_eq(String(inventory.storage[5].active_ability), "dash_pack")
+	assert_eq(String(inventory.storage[6].item_id), "utility_grapple_hook_common")
+	assert_eq(String(inventory.storage[6].active_ability), "grapple_hook")
+	assert_eq(String(inventory.storage[7].item_id), "utility_jet_pack_common")
+	assert_eq(String(inventory.storage[7].active_ability), "jet_pack")

@@ -90,6 +90,13 @@ func sync_roster_to_all() -> void:
 	for peer_id in NetworkSession.get_connected_peer_ids():
 		sync_roster_to(peer_id)
 
+func request_mobility_action(action: StringName, payload: Dictionary = {}) -> void:
+	if not NetworkSession.is_multiplayer_active() or NetworkSession.is_host():
+		var local_peer_id := NetworkSession.get_local_peer_id() if NetworkSession.is_multiplayer_active() else 0
+		_apply_mobility_action(local_peer_id, action, payload)
+		return
+	rpc_id(1, "rpc_npm_request_mobility_action", NetworkSession.get_local_peer_id(), String(action), payload)
+
 func apply_roster(roster: Array, preserve_local: bool = true) -> void:
 	_prune_invalid_players()
 	var roster_peer_ids := {}
@@ -235,6 +242,7 @@ func rpc_npm_submit_state(peer_id: int, snapshot: Dictionary) -> void:
 	if _is_live_player_node(player) and player.has_method("apply_network_snapshot"):
 		var s := snapshot.duplicate(true)
 		s.erase("health")  # host owns health authority
+		s.erase("mobility")  # host owns mobility authority
 		player.call("apply_network_snapshot", s)
 
 @rpc("authority", "call_remote", "unreliable")
@@ -250,6 +258,8 @@ func rpc_npm_receive_snapshots(snapshots: Array) -> void:
 		if peer_id == local_id:
 			if state.has("health") and player.has_method("apply_authoritative_health"):
 				player.call("apply_authoritative_health", int(state.get("health", 0)))
+			if player.has_method("apply_authoritative_mobility_snapshot"):
+				player.call("apply_authoritative_mobility_snapshot", state)
 			continue
 		if player.has_method("apply_network_snapshot"):
 			player.call("apply_network_snapshot", state)
@@ -257,6 +267,18 @@ func rpc_npm_receive_snapshots(snapshots: Array) -> void:
 @rpc("authority", "call_remote", "reliable")
 func rpc_npm_sync_roster(roster: Array) -> void:
 	apply_roster(roster)
+
+@rpc("any_peer", "reliable")
+func rpc_npm_request_mobility_action(peer_id: int, action: String, payload: Dictionary) -> void:
+	if not NetworkSession.is_host() or multiplayer.get_remote_sender_id() != peer_id:
+		return
+	_apply_mobility_action(peer_id, StringName(action), payload)
+
+func _apply_mobility_action(peer_id: int, action: StringName, payload: Dictionary) -> void:
+	var player = get_player(peer_id)
+	if player == null or not player.has_method("handle_mobility_request"):
+		return
+	player.call("handle_mobility_request", action, payload)
 
 func _find_existing_scene_player(peer_id: int) -> Node3D:
 	if peer_id >= 0 and NetworkSession.is_multiplayer_active():
