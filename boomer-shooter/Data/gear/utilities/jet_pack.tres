@@ -10,13 +10,13 @@ display_name = "Common Jet Pack"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_fireball.png"
-active_ability = &"jet_pack"
-active_ability_label = "Jet Pack"
 stats = {
 "jet_fuel_add": 0.25,
 "jet_thrust_add": 1.0,
 "rarity": "Common"
 }
+active_ability = &"jet_pack"
+active_ability_label = "Jet Pack"
 
 [sub_resource type="Resource" id="Item_002"]
 script = ExtResource("2_item")
@@ -25,14 +25,14 @@ display_name = "Uncommon Jet Pack"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_fireball.png"
-active_ability = &"jet_pack"
-active_ability_label = "Jet Pack"
 stats = {
 "air_control_mult": 0.04,
 "jet_fuel_add": 0.4,
 "jet_thrust_add": 1.4,
 "rarity": "Uncommon"
 }
+active_ability = &"jet_pack"
+active_ability_label = "Jet Pack"
 
 [sub_resource type="Resource" id="Item_003"]
 script = ExtResource("2_item")
@@ -41,8 +41,6 @@ display_name = "Rare Jet Pack"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_fireball.png"
-active_ability = &"jet_pack"
-active_ability_label = "Jet Pack"
 stats = {
 "air_control_mult": 0.08,
 "jet_fuel_add": 0.6,
@@ -50,6 +48,8 @@ stats = {
 "jet_thrust_add": 1.8,
 "rarity": "Rare"
 }
+active_ability = &"jet_pack"
+active_ability_label = "Jet Pack"
 
 [sub_resource type="Resource" id="Item_004"]
 script = ExtResource("2_item")
@@ -58,8 +58,6 @@ display_name = "Epic Jet Pack"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_fireball.png"
-active_ability = &"jet_pack"
-active_ability_label = "Jet Pack"
 stats = {
 "air_control_mult": 0.1,
 "jet_fuel_add": 0.8,
@@ -68,6 +66,8 @@ stats = {
 "jump_velocity_add": 0.25,
 "rarity": "Epic"
 }
+active_ability = &"jet_pack"
+active_ability_label = "Jet Pack"
 
 [sub_resource type="Resource" id="Item_005"]
 script = ExtResource("2_item")
@@ -76,8 +76,6 @@ display_name = "Legendary Jet Pack"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_fireball.png"
-active_ability = &"jet_pack"
-active_ability_label = "Jet Pack"
 stats = {
 "air_control_mult": 0.14,
 "jet_fuel_add": 1.0,
@@ -86,6 +84,8 @@ stats = {
 "jump_velocity_add": 0.45,
 "rarity": "Legendary"
 }
+active_ability = &"jet_pack"
+active_ability_label = "Jet Pack"
 
 [resource]
 script = ExtResource("1_line")

@@ -10,12 +10,12 @@ display_name = "Common Grapple Hook"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_crossbow.png"
-active_ability = &"grapple_hook"
-active_ability_label = "Grapple Hook"
 stats = {
 "grapple_range_add": 2.0,
 "rarity": "Common"
 }
+active_ability = &"grapple_hook"
+active_ability_label = "Grapple Hook"
 
 [sub_resource type="Resource" id="Item_002"]
 script = ExtResource("2_item")
@@ -24,14 +24,14 @@ display_name = "Uncommon Grapple Hook"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_crossbow.png"
-active_ability = &"grapple_hook"
-active_ability_label = "Grapple Hook"
 stats = {
 "air_control_mult": 0.04,
 "grapple_pull_speed_mult": 0.06,
 "grapple_range_add": 3.0,
 "rarity": "Uncommon"
 }
+active_ability = &"grapple_hook"
+active_ability_label = "Grapple Hook"
 
 [sub_resource type="Resource" id="Item_003"]
 script = ExtResource("2_item")
@@ -40,8 +40,6 @@ display_name = "Rare Grapple Hook"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_crossbow.png"
-active_ability = &"grapple_hook"
-active_ability_label = "Grapple Hook"
 stats = {
 "air_control_mult": 0.08,
 "grapple_pull_speed_mult": 0.1,
@@ -49,6 +47,8 @@ stats = {
 "jump_velocity_add": 0.2,
 "rarity": "Rare"
 }
+active_ability = &"grapple_hook"
+active_ability_label = "Grapple Hook"
 
 [sub_resource type="Resource" id="Item_004"]
 script = ExtResource("2_item")
@@ -57,8 +57,6 @@ display_name = "Epic Grapple Hook"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_crossbow.png"
-active_ability = &"grapple_hook"
-active_ability_label = "Grapple Hook"
 stats = {
 "air_control_mult": 0.12,
 "grapple_pull_speed_mult": 0.16,
@@ -66,6 +64,8 @@ stats = {
 "jump_velocity_add": 0.35,
 "rarity": "Epic"
 }
+active_ability = &"grapple_hook"
+active_ability_label = "Grapple Hook"
 
 [sub_resource type="Resource" id="Item_005"]
 script = ExtResource("2_item")
@@ -74,8 +74,6 @@ display_name = "Legendary Grapple Hook"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_crossbow.png"
-active_ability = &"grapple_hook"
-active_ability_label = "Grapple Hook"
 stats = {
 "air_control_mult": 0.16,
 "grapple_pull_speed_mult": 0.22,
@@ -83,6 +81,8 @@ stats = {
 "jump_velocity_add": 0.5,
 "rarity": "Legendary"
 }
+active_ability = &"grapple_hook"
+active_ability_label = "Grapple Hook"
 
 [resource]
 script = ExtResource("1_line")

@@ -10,13 +10,13 @@ display_name = "Common Dash Pack"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_shotgun.png"
-active_ability = &"dash_pack"
-active_ability_label = "Dash Pack"
 stats = {
 "dash_distance_add": 0.4,
 "dash_speed_add": 1.0,
 "rarity": "Common"
 }
+active_ability = &"dash_pack"
+active_ability_label = "Dash Pack"
 
 [sub_resource type="Resource" id="Item_002"]
 script = ExtResource("2_item")
@@ -25,14 +25,14 @@ display_name = "Uncommon Dash Pack"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_shotgun.png"
-active_ability = &"dash_pack"
-active_ability_label = "Dash Pack"
 stats = {
 "air_control_mult": 0.04,
 "dash_distance_add": 0.7,
 "dash_speed_add": 2.0,
 "rarity": "Uncommon"
 }
+active_ability = &"dash_pack"
+active_ability_label = "Dash Pack"
 
 [sub_resource type="Resource" id="Item_003"]
 script = ExtResource("2_item")
@@ -41,8 +41,6 @@ display_name = "Rare Dash Pack"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_shotgun.png"
-active_ability = &"dash_pack"
-active_ability_label = "Dash Pack"
 stats = {
 "air_control_mult": 0.06,
 "dash_cooldown_mult": -0.08,
@@ -50,6 +48,8 @@ stats = {
 "dash_speed_add": 2.8,
 "rarity": "Rare"
 }
+active_ability = &"dash_pack"
+active_ability_label = "Dash Pack"
 
 [sub_resource type="Resource" id="Item_004"]
 script = ExtResource("2_item")
@@ -58,8 +58,6 @@ display_name = "Epic Dash Pack"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_shotgun.png"
-active_ability = &"dash_pack"
-active_ability_label = "Dash Pack"
 stats = {
 "air_control_mult": 0.08,
 "dash_cooldown_mult": -0.12,
@@ -68,6 +66,8 @@ stats = {
 "jump_velocity_add": 0.25,
 "rarity": "Epic"
 }
+active_ability = &"dash_pack"
+active_ability_label = "Dash Pack"
 
 [sub_resource type="Resource" id="Item_005"]
 script = ExtResource("2_item")
@@ -76,8 +76,6 @@ display_name = "Legendary Dash Pack"
 category = &"utility"
 equipment_slot = &"utility_primary"
 item_icon_path = "res://Assets/Icons/Weapons/icon_shotgun.png"
-active_ability = &"dash_pack"
-active_ability_label = "Dash Pack"
 stats = {
 "air_control_mult": 0.12,
 "dash_cooldown_mult": -0.16,
@@ -86,6 +84,8 @@ stats = {
 "jump_velocity_add": 0.45,
 "rarity": "Legendary"
 }
+active_ability = &"dash_pack"
+active_ability_label = "Dash Pack"
 
 [resource]
 script = ExtResource("1_line")
