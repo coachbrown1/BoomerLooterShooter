@@ -4,6 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://bev31ij6jceat" path="res://Assets/Environment/Fungal/fungal_doorway_left.png" id="2_left_tex"]
 [ext_resource type="Texture2D" uid="uid://bo4cnttcysk46" path="res://Assets/Environment/Fungal/fungal_doorway_top.png" id="3_top_tex"]
 [ext_resource type="Texture2D" uid="uid://m70l7n032q7k" path="res://Assets/Environment/Fungal/fungal_doorway_right.png" id="4_right_tex"]
+[ext_resource type="Texture2D" path="res://Assets/Environment/Fungal/fungal_wall_v1.png" id="5_wall_tex"]
 
 [sub_resource type="BoxShape3D" id="11_jamb_shape"]
 size = Vector3(0.20274414, 4, 0.55)
@@ -29,6 +30,17 @@ emission_texture = ExtResource("4_right_tex")
 
 [sub_resource type="BoxShape3D" id="12_top_shape"]
 size = Vector3(3.2, 0.54816896, 0.55)
+
+[sub_resource type="StandardMaterial3D" id="13_upper_fill_mat"]
+albedo_texture = ExtResource("5_wall_tex")
+texture_filter = 0
+
+[sub_resource type="BoxShape3D" id="14_upper_fill_shape"]
+size = Vector3(6, 8, 0.55)
+
+[sub_resource type="BoxMesh" id="15_upper_fill_mesh"]
+material = SubResource("13_upper_fill_mat")
+size = Vector3(6, 8, 0.55)
 
 [sub_resource type="StandardMaterial3D" id="3_top_decal_mat"]
 transparency = 1
@@ -113,6 +125,17 @@ transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, 
 material_override = SubResource("3_top_decal_mat")
 cast_shadow = 0
 mesh = SubResource("8_top_decal_mesh")
+
+[node name="UpperFill" type="Node3D" parent="FrameRoot" unique_id=1950000001]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
+
+[node name="ColliderBody" type="StaticBody3D" parent="FrameRoot/UpperFill" unique_id=1950000002]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="FrameRoot/UpperFill/ColliderBody" unique_id=1950000003]
+shape = SubResource("14_upper_fill_shape")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="FrameRoot/UpperFill" unique_id=1950000004]
+mesh = SubResource("15_upper_fill_mesh")
 
 [node name="TileGuide" type="MeshInstance3D" parent="." unique_id=1340894944]
 transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)

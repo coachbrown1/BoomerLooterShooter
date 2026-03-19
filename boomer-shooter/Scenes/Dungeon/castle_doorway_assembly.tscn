@@ -2,6 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://cxhwb12mhiynr" path="res://Scenes/World/door.tscn" id="1_door"]
 [ext_resource type="Texture2D" uid="uid://d2rjp0yrr2e7r" path="res://Assets/Environment/Castle/CastleDoorwayNew.png" id="2_tex"]
+[ext_resource type="Material" path="res://Assets/Environment/Castle/castle_wall_mat.tres" id="3_wall_mat"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_doorway"]
 transparency = 2
@@ -23,6 +24,13 @@ size = Vector3(0.5, 4, 0.6)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_top"]
 size = Vector3(3, 1, 0.6)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_upper_fill"]
+size = Vector3(6, 8, 0.6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_upper_fill"]
+material = ExtResource("3_wall_mat")
+size = Vector3(6, 8, 0.6)
 
 [node name="DoorwayAssembly" type="Node3D" unique_id=1948476388]
 
@@ -50,3 +58,11 @@ shape = SubResource("BoxShape3D_jamb")
 [node name="TopJamb" type="CollisionShape3D" parent="StaticBody3D" unique_id=1815638779]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.5, 0)
 shape = SubResource("BoxShape3D_top")
+
+[node name="UpperFill" type="CollisionShape3D" parent="StaticBody3D" unique_id=720000001]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
+shape = SubResource("BoxShape3D_upper_fill")
+
+[node name="UpperFillMesh" type="MeshInstance3D" parent="." unique_id=720000002]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
+mesh = SubResource("BoxMesh_upper_fill")

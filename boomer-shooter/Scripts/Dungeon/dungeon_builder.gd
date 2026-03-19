@@ -3,7 +3,7 @@ class_name DungeonBuilder
 
 # World scale
 const TILE_SIZE: float = 3.0		# meters per tile
-const WALL_HEIGHT: float = 4.0
+const WALL_HEIGHT: float = 12.0
 const DOOR_WIDTH: float = 2.7
 const DOOR_HEIGHT: float = 3.6
 const DOOR_THICKNESS: float = 0.2
