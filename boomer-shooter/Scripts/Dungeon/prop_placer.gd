@@ -18,6 +18,14 @@ func populate(
 		push_error("PropPlacer: biome data must define non-empty universal_prop_scenes.")
 		return
 
+	var pool: Array = _get_universal_prop_scenes(biome_data)
+	var biome_pool: Array = _get_biome_prop_scenes(biome_data)
+	if not biome_pool.is_empty():
+		pool.append_array(biome_pool)
+	if pool.is_empty():
+		push_error("PropPlacer: no prop scenes resolved for biome data.")
+		return
+
 	for room_variant in rooms:
 		var room: RoomData = room_variant
 		if room == null:
@@ -27,14 +35,6 @@ func populate(
 
 		var area: int = room.grid_rect.size.x * room.grid_rect.size.y
 		var prop_count: int = mini(8, max(3, area / 15))
-
-		var pool: Array = _get_universal_prop_scenes(biome_data)
-		var biome_pool: Array = _get_biome_prop_scenes(biome_data)
-		if not biome_pool.is_empty():
-			pool.append_array(biome_pool)
-		if pool.is_empty():
-			push_error("PropPlacer: no prop scenes resolved for biome '%s'." % room.biome)
-			continue
 
 		for _i in range(prop_count):
 			var rx = room.grid_rect.position.x + 1 + rng.randi() % maxi(1, room.grid_rect.size.x - 2)

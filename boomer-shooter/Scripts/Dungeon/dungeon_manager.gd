@@ -27,6 +27,7 @@ var _encounter: EncounterSystem
 var _rooms: Array = []
 var _active_biome_data: Resource = null
 var _room_lookup := {}
+var _room_tile_owner := {}
 var _spawned_enemy_rooms := {}
 var _last_player_room_id: int = -1
 
@@ -117,6 +118,7 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 		child.queue_free()
 
 	_room_lookup = {}
+	_room_tile_owner = {}
 	_spawned_enemy_rooms = {}
 	_last_player_room_id = -1
 	_active_biome_data = null
@@ -145,6 +147,7 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 	_generator.generate(floor_num, requested_seed)
 	generation_seed = int(_generator.rng.seed)
 	_rooms = _generator.rooms
+	_room_tile_owner = _generator._room_tile_owner
 
 	var biome_id := "crypt"
 	if _rooms.size() > 0:
@@ -157,7 +160,17 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 
 	# Build 3D geometry inside the NavigationRegion3D
 	_builder = DungeonBuilder.new()
-	_builder.build(_generator.tile_grid, _rooms, _generator.corridors, _generator.doorways, nav_region, biome_data)
+	_builder.build(
+		_generator.tile_grid,
+		_rooms,
+		_generator.corridors,
+		_generator.doorways,
+		nav_region,
+		biome_data,
+		_generator._room_tile_owner,
+		_generator._corridor_tile_owner,
+		generation_seed
+	)
 	_spawn_handcrafted_room_overlays(nav_region)
 
 	# Place props (static, not streamed)
@@ -240,6 +253,7 @@ func clear_editor_preview() -> void:
 		child.queue_free()
 	_rooms = []
 	_room_lookup = {}
+	_room_tile_owner = {}
 	_spawned_enemy_rooms = {}
 	_last_player_room_id = -1
 	_encounter = null
@@ -774,12 +788,7 @@ func _spawn_room_once(room_id: int) -> void:
 func _find_room_id_for_world_position(world_pos: Vector3) -> int:
 	var tx := int(floor(world_pos.x / DungeonBuilder.TILE_SIZE))
 	var tz := int(floor(world_pos.z / DungeonBuilder.TILE_SIZE))
-	for room_variant in _rooms:
-		var room: RoomData = room_variant
-		var rect: Rect2i = room.grid_rect
-		if tx >= rect.position.x and tx < rect.position.x + rect.size.x and tz >= rect.position.y and tz < rect.position.y + rect.size.y:
-			return room.id
-	return -1
+	return int(_room_tile_owner.get("%d:%d" % [tx, tz], -1))
 
 func get_room_id_for_world_position(world_pos: Vector3) -> int:
 	return _find_room_id_for_world_position(world_pos)
@@ -1027,12 +1036,39 @@ func _on_inner_chamber_door_opened(_door: DungeonDoor, room_id: int) -> void:
 func _build_spawn_positions(base_pos: Vector3, _look_target: Vector3, player_count: int) -> Array[Vector3]:
 	var positions: Array[Vector3] = []
 	var desired_count := maxi(1, player_count)
-	var snapped_base_variant: Variant = _snap_spawn_to_floor(base_pos)
-	var snapped_base: Vector3 = snapped_base_variant if snapped_base_variant is Vector3 else base_pos
-	positions.append(snapped_base)
-	while positions.size() < desired_count:
-		positions.append(snapped_base)
+	for index in range(desired_count):
+		var candidate := _offset_spawn_position(base_pos, index)
+		var snapped_candidate_variant: Variant = _snap_spawn_to_floor(candidate)
+		var snapped_candidate: Vector3 = snapped_candidate_variant if snapped_candidate_variant is Vector3 else candidate
+		positions.append(snapped_candidate)
 	return positions
+
+func _offset_spawn_position(base_pos: Vector3, player_index: int) -> Vector3:
+	if player_index <= 0:
+		return base_pos
+	var offset_distance := 2.0
+	match player_index:
+		1:
+			return base_pos + Vector3(offset_distance, 0.0, 0.0)
+		2:
+			return base_pos + Vector3(-offset_distance, 0.0, 0.0)
+		3:
+			return base_pos + Vector3(0.0, 0.0, offset_distance)
+		4:
+			return base_pos + Vector3(0.0, 0.0, -offset_distance)
+		_:
+			var ring := int(floor(float(player_index - 1) / 4.0)) + 1
+			var lane := int((player_index - 1) % 4)
+			var scaled_distance := offset_distance * float(ring)
+			match lane:
+				0:
+					return base_pos + Vector3(scaled_distance, 0.0, 0.0)
+				1:
+					return base_pos + Vector3(-scaled_distance, 0.0, 0.0)
+				2:
+					return base_pos + Vector3(0.0, 0.0, scaled_distance)
+				_:
+					return base_pos + Vector3(0.0, 0.0, -scaled_distance)
 
 func _snap_spawn_to_floor(candidate: Vector3) -> Variant:
 	var space_state := get_world_3d().direct_space_state
@@ -1093,7 +1129,17 @@ func _sync_floor_to_clients() -> void:
 	if not _session_multiplayer or not _session_host:
 		return
 	_mark_all_clients_floor_not_ready()
-	rpc("rpc_sync_floor_state", floor_number, generation_seed, _build_floor_sync_config())
+	for peer_id in _get_network_connected_peer_ids():
+		_sync_floor_to_peer(int(peer_id), false)
+
+func _sync_floor_to_peer(peer_id: int, reset_ready: bool = true) -> void:
+	if not _session_multiplayer or not _session_host:
+		return
+	if peer_id <= 1:
+		return
+	if reset_ready:
+		_set_peer_floor_sync_ready(peer_id, false)
+	rpc_id(peer_id, "rpc_sync_floor_state", floor_number, generation_seed, _build_floor_sync_config())
 
 func request_weapon_fire(peer_id: int, weapon_slot: int, weapon_key: String, cam_origin: Vector3, cam_forward: Vector3, shot_id: int) -> void:
 	if not _session_multiplayer:
@@ -1644,8 +1690,7 @@ func _broadcast_enemy_snapshots() -> void:
 func _on_network_peer_joined(peer_id: int) -> void:
 	if not _session_host:
 		return
-	_set_peer_floor_sync_ready(peer_id, false)
-	_sync_floor_to_clients()
+	_sync_floor_to_peer(peer_id)
 
 func _on_network_peer_left(peer_id: int) -> void:
 	if not _session_host:
@@ -1700,8 +1745,7 @@ func rpc_client_ready_for_sync(peer_id: int) -> void:
 	var sender := multiplayer.get_remote_sender_id()
 	if sender != peer_id:
 		return
-	_set_peer_floor_sync_ready(peer_id, false)
-	rpc_id(peer_id, "rpc_sync_floor_state", floor_number, generation_seed, _build_floor_sync_config())
+	_sync_floor_to_peer(peer_id)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_sync_floor_state(remote_floor: int, remote_seed: int, floor_cfg: Dictionary = {}) -> void:
