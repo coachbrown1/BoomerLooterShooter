@@ -227,8 +227,10 @@ func _add_floor_quad(st: SurfaceTool, wx: float, wz: float, size: float, rand_va
 	var v3 := Vector3(wx,        0.0, wz + size)
 	var n   := Vector3.UP
 
-	var uvs := _get_randomized_uvs(rand_val)
-	var uv0: Vector2 = uvs[0]; var uv1: Vector2 = uvs[1]; var uv2: Vector2 = uvs[2]; var uv3: Vector2 = uvs[3]
+	var uv0 := Vector2(0, 0)
+	var uv1 := Vector2(1, 0)
+	var uv2 := Vector2(1, 1)
+	var uv3 := Vector2(0, 1)
 
 	st.set_normal(n); st.set_uv(uv0); st.add_vertex(v0)
 	st.set_normal(n); st.set_uv(uv1); st.add_vertex(v1)
@@ -291,15 +293,17 @@ func _add_wall_quad(
 		v2 = Vector3(wx + size, height, wz + size)
 		v3 = Vector3(wx,        height, wz + size)
 
-	# For walls, we only apply horizontal flipping (bit 0) if no custom UV rect is provided
-	var uv0 := Vector2(uv_rect.position.x, uv_rect.position.y + uv_rect.size.y)
-	var uv1 := Vector2(uv_rect.position.x + uv_rect.size.x, uv_rect.position.y + uv_rect.size.y)
+	# Tile vertically so tall walls do not stretch square wall materials.
+	var vertical_tiling: float = maxf(height / size, 1.0 / size)
+	var uv_height: float = uv_rect.size.y * vertical_tiling
+	var uv0 := Vector2(uv_rect.position.x, uv_rect.position.y + uv_height)
+	var uv1 := Vector2(uv_rect.position.x + uv_rect.size.x, uv_rect.position.y + uv_height)
 	var uv2 := Vector2(uv_rect.position.x + uv_rect.size.x, uv_rect.position.y)
 	var uv3 := Vector2(uv_rect.position.x, uv_rect.position.y)
 	
 	if uv_rect.size == Vector2(1, 1) and (rand_val % 2) == 1:
 		# Swap left/right UVs
-		uv0 = Vector2(1, 1); uv1 = Vector2(0, 1)
+		uv0 = Vector2(1, uv_height); uv1 = Vector2(0, uv_height)
 		uv2 = Vector2(0, 0); uv3 = Vector2(1, 0)
 
 
@@ -352,6 +356,10 @@ func _get_materials(biome: String, surface: String, biome_data: Resource = null)
 
 	var mats = []
 	for tex in textures:
+		if tex is Material:
+			mats.append(tex)
+			continue
+
 		var mat := StandardMaterial3D.new()
 		if tex is Texture2D:
 			var albedo_tex: Texture2D = tex
@@ -472,9 +480,11 @@ func _to_texture_array(source: Array) -> Array:
 	for value in source:
 		if value is Texture2D:
 			textures.append(value)
+		elif value is Material:
+			textures.append(value)
 		elif value is String:
 			var loaded := load(str(value))
-			if loaded is Texture2D:
+			if loaded is Texture2D or loaded is Material:
 				textures.append(loaded)
 	return textures
 

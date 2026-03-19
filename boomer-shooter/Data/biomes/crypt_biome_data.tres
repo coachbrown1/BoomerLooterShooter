@@ -22,7 +22,6 @@
 [ext_resource type="Texture2D" uid="uid://sbfcrpaqlvac" path="res://Assets/Environment/exit_portal.png" id="19_02qk5"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Crypt/propcryptbanner.tscn" id="19_bprop5"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Crypt/propcryptbonepile.tscn" id="20_bprop6"]
-[ext_resource type="PackedScene" uid="uid://8kv1bp8iue40" path="res://Scenes/Dungeon/fungal_mushroom.tscn" id="20_jqpud"]
 [ext_resource type="PackedScene" uid="uid://dprxvxrny58r5" path="res://Scenes/Enemies/skeleton.tscn" id="21_enemy1"]
 [ext_resource type="PackedScene" uid="uid://sphksp0r3333" path="res://Scenes/Enemies/spore_husk.tscn" id="22_enemy2"]
 [ext_resource type="PackedScene" uid="uid://gobarc483377" path="res://Scenes/Enemies/goblin_archer.tscn" id="23_enemy3"]
@@ -32,7 +31,6 @@
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/cultist.tscn" id="26_enemy6"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/death_knight.tscn" id="27_enemy7"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/gargoyle.tscn" id="28_enemy8"]
-[ext_resource type="PackedScene" path="res://Scenes/Dungeon/fungal_crystal.tscn" id="30_o1aeu"]
 
 [resource]
 script = ExtResource("1_biome_data")
@@ -41,8 +39,6 @@ wall_textures = [ExtResource("5_wall1"), ExtResource("6_wall2"), ExtResource("7_
 ceiling_textures = [ExtResource("8_ceil1"), ExtResource("9_ceil2"), ExtResource("10_ceil3")]
 tile_emission_color = Color(0.15, 0.25, 0.5, 1)
 tile_emission_energy = 0.08
-tile_uv_scale = 2.0
-tile_texture_filter = 0
 universal_prop_scenes = [ExtResource("11_uprop1"), ExtResource("12_uprop2"), ExtResource("13_uprop3"), ExtResource("14_uprop4")]
 biome_prop_scenes = [ExtResource("15_bprop1"), ExtResource("16_bprop2"), ExtResource("17_bprop3"), ExtResource("18_bprop4"), ExtResource("19_bprop5"), ExtResource("20_bprop6")]
 enemy_scenes = [ExtResource("21_enemy1"), ExtResource("22_enemy2"), ExtResource("23_enemy3"), ExtResource("24_enemy4"), ExtResource("25_enemy5"), ExtResource("26_enemy6"), ExtResource("27_enemy7"), ExtResource("28_enemy8")]

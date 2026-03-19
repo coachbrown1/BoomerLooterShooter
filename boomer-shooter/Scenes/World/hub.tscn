@@ -1,9 +1,11 @@
 [gd_scene format=3 uid="uid://d04th7wsm1tgd"]
 
 [ext_resource type="Script" uid="uid://bbkoj11vl0ail" path="res://Scripts/World/hub_manager.gd" id="1_hubmgr"]
-[ext_resource type="PackedScene" uid="uid://c7x8xa01a2b3c" path="res://Scenes/UI/hud.tscn" id="3_hud"]
-[ext_resource type="PackedScene" uid="uid://y34tho2frjpg" path="res://Scenes/Props/chest.tscn" id="4_chest"]
-[ext_resource type="PackedScene" uid="uid://b5y4kr6d1rq34" path="res://Scenes/Props/portal.tscn" id="5_portal"]
+[ext_resource type="StandardMaterial3D" path="res://Assets/Environment/Castle/hub_wall_mat.tres" id="2_hub_wall_mat"]
+[ext_resource type="StandardMaterial3D" path="res://Assets/Environment/Castle/hub_floor_mat.tres" id="3_hub_floor_mat"]
+[ext_resource type="PackedScene" uid="uid://c7x8xa01a2b3c" path="res://Scenes/UI/hud.tscn" id="4_hud"]
+[ext_resource type="PackedScene" uid="uid://y34tho2frjpg" path="res://Scenes/Props/chest.tscn" id="5_chest"]
+[ext_resource type="PackedScene" uid="uid://b5y4kr6d1rq34" path="res://Scenes/Props/portal.tscn" id="6_portal"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_hub"]
 sky_top_color = Color(0.08, 0.06, 0.04, 1)
@@ -28,10 +30,6 @@ fog_enabled = true
 fog_light_color = Color(0.12, 0.09, 0.06, 1)
 fog_density = 0.02
 
-[sub_resource type="StandardMaterial3D" id="Mat_floor"]
-albedo_color = Color(0.35, 0.31, 0.27, 1)
-roughness = 0.92
-
 [sub_resource type="BoxMesh" id="Mesh_floor"]
 size = Vector3(30, 0.2, 30)
 
@@ -47,10 +45,6 @@ size = Vector3(30, 0.2, 30)
 
 [sub_resource type="BoxShape3D" id="Shape_ceil"]
 size = Vector3(30, 0.2, 30)
-
-[sub_resource type="StandardMaterial3D" id="Mat_stone"]
-albedo_color = Color(0.42, 0.38, 0.33, 1)
-roughness = 0.92
 
 [sub_resource type="BoxMesh" id="Mesh_wallNS"]
 size = Vector3(30, 4, 0.4)
@@ -76,7 +70,7 @@ environment = SubResource("Environment_hub")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, -0.1, 15)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/Floor" unique_id=749652796]
-material_override = SubResource("Mat_floor")
+material_override = ExtResource("3_hub_floor_mat")
 mesh = SubResource("Mesh_floor")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Floor" unique_id=1389741743]
@@ -96,7 +90,7 @@ shape = SubResource("Shape_ceil")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 2, 0.2)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/WallNorth" unique_id=907768514]
-material_override = SubResource("Mat_stone")
+material_override = ExtResource("2_hub_wall_mat")
 mesh = SubResource("Mesh_wallNS")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/WallNorth" unique_id=1610806484]
@@ -106,7 +100,7 @@ shape = SubResource("Shape_wallNS")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 2, 29.8)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/WallSouth" unique_id=479138190]
-material_override = SubResource("Mat_stone")
+material_override = ExtResource("2_hub_wall_mat")
 mesh = SubResource("Mesh_wallNS")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/WallSouth" unique_id=1877638069]
@@ -116,7 +110,7 @@ shape = SubResource("Shape_wallNS")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 2, 15)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/WallWest" unique_id=1750663395]
-material_override = SubResource("Mat_stone")
+material_override = ExtResource("2_hub_wall_mat")
 mesh = SubResource("Mesh_wallEW")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/WallWest" unique_id=884541902]
@@ -126,7 +120,7 @@ shape = SubResource("Shape_wallEW")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29.8, 2, 15)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/WallEast" unique_id=1417177701]
-material_override = SubResource("Mat_stone")
+material_override = ExtResource("2_hub_wall_mat")
 mesh = SubResource("Mesh_wallEW")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/WallEast" unique_id=844285266]
@@ -162,16 +156,16 @@ light_color = Color(1, 0.55, 0.15, 1)
 light_energy = 1.8
 omni_range = 12.0
 
-[node name="HubChest_0" parent="NavigationRegion3D" unique_id=1415938721 instance=ExtResource("4_chest")]
+[node name="HubChest_0" parent="NavigationRegion3D" unique_id=1415938721 instance=ExtResource("5_chest")]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 28, 0, 10.5)
 
-[node name="HubChest_1" parent="NavigationRegion3D" unique_id=1600397823 instance=ExtResource("4_chest")]
+[node name="HubChest_1" parent="NavigationRegion3D" unique_id=1600397823 instance=ExtResource("5_chest")]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 28, 0, 15)
 
-[node name="HubChest_2" parent="NavigationRegion3D" unique_id=460038010 instance=ExtResource("4_chest")]
+[node name="HubChest_2" parent="NavigationRegion3D" unique_id=460038010 instance=ExtResource("5_chest")]
 transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 28, 0, 19.5)
 
-[node name="Portal" parent="NavigationRegion3D" unique_id=182651702 instance=ExtResource("5_portal")]
+[node name="Portal" parent="NavigationRegion3D" unique_id=182651702 instance=ExtResource("6_portal")]
 transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 15, 1.6, 2.5)
 
 [node name="PlayerSpawn_0" type="Marker3D" parent="." unique_id=2118568762]
@@ -186,4 +180,4 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17, 1, 21.963017)
 [node name="PlayerSpawn_3" type="Marker3D" parent="." unique_id=1106533819]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 1, 23.963017)
 
-[node name="HUD" parent="." unique_id=2003438820 instance=ExtResource("3_hud")]
+[node name="HUD" parent="." unique_id=2003438820 instance=ExtResource("4_hud")]

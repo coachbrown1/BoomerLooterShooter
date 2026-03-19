@@ -17,7 +17,6 @@
 [ext_resource type="Texture2D" uid="uid://sbfcrpaqlvac" path="res://Assets/Environment/exit_portal.png" id="14_mmxep"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Common/propbrokenpillar.tscn" id="14_uprop4"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Lava/proplavacrack.tscn" id="15_bprop1"]
-[ext_resource type="PackedScene" uid="uid://8kv1bp8iue40" path="res://Scenes/Dungeon/fungal_mushroom.tscn" id="15_hdji1"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Lava/proplavaspike.tscn" id="16_bprop2"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Lava/proplavabrazier.tscn" id="17_bprop3"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Lava/proplavacharredbones.tscn" id="18_bprop4"]
@@ -27,7 +26,6 @@
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/kobold.tscn" id="21_enemy1"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/flaming_skull.tscn" id="22_enemy2"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/gargoyle.tscn" id="23_enemy3"]
-[ext_resource type="PackedScene" path="res://Scenes/Dungeon/fungal_crystal.tscn" id="25_s81vs"]
 
 [resource]
 script = ExtResource("1_biome_data")
@@ -37,8 +35,6 @@ wall_textures = [ExtResource("5_wall1"), ExtResource("6_wall2"), ExtResource("7_
 ceiling_textures = [ExtResource("8_ceil1"), ExtResource("9_ceil2"), ExtResource("10_ceil3")]
 tile_emission_color = Color(0.8, 0.15, 0, 1)
 tile_emission_energy = 0.4
-tile_uv_scale = 2.0
-tile_texture_filter = 0
 room_light_color = Color(1, 0.4, 0.15, 1)
 corridor_light_color = Color(1, 0.35, 0.1, 1)
 fog_light_color = Color(0.08, 0.02, 0.01, 1)

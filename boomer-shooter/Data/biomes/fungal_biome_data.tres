@@ -11,8 +11,6 @@
 [ext_resource type="Texture2D" uid="uid://yfcqcye70nbh" path="res://Assets/Environment/Fungal/fungal_ceiling_v2.png" id="8_ceil2"]
 [ext_resource type="Texture2D" uid="uid://ddt11sm3rurga" path="res://Assets/Environment/Fungal/fungal_ceiling_v3.png" id="9_ceil3"]
 [ext_resource type="PackedScene" uid="uid://bu6s2o7mr0val" path="res://Scenes/Dungeon/doorway_assembly.tscn" id="10_doorway"]
-[ext_resource type="PackedScene" uid="uid://8kv1bp8iue40" path="res://Scenes/Dungeon/fungal_mushroom.tscn" id="11_floor_light"]
-[ext_resource type="PackedScene" path="res://Scenes/Dungeon/fungal_crystal.tscn" id="12_wall_light"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_barrel.tscn" id="13_uprop1"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_crate.tscn" id="14_uprop2"]
 [ext_resource type="Texture2D" uid="uid://sbfcrpaqlvac" path="res://Assets/Environment/exit_portal.png" id="15_d6p21"]
