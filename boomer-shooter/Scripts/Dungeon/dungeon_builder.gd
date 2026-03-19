@@ -44,6 +44,7 @@ const MURAL_TILING: float = 3.0
 
 # Cached materials per biome
 var _mat_cache := {}
+var _rng := RandomNumberGenerator.new()
 
 # -------------------------------------------------------
 # Main build entry
@@ -54,10 +55,14 @@ func build(
 	corridors: Array,
 	doorways: Array,
 	parent: Node3D,
-	biome_data: Resource = null
+	biome_data: Resource = null,
+	room_tile_owner_ids: Dictionary = {},
+	corridor_tile_owner_ids: Dictionary = {},
+	rng_seed: int = 0
 ) -> void:
 	var grid_w: int = tile_grid.size()
 	var grid_h: int = tile_grid[0].size() if grid_w > 0 else 0
+	_rng.seed = rng_seed if rng_seed != 0 else 1
 
 	# Determine dominant biome from rooms
 	var biome := "crypt"
@@ -67,10 +72,9 @@ func build(
 	var mats_floor   := _get_materials(biome, "floor", biome_data)
 	var mats_wall    := _get_materials(biome, "wall", biome_data)
 	var mats_ceiling := _get_materials(biome, "ceiling", biome_data)
-	
-	var room_tile_owner := _build_room_tile_owner(rooms)
-
-	var corridor_tile_owner := _build_corridor_tile_owner(corridors)
+	var room_lookup := _build_room_lookup(rooms)
+	var room_tile_owner := room_tile_owner_ids if not room_tile_owner_ids.is_empty() else _build_room_tile_owner(rooms)
+	var corridor_tile_owner := corridor_tile_owner_ids if not corridor_tile_owner_ids.is_empty() else _build_corridor_tile_owner(corridors)
 	var doorway_opening_owner := _build_doorway_opening_owner(doorways)
 	var fungal_corridor_profile := _make_fungal_corridor_profile(
 		mats_floor.size(),
@@ -126,13 +130,15 @@ func build(
 			var wx := x * TILE_SIZE
 			var wz := z * TILE_SIZE
 
-			var rand_val = randi()
+			var rand_val = _rng.randi()
 			var floor_idx = rand_val % floor_sts.size()
 			var ceil_idx = (rand_val >> 2) % ceil_sts.size()
-			var room: RoomData = room_tile_owner.get(_tile_key(x, z), null)
-			var corridor: Dictionary = corridor_tile_owner.get(_tile_key(x, z), {})
-			var is_doorway_opening := doorway_opening_owner.has(_tile_key(x, z))
-			var wall_idx = randi() % wall_sts.size()
+			var tile_key := _tile_key(x, z)
+			var room_id := int(room_tile_owner.get(tile_key, -1))
+			var room: RoomData = room_lookup.get(room_id, null)
+			var is_corridor_tile := corridor_tile_owner.has(tile_key)
+			var is_doorway_opening := doorway_opening_owner.has(tile_key)
+			var wall_idx = _rng.randi() % wall_sts.size()
 
 			# Fungal uses semantic ownership: room profile, corridor profile, doorway opening profile.
 			if biome == "fungal":
@@ -144,7 +150,7 @@ func build(
 					floor_idx = _get_room_surface_variant(room, "floor_variant", floor_sts.size(), floor_idx)
 					ceil_idx = _get_room_surface_variant(room, "ceiling_variant", ceil_sts.size(), ceil_idx)
 					wall_idx = _get_room_surface_variant(room, "wall_variant", wall_sts.size(), wall_idx)
-				elif typeof(corridor) == TYPE_DICTIONARY and not corridor.is_empty():
+				elif is_corridor_tile:
 					floor_idx = fungal_corridor_profile["floor_variant"]
 					ceil_idx = fungal_corridor_profile["ceiling_variant"]
 					wall_idx = fungal_corridor_profile["wall_variant"]
@@ -157,16 +163,16 @@ func build(
 
 			# Walls — pick random per wall quad
 			if x == 0               or tile_grid[x - 1][z] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(-1, 0, 0), randi())
+				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(-1, 0, 0), _rng.randi())
 					
 			if x == grid_w - 1      or tile_grid[x + 1][z] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(1, 0, 0), randi())
+				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(1, 0, 0), _rng.randi())
 					
 			if z == 0               or tile_grid[x][z - 1] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, -1), randi())
+				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, -1), _rng.randi())
 					
 			if z == grid_h - 1      or tile_grid[x][z + 1] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, 1), randi())
+				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, 1), _rng.randi())
 
 
 	var floor_mesh = ArrayMesh.new()
@@ -208,7 +214,7 @@ func build(
 
 	# Post-processing: Place doorways and lights
 	_place_generated_doorway_assemblies(geo_root, doorways, biome_data)
-	_place_lights(geo_root, rooms, tile_grid, biome, doorway_opening_owner, room_tile_owner, biome_data)
+	_place_lights(geo_root, rooms, tile_grid, biome, doorway_opening_owner, room_tile_owner, room_lookup, biome_data)
 
 # -------------------------------------------------------
 # Quad helpers
@@ -488,11 +494,21 @@ func _build_room_tile_owner(rooms: Array) -> Dictionary:
 	for room in rooms:
 		if room == null:
 			continue
+		var room_id := int(room.id)
 		var rect: Rect2i = room.grid_rect
 		for x in range(rect.position.x, rect.position.x + rect.size.x):
 			for z in range(rect.position.y, rect.position.y + rect.size.y):
-				owner[_tile_key(x, z)] = room
+				owner[_tile_key(x, z)] = room_id
 	return owner
+
+func _build_room_lookup(rooms: Array) -> Dictionary:
+	var lookup := {}
+	for room_variant in rooms:
+		if room_variant == null:
+			continue
+		var room: RoomData = room_variant
+		lookup[room.id] = room
+	return lookup
 
 func _build_corridor_tile_owner(corridors: Array) -> Dictionary:
 	var owner := {}
@@ -539,9 +555,9 @@ func _get_room_surface_variant(room: RoomData, key: String, variant_count: int, 
 	return raw % variant_count
 
 func _make_fungal_corridor_profile(floor_count: int, wall_count: int, ceiling_count: int) -> Dictionary:
-	var floor_variant := randi() % maxi(1, floor_count)
-	var wall_variant := randi() % maxi(1, wall_count)
-	var ceiling_variant := randi() % maxi(1, ceiling_count)
+	var floor_variant := _rng.randi() % maxi(1, floor_count)
+	var wall_variant := _rng.randi() % maxi(1, wall_count)
+	var ceiling_variant := _rng.randi() % maxi(1, ceiling_count)
 	return {
 		"floor_variant": floor_variant,
 		"wall_variant": wall_variant,
@@ -558,6 +574,7 @@ func _place_lights(
 	biome: String,
 	doorway_owner: Dictionary,
 	room_tile_owner: Dictionary,
+	room_lookup: Dictionary,
 	biome_data: Resource = null
 ) -> void:
 	var room_color: Color = Color(0.9, 0.75, 0.5)
@@ -647,7 +664,7 @@ func _place_lights(
 				wx = pos.x
 				wz = pos.z
 			else:
-				var c = candidates[randi() % candidates.size()]
+				var c = candidates[_rng.randi() % candidates.size()]
 				match c.side:
 					0: # West
 						wx = c.x * TILE_SIZE + 0.05
@@ -684,7 +701,7 @@ func _place_lights(
 			flicker.mode = FlickerLight.Mode.PULSE
 			flicker.base_energy = 1.2
 			flicker.max_variation = 0.4
-			flicker.speed = 1.5 + randf() * 1.5
+			flicker.speed = 1.5 + _rng.randf() * 1.5
 			light.add_child(flicker)
 
 			parent.add_child(holder)
@@ -692,7 +709,7 @@ func _place_lights(
 			var light: Light3D
 			
 			# 50% chance for a cookie projector in non-fungal rooms
-			if randf() < 0.5:
+			if _rng.randf() < 0.5:
 				var spot = SpotLight3D.new()
 				spot.spot_range = 25.0
 				spot.spot_angle = 75.0
@@ -733,10 +750,11 @@ func _place_lights(
 	if use_prop_lights:
 		for x in range(2, grid_w - 2, corridor_step):
 			for z in range(2, grid_h - 2, corridor_step):
-				var tile_room: RoomData = room_tile_owner.get(_tile_key(x, z), null)
+				var tile_room_id := int(room_tile_owner.get(_tile_key(x, z), -1))
+				var tile_room: RoomData = room_lookup.get(tile_room_id, null)
 				if tile_room != null and (tile_room.has_handcrafted_layout or tile_room.handcrafted_scene != null or tile_room.handcrafted_scene_path != ""):
 					continue
-				if tile_grid[x][z] == TILE_FLOOR and randf() < corridor_chance:
+				if tile_grid[x][z] == TILE_FLOOR and _rng.randf() < corridor_chance:
 					# Container node so the sprite and light share a transform
 					var holder := Node3D.new()
 					var wx = x * TILE_SIZE + TILE_SIZE / 2.0
@@ -744,7 +762,7 @@ func _place_lights(
 					# Try wall placement first; if not possible, use floor light.
 					var wall_light_ry: float = 0.0
 					var found_flat_wall: bool = false
-					var prefer_wall := (not has_floor_light_scene and has_wall_light_scene) or randf() < 0.5
+					var prefer_wall := (not has_floor_light_scene and has_wall_light_scene) or _rng.randf() < 0.5
 					if prefer_wall:
 						var key := _tile_key(x, z)
 						if not doorway_owner.has(key):
@@ -789,7 +807,7 @@ func _place_lights(
 					flicker.mode = FlickerLight.Mode.PULSE
 					flicker.base_energy = wall_light_energy if use_wall_light else floor_light_energy
 					flicker.max_variation = 0.5 # Substantial pulse
-					flicker.speed = 1.0 + randf() * 1.5
+					flicker.speed = 1.0 + _rng.randf() * 1.5
 					flicker.light_node = light
 					holder.add_child(flicker)
 					
@@ -798,10 +816,11 @@ func _place_lights(
 		# Other biomes: plain invisible torchlight
 		for x in range(2, grid_w - 2, corridor_step):
 			for z in range(2, grid_h - 2, corridor_step):
-				var tile_room: RoomData = room_tile_owner.get(_tile_key(x, z), null)
+				var tile_room_id := int(room_tile_owner.get(_tile_key(x, z), -1))
+				var tile_room: RoomData = room_lookup.get(tile_room_id, null)
 				if tile_room != null and (tile_room.has_handcrafted_layout or tile_room.handcrafted_scene != null or tile_room.handcrafted_scene_path != ""):
 					continue
-				if tile_grid[x][z] == TILE_FLOOR and randf() < corridor_chance:
+				if tile_grid[x][z] == TILE_FLOOR and _rng.randf() < corridor_chance:
 					var light = OmniLight3D.new()
 					light.light_color = corridor_color
 					light.light_energy = corridor_energy
