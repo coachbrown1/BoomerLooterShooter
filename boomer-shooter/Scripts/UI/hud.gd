@@ -1,6 +1,5 @@
 extends CanvasLayer
 
-@onready var screen_fx = $ScreenFX
 @onready var _bottom_margin: MarginContainer = $MarginContainer
 @onready var _bottom_row: BoxContainer = $MarginContainer/HBoxContainer
 @onready var _health_row: HBoxContainer = $MarginContainer/HBoxContainer/HealthRow
@@ -190,8 +189,6 @@ var _pause_fullscreen_check: CheckBox = null
 var _pause_menu_open: bool = false
 
 func _ready() -> void:
-	# Print out a message so the user knows about the debug key
-	print("Debug: Press 'G' to toggle Screen Effects (Saturation/Vignette)")
 	_apply_hud_icons()
 	_build_stat_modules()
 	_ensure_session_role_label()
@@ -218,12 +215,6 @@ func _process(delta: float) -> void:
 	_update_local_health_label()
 	_update_teammate_health_label()
 	_update_health_warning_visuals(delta)
-
-func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_G:
-		if screen_fx:
-			screen_fx.visible = !screen_fx.visible
-			print("Screen Effects: ", "ON" if screen_fx.visible else "OFF")
 
 func update_health(health: int) -> void:
 	if not is_node_ready():
