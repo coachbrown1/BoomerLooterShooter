@@ -1,26 +1,10 @@
 [gd_resource type="StandardMaterial3D" format=3 uid="uid://b3ajnbfsepeqj"]
 
-[ext_resource type="Texture2D" uid="uid://bc8m5xh43h1x8" path="res://Assets/Environment/Castle/castle_wood_floor_mat_albedo.png" id="1"]
-[ext_resource type="Texture2D" uid="uid://d1a2t7ctjlwm8" path="res://Assets/Environment/Castle/castle_wood_floor_mat_orm.png" id="2"]
-[ext_resource type="Texture2D" uid="uid://bf7n7g7lnkr4v" path="res://Assets/Environment/Castle/castle_wood_floor_mat_normal.png" id="3"]
-[ext_resource type="Texture2D" uid="uid://dygdsx0lqi5i4" path="res://Assets/Environment/Castle/castle_wood_floor_mat_heightmap.png" id="4"]
+[ext_resource type="Texture2D" uid="uid://dlbtwdyatlw7a" path="res://Assets/Environment/Castle/castle_floor_v1.png" id="1"]
 
 [resource]
 albedo_texture = ExtResource("1")
-metallic_texture = ExtResource("2")
-metallic_texture_channel = 2
-roughness_texture = ExtResource("2")
-roughness_texture_channel = 1
-normal_enabled = true
-normal_texture = ExtResource("3")
-ao_enabled = true
-ao_texture = ExtResource("2")
-heightmap_scale = 0.0
-heightmap_deep_parallax = true
-heightmap_min_layers = 8
-heightmap_max_layers = 32
-heightmap_texture = ExtResource("4")
-uv1_scale = Vector3(2, 2, 2)
+uv1_scale = Vector3(0.1, 0.1, 0.1)
 uv1_triplanar = true
 uv1_world_triplanar = true
 texture_filter = 0

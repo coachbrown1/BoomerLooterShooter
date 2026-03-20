@@ -35,9 +35,21 @@ Current pilot coverage:
 - [world-interactions-and-props.md](world-interactions-and-props.md)
 - [data-resources-and-content.md](data-resources-and-content.md)
 - [testing-and-debugging.md](testing-and-debugging.md)
+- [components-effects-and-lighting.md](components-effects-and-lighting.md)
+- [release-and-build.md](release-and-build.md)
+- [editor-tooling.md](editor-tooling.md)
+- [mobility-and-abilities.md](mobility-and-abilities.md)
+- [projectiles-and-area-effects.md](projectiles-and-area-effects.md)
+- [system-singletons-and-state.md](system-singletons-and-state.md)
+- [support-folders-and-local-notes.md](support-folders-and-local-notes.md)
+- [enemies-and-rosters.md](enemies-and-rosters.md)
+- [biomes-and-handcrafted-content.md](biomes-and-handcrafted-content.md)
+- [weapon-families-and-scene-config.md](weapon-families-and-scene-config.md)
+- [hub-workflow-and-persistence.md](hub-workflow-and-persistence.md)
+- [scene-organization-and-conventions.md](scene-organization-and-conventions.md)
 
 Known gaps in this first pass:
 
 - top-level support folders outside the game project are only summarized
-- lighting, release/export flow, and editor tooling do not yet have dedicated subsystem docs
+- some smaller folders still do not have stand-alone docs if their behavior is already covered by broader subsystem pages
 - addon internals are intentionally not documented beyond how the project uses them

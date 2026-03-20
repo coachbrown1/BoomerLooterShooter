@@ -639,11 +639,11 @@ func _apply_surface_material_settings(mat: StandardMaterial3D, biome: String, bi
 		mat.emission_texture = mat.albedo_texture
 
 	if _has_biome_data(biome_data):
-		var use_world_triplanar: bool = bool(biome_data.tile_use_world_triplanar)
+		var use_world_triplanar: bool = _get_biome_bool(biome_data, "tile_use_world_triplanar", true)
 		var tile_scale: float = float(biome_data.tile_uv_scale)
 		var uv_scale: Vector3 = Vector3(tile_scale, tile_scale, tile_scale)
 		if surface == "wall":
-			use_world_triplanar = bool(biome_data.wall_use_world_triplanar)
+			use_world_triplanar = _get_biome_bool(biome_data, "wall_use_world_triplanar", false)
 			uv_scale = biome_data.wall_uv_scale
 		mat.emission = biome_data.tile_emission_color
 		mat.emission_energy_multiplier = biome_data.tile_emission_energy
@@ -1220,6 +1220,14 @@ func _has_biome_data(biome_data: Resource) -> bool:
 		if typeof(p) == TYPE_DICTIONARY and str(p.get("name", "")) == "biome_id":
 			return true
 	return false
+
+func _get_biome_bool(biome_data: Resource, property_name: String, fallback: bool) -> bool:
+	if biome_data == null or not _has_biome_data(biome_data):
+		return fallback
+	var value: Variant = biome_data.get(property_name)
+	if typeof(value) == TYPE_NIL:
+		return fallback
+	return bool(value)
 
 func _get_generated_doorway_wall_normal(doorway: Dictionary, room_lookup: Dictionary) -> Vector3:
 	var room_id := int(doorway.get("room_id", -1))

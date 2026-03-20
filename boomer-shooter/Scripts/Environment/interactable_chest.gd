@@ -91,7 +91,7 @@ func _open_lid() -> void:
 	_lid_tween.set_trans(Tween.TRANS_SINE)
 	_lid_tween.set_ease(Tween.EASE_IN_OUT)
 	# Rotates lid up to open
-	_lid_tween.tween_property(lid_hinge, "rotation_degrees:x", -110.0, 0.8)
+	_lid_tween.tween_property(lid_hinge, "rotation_degrees:x", 110.0, 0.8)
 
 func _get_player_inventory_system(interactor: Node = null) -> InventorySystem:
 	if interactor != null and interactor.has_method("get"):

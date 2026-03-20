@@ -1,0 +1,85 @@
+# Weapon Families And Scene Config
+
+## Purpose
+
+Document the project convention where most weapon behavior comes from one shared script plus per-weapon scene configuration, so agents do not waste time looking for missing subclass scripts.
+
+## Key Files
+
+- `boomer-shooter/Scripts/Weapons/weapon.gd`
+- `boomer-shooter/Scripts/Weapons/weapon_manager.gd`
+- `boomer-shooter/Scenes/Weapons/weapon_rifle.tscn`
+- `boomer-shooter/Scenes/Weapons/weapon_shotgun.tscn`
+- `boomer-shooter/Scenes/Weapons/weapon_crossbow.tscn`
+- `boomer-shooter/Scenes/Weapons/weapon_fireball.tscn`
+- `boomer-shooter/Scenes/Projectiles/arrow.tscn`
+- `boomer-shooter/Scenes/Projectiles/fireball.tscn`
+
+## Main Data Flow
+
+- All current player weapons use the same runtime script: `Scripts/Weapons/weapon.gd`.
+- Individual weapon scenes specialize behavior through exported properties rather than separate subclass scripts.
+- `WeaponManager` owns the instantiated scene-local weapon nodes under the player’s weapon mount and maps inventory weapon slots to those nodes.
+- Scene configuration defines weapon family behavior such as:
+  - ammo type
+  - magazine size
+  - reload time
+  - hitscan versus projectile
+  - projectile scene
+  - spread and pellet count
+  - muzzle flash offsets and visual setup
+
+## Current Weapon Families
+
+- Rifle:
+  - hitscan
+  - uses `light` ammo
+  - medium magazine
+  - standard muzzle flash and tracer behavior
+- Shotgun:
+  - hitscan
+  - uses `shells`
+  - multiple pellets and wide spread
+  - short effective range
+- Crossbow:
+  - projectile weapon
+  - uses `arrows`
+  - infinite reserve ammo
+  - spawns the arrow projectile scene
+- Fireball:
+  - projectile weapon
+  - uses `energy`
+  - one-round magazine with slower reload
+  - spawns the fireball projectile scene
+
+## Important State And Resources
+
+- Weapon scenes commonly contain:
+  - `WeaponSprite`
+  - `EjectionPort`
+  - `MuzzleFlash`
+  - `BulletTracer`
+- `weapon.gd` applies both equipment stats and weapon-item stats, so a weapon’s effective runtime behavior is a mix of:
+  - scene exports
+  - inventory item rolls
+  - equipment-derived modifiers
+- Weapon icons are referenced both by the scene and by generated inventory item definitions.
+
+## Multiplayer/Authority Notes
+
+- Even though weapon tuning is scene-driven, actual fire and reload outcomes still follow host-authoritative flow.
+- Scene changes that alter projectile versus hitscan behavior can have replication impact because the dungeon manager and verifier scenarios distinguish state sync from visual-only sync.
+- If a new weapon family is added, document whether it needs new verifier coverage for state, damage, or visuals.
+
+## Safe Edit Guidance
+
+- Do not assume there is a weapon-specific script file for each weapon; check the scene exports first.
+- If a change affects only tuning, prefer editing the weapon scene rather than branching `weapon.gd`.
+- If a new weapon truly needs unique code, document why the shared script is no longer sufficient.
+- Keep inventory weapon keys, gear catalog weapon definitions, scene names, and HUD icon paths aligned.
+
+## Related Docs
+
+- [combat-actors-and-weapons.md](combat-actors-and-weapons.md)
+- [projectiles-and-area-effects.md](projectiles-and-area-effects.md)
+- [inventory-gear-and-chests.md](inventory-gear-and-chests.md)
