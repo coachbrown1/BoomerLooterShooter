@@ -2,6 +2,15 @@
 
 This file is the canonical instruction set for any AI agent working in this repository, including Codex, Claude, Gemini, and similar tools. Apply these rules across the entire repo, including the Godot project under `boomer-shooter/`.
 
+## Agent Docs
+
+- `docs/ai/` is the canonical agent-oriented documentation directory for this repository.
+- Consult those docs when you need system context, file ownership hints, gameplay or data-flow summaries, multiplayer notes, or project entrypoint guidance.
+- Treat the codebase as the final source of truth if any documentation and implementation diverge.
+- When a change adds, removes, or materially alters a system, flow, interface, ownership boundary, or verification path, update the relevant file in `docs/ai/` in the same change set.
+- If no existing doc fits the new system, add a new markdown file under `docs/ai/` and link it from `docs/ai/README.md`.
+- Documentation updates should stay concise and practical: reflect current entrypoints, key files, data flow, multiplayer implications, and safe edit guidance.
+
 ## 1. Git And Branch Safety
 
 - Never use destructive Git commands such as `git reset --hard`, `git checkout --`, force-push, or history rewriting unless the user explicitly asks for them.
@@ -41,6 +50,7 @@ This file is the canonical instruction set for any AI agent working in this repo
 - If `git status` includes files you did not modify, do not include those files in the commit. Leave them in the changelist untouched and mention them in the handoff when relevant.
 - In the final handoff, report:
   - what changed
+  - what documentation was updated or why no documentation update was needed
   - how it was validated
   - any risks, assumptions, or unverified areas
 - Inspect `git status` again before handoff so the reported change set matches the actual repo state.

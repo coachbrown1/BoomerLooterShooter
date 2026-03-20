@@ -1,136 +1,16 @@
 [gd_scene format=3 uid="uid://y34tho2frjpg"]
 
 [ext_resource type="Script" uid="uid://betp6pitj7skh" path="res://Scripts/Environment/interactable_chest.gd" id="1_chest"]
-[ext_resource type="Texture2D" uid="uid://dwnt0iqvb7o7f" path="res://Assets/Environment/chest_base.png" id="tex_base"]
-[ext_resource type="Texture2D" uid="uid://gmdyh48kvmym" path="res://Assets/Environment/chest_front.png" id="tex_front"]
-[ext_resource type="Texture2D" uid="uid://dackkesplvwv2" path="res://Assets/Environment/chest_lid.png" id="tex_lid"]
-[ext_resource type="Texture2D" uid="uid://c2hxs3mq7kqp4" path="res://Assets/Environment/chest_side.png" id="tex_side"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/chest_model_recovered.tscn" id="2_model"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_chest"]
-size = Vector3(1.2, 1, 0.8)
-
-[sub_resource type="StandardMaterial3D" id="Mat_Front"]
-blend_mode = 4
-shading_mode = 0
-disable_ambient_light = true
-disable_fog = true
-disable_specular_occlusion = true
-albedo_texture = ExtResource("tex_front")
-texture_filter = 0
-
-[sub_resource type="QuadMesh" id="QM_Base_Front"]
-material = SubResource("Mat_Front")
-size = Vector2(1.2, 0.6)
-
-[sub_resource type="StandardMaterial3D" id="Mat_Base"]
-cull_mode = 2
-shading_mode = 0
-albedo_texture = ExtResource("tex_base")
-texture_filter = 0
-
-[sub_resource type="QuadMesh" id="QM_Base_Back"]
-material = SubResource("Mat_Base")
-size = Vector2(1.2, 0.6)
-
-[sub_resource type="StandardMaterial3D" id="Mat_Side"]
-cull_mode = 2
-shading_mode = 0
-disable_ambient_light = true
-disable_fog = true
-disable_specular_occlusion = true
-albedo_texture = ExtResource("tex_side")
-texture_filter = 0
-
-[sub_resource type="QuadMesh" id="QM_Base_Side"]
-material = SubResource("Mat_Side")
-size = Vector2(0.8, 0.6)
-
-[sub_resource type="QuadMesh" id="QM_Base_Bottom"]
-material = SubResource("Mat_Base")
-size = Vector2(1.2, 0.8)
-
-[sub_resource type="QuadMesh" id="QM_Base_Top"]
-material = SubResource("Mat_Base")
-size = Vector2(1.2, 0.8)
-
-[sub_resource type="QuadMesh" id="QM_Lid_Front"]
-material = SubResource("Mat_Front")
-size = Vector2(1.2, 0.4)
-
-[sub_resource type="StandardMaterial3D" id="Mat_Lid"]
-cull_mode = 2
-shading_mode = 0
-albedo_texture = ExtResource("tex_lid")
-texture_filter = 0
-
-[sub_resource type="QuadMesh" id="QM_Lid_Back"]
-material = SubResource("Mat_Lid")
-size = Vector2(1.2, 0.4)
-
-[sub_resource type="QuadMesh" id="QM_Lid_Side"]
-material = SubResource("Mat_Side")
-size = Vector2(0.8, 0.4)
-
-[sub_resource type="QuadMesh" id="QM_Lid_Top"]
-material = SubResource("Mat_Lid")
-size = Vector2(1.2, 0.8)
+size = Vector3(1.5, 1.0, 1.0)
 
 [node name="InteractableChest" type="StaticBody3D" unique_id=1563185929]
 script = ExtResource("1_chest")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1997504393]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
 shape = SubResource("BoxShape3D_chest")
 
-[node name="BaseMesh" type="Node3D" parent="." unique_id=791602583]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
-
-[node name="Front" type="MeshInstance3D" parent="BaseMesh" unique_id=1062979777]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.4)
-mesh = SubResource("QM_Base_Front")
-
-[node name="Back" type="MeshInstance3D" parent="BaseMesh" unique_id=2000702558]
-transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, -0.4)
-mesh = SubResource("QM_Base_Back")
-
-[node name="Left" type="MeshInstance3D" parent="BaseMesh" unique_id=29915897]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -0.6, 0, 0)
-mesh = SubResource("QM_Base_Side")
-
-[node name="Right" type="MeshInstance3D" parent="BaseMesh" unique_id=666686996]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0.6, 0, 0)
-mesh = SubResource("QM_Base_Side")
-
-[node name="Bottom" type="MeshInstance3D" parent="BaseMesh" unique_id=946556554]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, -0.3, 0)
-mesh = SubResource("QM_Base_Bottom")
-
-[node name="Top" type="MeshInstance3D" parent="BaseMesh" unique_id=956401012]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0.3, 0)
-mesh = SubResource("QM_Base_Top")
-
-[node name="LidHinge" type="Node3D" parent="." unique_id=834980523]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, -0.4)
-
-[node name="LidMesh" type="Node3D" parent="LidHinge" unique_id=483361449]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0.4)
-
-[node name="Front" type="MeshInstance3D" parent="LidHinge/LidMesh" unique_id=641684703]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.4)
-mesh = SubResource("QM_Lid_Front")
-
-[node name="Back" type="MeshInstance3D" parent="LidHinge/LidMesh" unique_id=2037538647]
-transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, -0.4)
-mesh = SubResource("QM_Lid_Back")
-
-[node name="Left" type="MeshInstance3D" parent="LidHinge/LidMesh" unique_id=1301624927]
-transform = Transform3D(-0.022163764, 0, 0.99975437, 0, 1, 0, -0.99975437, 0, -0.022163764, -0.6, 0, 0)
-mesh = SubResource("QM_Lid_Side")
-
-[node name="Right" type="MeshInstance3D" parent="LidHinge/LidMesh" unique_id=1116092793]
-transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0.6, 0, 0)
-mesh = SubResource("QM_Lid_Side")
-
-[node name="Top" type="MeshInstance3D" parent="LidHinge/LidMesh" unique_id=1287804362]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0.2, 0)
-mesh = SubResource("QM_Lid_Top")
+[node name="ChestModel" parent="." instance=ExtResource("2_model")]

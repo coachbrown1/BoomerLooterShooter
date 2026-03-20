@@ -10,7 +10,7 @@ class_name InteractableChest
 var is_open: bool = false
 var _stored_items: Array = []
 var _lid_tween: Tween = null
-@onready var lid_hinge: Node3D = $LidHinge
+@onready var lid_hinge: Node3D = _resolve_lid_hinge()
 
 var _cached_inventory_system: InventorySystem = null
 
@@ -18,6 +18,8 @@ func _ready() -> void:
 	# Add to interactable group if not already, useful for raycasts
 	add_to_group("interactable")
 	add_to_group("interactable_chest")
+	if lid_hinge == null:
+		push_warning("InteractableChest: LidHinge node not found for %s" % String(get_path()))
 	_stored_items.resize(max(slot_count, 1))
 	for i in range(_stored_items.size()):
 		_stored_items[i] = null
@@ -71,7 +73,7 @@ func _coerce_storage_item(item_variant: Variant) -> Variant:
 	return null
 
 func close_chest() -> void:
-	if not is_open:
+	if not is_open or lid_hinge == null:
 		return
 	is_open = false
 	_kill_lid_tween_if_active()
@@ -81,7 +83,7 @@ func close_chest() -> void:
 	_lid_tween.tween_property(lid_hinge, "rotation_degrees:x", 0.0, 0.5)
 
 func _open_lid() -> void:
-	if is_open:
+	if is_open or lid_hinge == null:
 		return
 	is_open = true
 	_kill_lid_tween_if_active()
@@ -109,6 +111,15 @@ func _kill_lid_tween_if_active() -> void:
 	if _lid_tween != null and _lid_tween.is_valid():
 		_lid_tween.kill()
 	_lid_tween = null
+
+func _resolve_lid_hinge() -> Node3D:
+	var direct := get_node_or_null("LidHinge")
+	if direct is Node3D:
+		return direct
+	var nested := find_child("LidHinge", true, false)
+	if nested is Node3D:
+		return nested
+	return null
 
 func _populate_default_loot_if_needed() -> void:
 	if gear_catalog == null:
