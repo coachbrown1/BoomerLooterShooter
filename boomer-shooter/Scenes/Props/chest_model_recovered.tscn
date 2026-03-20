@@ -6,6 +6,9 @@
 [ext_resource type="Texture2D" path="res://Assets/Environment/chest_recovered_wood_albedo.png" id="4_jshht"]
 [ext_resource type="Texture2D" path="res://Assets/Environment/chest_recovered_wood_orm.png" id="5_aal8x"]
 [ext_resource type="Texture2D" path="res://Assets/Environment/chest_recovered_wood_normal.png" id="6_xnrn2"]
+[ext_resource type="Texture2D" path="res://Assets/Environment/chest_recovered_lid_wood_albedo.png" id="7_0wo4g"]
+[ext_resource type="Texture2D" path="res://Assets/Environment/chest_recovered_lid_wood_orm.png" id="8_h7wi5"]
+[ext_resource type="Texture2D" path="res://Assets/Environment/chest_recovered_lid_wood_normal.png" id="9_7esqf"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rsmw5"]
 resource_name = "M_ChestMetal"
@@ -236,6 +239,20 @@ roughness_texture = ExtResource("5_aal8x")
 roughness_texture_channel = 1
 normal_enabled = true
 normal_texture = ExtResource("6_xnrn2")
+uv1_scale = Vector3(1.5, 1.5, 1)
+uv1_offset = Vector3(0, -0.5, 0)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lidw0"]
+resource_name = "M_ChestWoodLidRotated"
+cull_mode = 2
+albedo_texture = ExtResource("7_0wo4g")
+metallic = 1.0
+metallic_texture = ExtResource("8_h7wi5")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("8_h7wi5")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("9_7esqf")
 uv1_scale = Vector3(1.5, 1.5, 1)
 uv1_offset = Vector3(0, -0.5, 0)
 
@@ -679,6 +696,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.43)
 [node name="ChestLid" type="MeshInstance3D" parent="ChestVisual/LidHinge" unique_id=583286083]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, -0.43)
 mesh = SubResource("ArrayMesh_mx1cd")
+material_override = SubResource("StandardMaterial3D_lidw0")
 
 [node name="HingeBarrel_0" type="MeshInstance3D" parent="ChestVisual/LidHinge" unique_id=132297918]
 transform = Transform3D(0, 1, 0, -1, 0, 0, 0, 0, 1, -0.52, 0, 0.02000001)

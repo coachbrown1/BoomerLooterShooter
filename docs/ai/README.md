@@ -31,9 +31,13 @@ Current pilot coverage:
 - [dungeon-generation-and-world.md](dungeon-generation-and-world.md)
 - [inventory-gear-and-chests.md](inventory-gear-and-chests.md)
 - [combat-actors-and-weapons.md](combat-actors-and-weapons.md)
+- [ui-and-player-experience.md](ui-and-player-experience.md)
+- [world-interactions-and-props.md](world-interactions-and-props.md)
+- [data-resources-and-content.md](data-resources-and-content.md)
+- [testing-and-debugging.md](testing-and-debugging.md)
 
 Known gaps in this first pass:
 
 - top-level support folders outside the game project are only summarized
-- UI, lighting, effects, props, release/export flow, and editor tooling do not yet have dedicated subsystem docs
+- lighting, release/export flow, and editor tooling do not yet have dedicated subsystem docs
 - addon internals are intentionally not documented beyond how the project uses them
