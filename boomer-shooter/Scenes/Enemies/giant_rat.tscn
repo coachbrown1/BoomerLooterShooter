@@ -19,6 +19,7 @@ height = 1.35
 collision_layer = 4
 collision_mask = 7
 script = ExtResource("1_rat")
+visual_ground_offset_pixels = 31.0
 move_speed = 5.5
 attack_damage = 8
 attack_range = 1.2

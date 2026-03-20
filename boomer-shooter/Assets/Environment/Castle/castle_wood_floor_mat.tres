@@ -1,10 +1,9 @@
 [gd_resource type="StandardMaterial3D" format=3 uid="uid://b3ajnbfsepeqj"]
 
-[ext_resource type="Texture2D" uid="uid://dlbtwdyatlw7a" path="res://Assets/Environment/Castle/castle_floor_v1.png" id="1"]
+[ext_resource type="Texture2D" uid="uid://b6t0hcn5s82yn" path="res://Assets/Environment/Castle/castle_floor_simple_albedo.png" id="1"]
 
 [resource]
 albedo_texture = ExtResource("1")
-uv1_scale = Vector3(0.1, 0.1, 0.1)
 uv1_triplanar = true
 uv1_world_triplanar = true
 texture_filter = 0

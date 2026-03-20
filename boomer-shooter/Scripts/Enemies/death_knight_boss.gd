@@ -236,7 +236,7 @@ func _cancel_current_action() -> void:
 	_is_beam_windup = false
 	_attack_timer   = 0.0
 	billboard_sprite.position.x = _sprite_base_x
-	billboard_sprite.scale      = Vector3(1.0, 1.0, 1.0)
+	billboard_sprite.scale      = get_billboard_scale_with_multiplier()
 	billboard_sprite.modulate   = Color(1.0, 1.0, 1.0, 1.0)
 	velocity        = Vector3.ZERO
 	current_state   = State.CHASE
@@ -451,7 +451,7 @@ func _process_windup_effect() -> void:
 
 	billboard_sprite.position.x = _sprite_base_x + sin(phase_t) * shake_x_amp * intensity
 	var pulse := 1.0 + sin(phase_t * 0.7) * shake_scale_amp * intensity
-	billboard_sprite.scale = Vector3(pulse, pulse, 1.0)
+	billboard_sprite.scale = get_billboard_scale_with_multiplier(pulse)
 	billboard_sprite.frame = FRAME_ATK_A if fmod(_attack_timer * 6.0, 1.0) < 0.5 else FRAME_ATK_B
 
 	var blue := lerpf(1.5, 3.0, progress)
@@ -464,7 +464,7 @@ func _process_windup_effect() -> void:
 
 func _execute_attack() -> void:
 	billboard_sprite.position.x = _sprite_base_x
-	billboard_sprite.scale      = Vector3(1.0, 1.0, 1.0)
+	billboard_sprite.scale      = get_billboard_scale_with_multiplier()
 	billboard_sprite.modulate   = Color(1.0, 1.0, 1.0, 1.0)
 	billboard_sprite.frame      = FRAME_ATK_FIRE
 
@@ -568,12 +568,12 @@ func _update_proxy_visual_state() -> void:
 		var intensity := 1.0 + maxf(0.0, (_proxy_windup_progress - 0.6) / 0.4) * 3.0
 		billboard_sprite.position.x = _sprite_base_x + sin(t) * shake_x_amp * intensity
 		var pulse := 1.0 + sin(t * 0.7) * shake_scale_amp * intensity
-		billboard_sprite.scale    = Vector3(pulse, pulse, 1.0)
+		billboard_sprite.scale    = get_billboard_scale_with_multiplier(pulse)
 		var blue := lerpf(1.5, 3.0, _proxy_windup_progress)
 		billboard_sprite.modulate = Color(0.7, 0.8, blue, 1.0)
 	else:
 		billboard_sprite.position.x = _sprite_base_x
-		billboard_sprite.scale      = Vector3(1.0, 1.0, 1.0)
+		billboard_sprite.scale      = get_billboard_scale_with_multiplier()
 		if current_state != State.DEAD:
 			billboard_sprite.modulate = Color(1.0, 1.0, 1.0, 1.0)
 

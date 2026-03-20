@@ -40,6 +40,8 @@ Document the enemy script hierarchy, the role of roster resources, and the conve
   - base health
   - spawn cost
   - minimum floor
+  - visual scale multiplier, which drives billboard size and the collision height recalculated in `EnemyBase`
+  - visual ground offset pixels for spritesheets that include extra transparent padding below the feet
 - `EnemyRosterData` is intentionally simple: it is just an array of enemy scenes.
 - Biome-specific enemy pools usually come from biome data, with `fallback_enemy_roster.tres` acting as a safety net.
 - Enemy scene files under `Scenes/Enemies/` are the runtime prefabs consumed by encounter spawning and multiplayer replication.
@@ -49,6 +51,7 @@ Document the enemy script hierarchy, the role of roster resources, and the conve
 - Host authority owns enemy logic, damage, death, and snapshot generation.
 - Clients should treat enemies as proxies unless they are the host or in single-player.
 - Enemy visual animation is part of replicated enemy state in this project, so changes to billboard or attack-frame logic can affect the dedicated animation replication scenario.
+- Enemy presentation scale is derived from the billboard sprite scale at runtime, so custom enemy scripts that pulse or reset sprite scale should preserve the shared multiplier instead of hard-coding `Vector3.ONE`.
 - New enemy behavior should define how it serializes into the existing snapshot model, or explicitly extend that model if needed.
 
 ## Safe Edit Guidance

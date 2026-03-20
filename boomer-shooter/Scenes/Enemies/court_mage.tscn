@@ -20,6 +20,7 @@ height = 2.55
 collision_layer = 4
 collision_mask = 7
 script = ExtResource("1_mage")
+visual_ground_offset_pixels = 19.0
 move_speed = 2.0
 attack_damage = 12
 attack_range = 22.0

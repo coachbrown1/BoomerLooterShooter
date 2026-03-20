@@ -384,7 +384,7 @@ func _get_start_player_spawn_data(start_room: RoomData) -> Dictionary:
 			"look_target": fallback_look_target,
 		}
 	var spawn_pos: Vector3 = player_spawn.global_position
-	var look_target: Vector3 = spawn_pos + room_overlay.global_basis * Vector3(0.0, 0.0, 1.0)
+	var look_target: Vector3 = spawn_pos + player_spawn.global_basis * Vector3(0.0, 0.0, 1.0)
 	return {
 		"position": spawn_pos,
 		"look_target": look_target,

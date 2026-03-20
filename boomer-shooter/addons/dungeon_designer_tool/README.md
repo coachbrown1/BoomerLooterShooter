@@ -34,3 +34,31 @@ Editor dock for dungeon-focused tuning.
 4. Use `Preview Room Jump` to select START/EXIT/custom rooms and jump focus.
 5. Press Play to run the same layout (seed is saved into the scene).
 6. Click `Clear Preview` to remove generated preview geometry from the editor scene.
+
+## Handcrafted room wizard
+
+1. Switch to the `Biome Data` tab.
+2. In `Handcrafted Room Wizard`, enter a scene name.
+3. Choose a base type:
+   - `Start Room Skeleton`
+   - `Normal Room Skeleton`
+   - `Quadrant Composite Room`
+4. Optionally register the new scene into the currently selected biome as:
+   - start room
+   - normal room
+   - quadrant module pool
+5. Click `Create Handcrafted Room`.
+6. The tool saves the scene under `res://Scenes/Dungeon/Handcrafted/` and opens it immediately.
+
+### Wizard output
+
+- Start room skeletons include:
+  - `PlayerSpawn`
+  - a spawn pad
+  - doorway socket markers
+  - room bounds debug guides
+- Normal room skeletons include:
+  - an `Encounter/EnemySpawner` marker
+  - doorway socket markers
+  - room bounds debug guides
+- Quadrant composite rooms start from the existing crossroom shell so designers can focus on quadrant content first.

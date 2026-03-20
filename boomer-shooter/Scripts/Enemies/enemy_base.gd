@@ -15,6 +15,8 @@ var current_state: State = State.IDLE
 @export var base_start_health: int = -1
 @export var spawn_cost: float = 1.0
 @export var spawn_min_floor: int = 1
+@export var visual_scale_multiplier: float = 2.0
+@export var visual_ground_offset_pixels: float = 0.0
 
 @onready var health_component: HealthComponent = $HealthComponent
 @onready var hitbox_component: HitboxComponent = $HitboxComponent
@@ -34,6 +36,7 @@ var _has_proxy_snapshot: bool = false
 var _proxy_visual_frame: int = 0
 var _proxy_visual_animate: bool = false
 var _aggro_suppressed: bool = false
+var _base_billboard_scale: Vector3 = Vector3.ONE
 
 signal enemy_died
 
@@ -52,12 +55,15 @@ func _ready() -> void:
 	
 	# Align sprite to ground and adjust collision
 	if billboard_sprite and billboard_sprite.texture:
+		_base_billboard_scale = billboard_sprite.scale * visual_scale_multiplier
+		billboard_sprite.scale = _base_billboard_scale
 		var frame_h = float(billboard_sprite.texture.get_height()) / billboard_sprite.vframes
 		actual_height = frame_h * billboard_sprite.pixel_size * billboard_sprite.scale.y
 		var actual_h = actual_height
+		var ground_offset := visual_ground_offset_pixels * billboard_sprite.pixel_size * billboard_sprite.scale.y
 		
 		# Position sprite so its bottom is at Y=0
-		billboard_sprite.position.y = actual_h / 2.0
+		billboard_sprite.position.y = actual_h / 2.0 - ground_offset
 		if "base_y" in billboard_sprite:
 			billboard_sprite.base_y = billboard_sprite.position.y
 		
@@ -79,6 +85,9 @@ func _ready() -> void:
 				hb_col.shape.height = actual_h + 0.1
 				hb_col.shape.radius = min(0.75, actual_h * 0.5)
 				hb_col.position.y = actual_h / 2.0
+
+func get_billboard_scale_with_multiplier(multiplier: float = 1.0) -> Vector3:
+	return _base_billboard_scale * multiplier
 
 func take_damage(amount: int) -> void:
 	if _network_proxy_mode:

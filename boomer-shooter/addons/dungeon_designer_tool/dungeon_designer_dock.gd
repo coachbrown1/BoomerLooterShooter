@@ -4,7 +4,25 @@ extends VBoxContainer
 const DUNGEON_SCENE_PATH := "res://Scenes/World/dungeon.tscn"
 const BIOME_DB_PATH := "res://Data/biomes/biome_dungeon_database.tres"
 const DUNGEON_MANAGER_SCRIPT_PATH := "res://Scripts/Dungeon/dungeon_manager.gd"
+const HANDCRAFTED_DIR_PATH := "res://Scenes/Dungeon/Handcrafted"
+const HANDCRAFTED_LAYOUT_SCRIPT_PATH := "res://Scripts/Dungeon/handcrafted_room_layout.gd"
+const HANDCRAFTED_QUADRANT_SCRIPT_PATH := "res://Scripts/Dungeon/handcrafted_quadrant_composite_room.gd"
+const HANDCRAFTED_ENEMY_SPAWNER_SCRIPT_PATH := "res://Scripts/Dungeon/handcrafted_enemy_spawner.gd"
+const QUADRANT_TEMPLATE_SCENE_PATH := "res://Scenes/Dungeon/Handcrafted/Castle_Crossroom.tscn"
 const BIOME_TAB_INDEX := 1
+
+enum WizardRoomType {
+	START_SKELETON,
+	NORMAL_SKELETON,
+	QUADRANT_COMPOSITE,
+}
+
+enum WizardRegisterTarget {
+	NONE,
+	START_ROOM,
+	NORMAL_ROOM_POOL,
+	QUADRANT_POOL,
+}
 
 var plugin: EditorPlugin = null
 
@@ -15,6 +33,9 @@ var _manager_inspector: EditorInspector
 var _biome_editor_scroll: ScrollContainer
 var _biome_editor_root: VBoxContainer
 var _preview_room_selector: OptionButton
+var _wizard_name_edit: LineEdit
+var _wizard_room_type_selector: OptionButton
+var _wizard_register_selector: OptionButton
 var _grid_min_spin: SpinBox
 var _grid_max_spin: SpinBox
 var _room_size_spin: SpinBox
@@ -162,6 +183,8 @@ func _build_ui() -> void:
 	biome_row.add_child(_biome_selector)
 	biome_tab.add_child(biome_row)
 
+	_build_handcrafted_room_wizard(biome_tab)
+
 	var biome_header := Label.new()
 	biome_header.text = "Biome Editor"
 	biome_tab.add_child(biome_header)
@@ -180,6 +203,59 @@ func _make_button(text: String, callable: Callable) -> Button:
 	button.text = text
 	button.pressed.connect(callable)
 	return button
+
+func _build_handcrafted_room_wizard(parent: Control) -> void:
+	var panel := PanelContainer.new()
+	parent.add_child(panel)
+
+	var root := VBoxContainer.new()
+	panel.add_child(root)
+
+	var title := Label.new()
+	title.text = "Handcrafted Room Wizard"
+	root.add_child(title)
+
+	var subtitle := Label.new()
+	subtitle.text = "Create a clean handcrafted room scene, optionally register it into the selected biome, then open it."
+	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	root.add_child(subtitle)
+
+	var grid := GridContainer.new()
+	grid.columns = 2
+	root.add_child(grid)
+
+	var name_label := Label.new()
+	name_label.text = "Scene Name"
+	grid.add_child(name_label)
+
+	_wizard_name_edit = LineEdit.new()
+	_wizard_name_edit.placeholder_text = "Castle_GuardHall"
+	_wizard_name_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_child(_wizard_name_edit)
+
+	var type_label := Label.new()
+	type_label.text = "Base Type"
+	grid.add_child(type_label)
+
+	_wizard_room_type_selector = OptionButton.new()
+	_wizard_room_type_selector.add_item("Start Room Skeleton", WizardRoomType.START_SKELETON)
+	_wizard_room_type_selector.add_item("Normal Room Skeleton", WizardRoomType.NORMAL_SKELETON)
+	_wizard_room_type_selector.add_item("Quadrant Composite Room", WizardRoomType.QUADRANT_COMPOSITE)
+	_wizard_room_type_selector.item_selected.connect(_on_wizard_room_type_selected)
+	grid.add_child(_wizard_room_type_selector)
+
+	var register_label := Label.new()
+	register_label.text = "Register In Biome"
+	grid.add_child(register_label)
+
+	_wizard_register_selector = OptionButton.new()
+	_populate_wizard_register_options(WizardRoomType.START_SKELETON)
+	grid.add_child(_wizard_register_selector)
+
+	var actions := HFlowContainer.new()
+	actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	actions.add_child(_make_button("Create Handcrafted Room", _on_create_handcrafted_room_pressed))
+	root.add_child(actions)
 
 func _add_spin_row(container: GridContainer, label_text: String, min_value: int, max_value: int, step_value: int) -> SpinBox:
 	var label := Label.new()
@@ -283,9 +359,11 @@ func _set_selected_biome(index: int) -> void:
 	if index < 0 or index >= _biomes.size():
 		_selected_biome = null
 		_rebuild_biome_editor()
+		_sync_wizard_name_placeholder()
 		return
 	_selected_biome = _biomes[index]
 	_rebuild_biome_editor()
+	_sync_wizard_name_placeholder()
 
 func _on_open_dungeon_scene_pressed() -> void:
 	if plugin == null:
@@ -421,6 +499,7 @@ func _on_save_biome_pressed() -> void:
 
 func _on_biome_selected(index: int) -> void:
 	_set_selected_biome(index)
+	_sync_wizard_name_placeholder()
 
 func _on_open_biome_resource_pressed() -> void:
 	if plugin == null or _selected_biome == null:
@@ -445,6 +524,311 @@ func _on_open_start_scene_pressed() -> void:
 		return
 	plugin.get_editor_interface().open_scene_from_path(path)
 	_set_status("Opened start scene: %s" % path)
+
+func _on_wizard_room_type_selected(index: int) -> void:
+	if _wizard_room_type_selector == null:
+		return
+	var room_type := _wizard_room_type_selector.get_item_id(index)
+	_populate_wizard_register_options(room_type)
+	_sync_wizard_name_placeholder()
+
+func _populate_wizard_register_options(room_type: int) -> void:
+	if _wizard_register_selector == null:
+		return
+	_wizard_register_selector.clear()
+	_wizard_register_selector.add_item("Do Not Register", WizardRegisterTarget.NONE)
+	match room_type:
+		WizardRoomType.START_SKELETON:
+			_wizard_register_selector.add_item("Set As Selected Biome Start Room", WizardRegisterTarget.START_ROOM)
+		WizardRoomType.QUADRANT_COMPOSITE:
+			_wizard_register_selector.add_item("Add To Selected Biome Normal Rooms", WizardRegisterTarget.NORMAL_ROOM_POOL)
+			_wizard_register_selector.add_item("Add To Selected Biome Quadrant Pool", WizardRegisterTarget.QUADRANT_POOL)
+		_:
+			_wizard_register_selector.add_item("Add To Selected Biome Normal Rooms", WizardRegisterTarget.NORMAL_ROOM_POOL)
+	_wizard_register_selector.select(0)
+
+func _sync_wizard_name_placeholder() -> void:
+	if _wizard_name_edit == null:
+		return
+	var biome_prefix := "Room"
+	if _selected_biome != null and _has_property(_selected_biome, "biome_id"):
+		biome_prefix = str(_selected_biome.get("biome_id")).capitalize()
+	var room_type := WizardRoomType.NORMAL_SKELETON
+	if _wizard_room_type_selector != null and _wizard_room_type_selector.selected >= 0:
+		room_type = _wizard_room_type_selector.get_item_id(_wizard_room_type_selector.selected)
+	match room_type:
+		WizardRoomType.START_SKELETON:
+			_wizard_name_edit.placeholder_text = "%s_StartVariant" % biome_prefix
+		WizardRoomType.QUADRANT_COMPOSITE:
+			_wizard_name_edit.placeholder_text = "%s_CrossroomVariant" % biome_prefix
+		_:
+			_wizard_name_edit.placeholder_text = "%s_GuardHall" % biome_prefix
+
+func _on_create_handcrafted_room_pressed() -> void:
+	if plugin == null:
+		return
+	if _wizard_name_edit == null or _wizard_room_type_selector == null or _wizard_register_selector == null:
+		_set_status("Handcrafted room wizard is not ready yet.", true)
+		return
+
+	var raw_name := _wizard_name_edit.text.strip_edges()
+	if raw_name == "":
+		raw_name = _wizard_name_edit.placeholder_text.strip_edges()
+	if raw_name == "":
+		_set_status("Enter a room scene name first.", true)
+		return
+
+	var scene_name := _sanitize_scene_name(raw_name)
+	if scene_name == "":
+		_set_status("Room scene name must contain letters or numbers.", true)
+		return
+
+	var room_type := _wizard_room_type_selector.get_item_id(_wizard_room_type_selector.selected)
+	var register_target := _wizard_register_selector.get_item_id(_wizard_register_selector.selected)
+	var scene_path := _build_unique_handcrafted_scene_path(scene_name)
+	var packed_scene := _build_handcrafted_room_scene(scene_name, room_type)
+	if packed_scene == null:
+		_set_status("Could not build handcrafted room scene.", true)
+		return
+
+	var save_err := ResourceSaver.save(packed_scene, scene_path)
+	if save_err != OK:
+		_set_status("Create handcrafted room failed with error %d." % save_err, true)
+		return
+
+	var saved_scene := load(scene_path)
+	if not (saved_scene is PackedScene):
+		_set_status("Room scene was saved but could not be reloaded: %s" % scene_path, true)
+		return
+
+	var register_result := _register_new_handcrafted_scene(saved_scene, register_target)
+	_refresh_biome_option_lists()
+	_rebuild_biome_editor()
+	plugin.get_editor_interface().open_scene_from_path(scene_path)
+	_wizard_name_edit.text = ""
+
+	if register_result == "":
+		_set_status("Created handcrafted room: %s" % scene_path)
+	else:
+		_set_status("Created handcrafted room: %s. %s" % [scene_path, register_result])
+
+func _sanitize_scene_name(value: String) -> String:
+	var cleaned := ""
+	for chr in value.strip_edges():
+		var code := chr.unicode_at(0)
+		var is_alpha_num := (code >= 48 and code <= 57) or (code >= 65 and code <= 90) or (code >= 97 and code <= 122)
+		if is_alpha_num:
+			cleaned += chr
+		elif chr == " " or chr == "-" or chr == "." or chr == "/":
+			if not cleaned.ends_with("_"):
+				cleaned += "_"
+		elif chr == "_":
+			if not cleaned.ends_with("_"):
+				cleaned += "_"
+	return cleaned.strip_edges().trim_suffix("_").trim_prefix("_")
+
+func _build_unique_handcrafted_scene_path(scene_name: String) -> String:
+	var attempt := 0
+	while true:
+		var suffix := "" if attempt == 0 else "_%d" % (attempt + 1)
+		var candidate := "%s/%s%s.tscn" % [HANDCRAFTED_DIR_PATH, scene_name, suffix]
+		if not ResourceLoader.exists(candidate):
+			return candidate
+		attempt += 1
+	return "%s/%s.tscn" % [HANDCRAFTED_DIR_PATH, scene_name]
+
+func _build_handcrafted_room_scene(scene_name: String, room_type: int) -> PackedScene:
+	var root: Node3D = null
+	match room_type:
+		WizardRoomType.QUADRANT_COMPOSITE:
+			root = _build_quadrant_composite_scene_root(scene_name)
+		_:
+			root = _build_overlay_room_scene_root(scene_name, room_type)
+	if root == null:
+		return null
+
+	var packed := PackedScene.new()
+	var pack_err := packed.pack(root)
+	root.free()
+	if pack_err != OK:
+		return null
+	return packed
+
+func _build_overlay_room_scene_root(scene_name: String, room_type: int) -> Node3D:
+	var root := Node3D.new()
+	root.name = scene_name
+	var layout_script := load(HANDCRAFTED_LAYOUT_SCRIPT_PATH)
+	if layout_script is Script:
+		root.set_script(layout_script)
+	root.set("allow_random_orientation", room_type == WizardRoomType.NORMAL_SKELETON)
+
+	_add_owned_child(root, _make_room_guides_root(), root)
+	_add_owned_child(root, _make_door_socket_root(room_type == WizardRoomType.START_SKELETON), root)
+
+	if room_type == WizardRoomType.START_SKELETON:
+		var spawn_pad := MeshInstance3D.new()
+		spawn_pad.name = "SpawnPad"
+		spawn_pad.position = Vector3(0.0, 0.15, -2.5)
+		var pad_mesh := CylinderMesh.new()
+		pad_mesh.top_radius = 2.5
+		pad_mesh.bottom_radius = 2.8
+		pad_mesh.height = 0.3
+		var pad_material := StandardMaterial3D.new()
+		pad_material.albedo_color = Color(0.16, 0.15, 0.14, 1.0)
+		pad_material.roughness = 0.95
+		pad_material.emission_enabled = true
+		pad_material.emission = Color(0.18, 0.11, 0.04, 1.0)
+		pad_material.emission_energy_multiplier = 0.2
+		pad_mesh.material = pad_material
+		spawn_pad.mesh = pad_mesh
+		_add_owned_child(root, spawn_pad, root)
+
+		var player_spawn := Node3D.new()
+		player_spawn.name = "PlayerSpawn"
+		player_spawn.position = Vector3(0.0, 0.0, -2.5)
+		_add_owned_child(root, player_spawn, root)
+	else:
+		var encounter_root := Node3D.new()
+		encounter_root.name = "Encounter"
+		_add_owned_child(root, encounter_root, root)
+
+		var spawner := Marker3D.new()
+		spawner.name = "EnemySpawner"
+		spawner.position = Vector3(0.0, 0.0, 0.0)
+		var spawner_script := load(HANDCRAFTED_ENEMY_SPAWNER_SCRIPT_PATH)
+		if spawner_script is Script:
+			spawner.set_script(spawner_script)
+		_add_owned_child(encounter_root, spawner, root)
+
+	return root
+
+func _build_quadrant_composite_scene_root(scene_name: String) -> Node3D:
+	var template_variant := load(QUADRANT_TEMPLATE_SCENE_PATH)
+	if not (template_variant is PackedScene):
+		return null
+	var template_scene: PackedScene = template_variant
+	var inst: Variant = template_scene.instantiate()
+	if not (inst is Node3D):
+		if inst is Node:
+			var cleanup: Node = inst
+			cleanup.free()
+		return null
+	var root: Node3D = inst
+	root.name = scene_name
+	return root
+
+func _make_door_socket_root(mark_start_socket: bool) -> Node3D:
+	var sockets_root := Node3D.new()
+	sockets_root.name = "DoorSockets"
+
+	var socket_positions := {
+		"NorthSocket": Vector3(0.0, 0.0, -10.0),
+		"SouthSocket": Vector3(0.0, 0.0, 10.0),
+		"WestSocket": Vector3(-10.0, 0.0, 0.0),
+		"EastSocket": Vector3(10.0, 0.0, 0.0),
+	}
+	for socket_name in socket_positions.keys():
+		var marker := Marker3D.new()
+		marker.name = socket_name
+		marker.position = socket_positions[socket_name]
+		sockets_root.add_child(marker)
+		marker.owner = sockets_root
+		if mark_start_socket and socket_name == "SouthSocket":
+			marker.set_meta("start_room_primary_doorway", true)
+
+	return sockets_root
+
+func _make_room_guides_root() -> Node3D:
+	var debug_root := Node3D.new()
+	debug_root.name = "RoomBoundsDebug"
+
+	var guide_material := StandardMaterial3D.new()
+	guide_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	guide_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	guide_material.albedo_color = Color(0.8, 0.7, 0.45, 0.55)
+
+	var long_mesh := BoxMesh.new()
+	long_mesh.material = guide_material
+	long_mesh.size = Vector3(20.0, 0.2, 0.25)
+
+	var short_mesh := BoxMesh.new()
+	short_mesh.material = guide_material
+	short_mesh.size = Vector3(0.25, 0.2, 20.0)
+
+	var north_edge := MeshInstance3D.new()
+	north_edge.name = "NorthEdge"
+	north_edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	north_edge.position = Vector3(0.0, 0.1, -10.0)
+	north_edge.mesh = long_mesh
+	_add_owned_child(debug_root, north_edge, debug_root)
+
+	var south_edge := MeshInstance3D.new()
+	south_edge.name = "SouthEdge"
+	south_edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	south_edge.position = Vector3(0.0, 0.1, 10.0)
+	south_edge.mesh = long_mesh
+	_add_owned_child(debug_root, south_edge, debug_root)
+
+	var west_edge := MeshInstance3D.new()
+	west_edge.name = "WestEdge"
+	west_edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	west_edge.position = Vector3(-10.0, 0.1, 0.0)
+	west_edge.mesh = short_mesh
+	_add_owned_child(debug_root, west_edge, debug_root)
+
+	var east_edge := MeshInstance3D.new()
+	east_edge.name = "EastEdge"
+	east_edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	east_edge.position = Vector3(10.0, 0.1, 0.0)
+	east_edge.mesh = short_mesh
+	_add_owned_child(debug_root, east_edge, debug_root)
+
+	return debug_root
+
+func _add_owned_child(parent: Node, child: Node, owner: Node) -> void:
+	parent.add_child(child)
+	child.owner = owner
+
+func _register_new_handcrafted_scene(scene: PackedScene, register_target: int) -> String:
+	if register_target == WizardRegisterTarget.NONE:
+		return "Left unregistered."
+	if _selected_biome == null:
+		return "No biome selected, so it was not registered."
+
+	match register_target:
+		WizardRegisterTarget.START_ROOM:
+			if not _has_property(_selected_biome, "handcrafted_start_room_scene"):
+				return "Selected biome does not expose handcrafted_start_room_scene."
+			_selected_biome.set("handcrafted_start_room_scene", scene)
+		WizardRegisterTarget.NORMAL_ROOM_POOL:
+			if not _append_scene_to_biome_array("handcrafted_normal_room_scenes", scene):
+				return "Selected biome does not expose handcrafted_normal_room_scenes."
+		WizardRegisterTarget.QUADRANT_POOL:
+			if not _append_scene_to_biome_array("handcrafted_quadrant_room_scenes", scene):
+				return "Selected biome does not expose handcrafted_quadrant_room_scenes."
+
+	var path := str(_selected_biome.resource_path)
+	if path == "":
+		return "Registered in memory only because the selected biome has no resource path."
+	var save_err := ResourceSaver.save(_selected_biome, path)
+	if save_err != OK:
+		return "Updated biome in memory but saving failed with error %d." % save_err
+	return "Updated selected biome: %s" % path
+
+func _append_scene_to_biome_array(property_name: String, scene: PackedScene) -> bool:
+	if not _has_property(_selected_biome, property_name):
+		return false
+	var current_variant: Variant = _selected_biome.get(property_name)
+	var scenes: Array = []
+	if typeof(current_variant) == TYPE_ARRAY:
+		scenes.assign(current_variant)
+	for existing_variant in scenes:
+		if existing_variant is PackedScene and str((existing_variant as PackedScene).resource_path) == str(scene.resource_path):
+			_selected_biome.set(property_name, scenes)
+			return true
+	scenes.append(scene)
+	_selected_biome.set(property_name, scenes)
+	return true
 
 func _refresh_biome_option_lists() -> void:
 	_texture_options = _collect_files_recursive("res://Assets", ["png", "jpg", "jpeg", "webp", "tga", "bmp", "exr", "hdr"])

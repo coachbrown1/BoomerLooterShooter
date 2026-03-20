@@ -4,8 +4,8 @@
 [ext_resource type="Script" uid="uid://cjjywi22247q4" path="res://Scripts/Components/health_component.gd" id="2_b"]
 [ext_resource type="Script" uid="uid://cq7c3rgbvvmh2" path="res://Scripts/Components/hitbox_component.gd" id="3_c"]
 [ext_resource type="Script" uid="uid://d11y815ukmppm" path="res://Scripts/Components/billboard_sprite.gd" id="4_d"]
+[ext_resource type="Shader" uid="uid://dqyk77oa5aom7" path="res://Shaders/pixel_outline.gdshader" id="4_eiu2b"]
 [ext_resource type="Texture2D" uid="uid://7levj5jcptaq" path="res://Assets/Enemies/Skeleton/skeleton_armor_clean.png" id="5_e"]
-[ext_resource type="Material" uid="uid://cx6i4m3cny0m1" path="res://Materials/enemy_outline_material.tres" id="6_mat"]
 
 [sub_resource type="CapsuleShape3D" id="1"]
 radius = 0.6
@@ -14,6 +14,23 @@ height = 2.7
 [sub_resource type="CapsuleShape3D" id="2"]
 radius = 0.75
 height = 2.85
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_6ry3g"]
+resource_local_to_scene = true
+render_priority = 0
+shader = ExtResource("4_eiu2b")
+shader_parameter/outline_color = Color(1, 0.4, 0.1, 0.8)
+shader_parameter/texture_albedo = ExtResource("5_e")
+shader_parameter/outline_width = 1.0
+shader_parameter/enable_outline = true
+shader_parameter/billboard = true
+shader_parameter/alpha_scissor_threshold = 0.5
+shader_parameter/distance_fade_min = 15.0
+shader_parameter/distance_fade_max = 30.0
+shader_parameter/rim_steepness = 3.0
+shader_parameter/rim_color = Color(1, 1, 1, 1)
+shader_parameter/emission_energy = 2.0
+shader_parameter/enable_emission = false
 
 [node name="SkeletonMelee" type="CharacterBody3D" unique_id=2092361946]
 collision_layer = 4
@@ -39,12 +56,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 0)
 shape = SubResource("2")
 
 [node name="Sprite3D" type="Sprite3D" parent="." unique_id=483161991]
-transform = Transform3D(1, 0, 0, 0, 1.8330222, 0, 0, 0, 1, 0, 1.245331, 0)
-material_override = ExtResource("6_mat")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.245331, 0)
+material_override = SubResource("ShaderMaterial_6ry3g")
+billboard = 2
 texture = ExtResource("5_e")
 hframes = 8
-frame = 2
 script = ExtResource("4_d")
+total_frames = 8
 bounce_walk_mode = true
 
 [node name="NavigationAgent3D" type="NavigationAgent3D" parent="." unique_id=1329691030]

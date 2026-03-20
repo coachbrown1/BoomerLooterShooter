@@ -26,7 +26,7 @@ func _ready() -> void:
 func _process_windup_effect() -> void:
 	# Pulse slightly during windup to indicate an explosion
 	var pulse = 1.0 + sin(_attack_timer * 20.0) * 0.1
-	billboard_sprite.scale = Vector3(pulse, pulse, pulse)
+	billboard_sprite.scale = get_billboard_scale_with_multiplier(pulse)
 
 	if _aoe_telegraph:
 		_aoe_telegraph.visible = true
@@ -47,7 +47,7 @@ func _process_windup_effect() -> void:
 
 func _execute_attack() -> void:
 	# Reset scale
-	billboard_sprite.scale = Vector3.ONE
+	billboard_sprite.scale = get_billboard_scale_with_multiplier()
 	if _aoe_telegraph:
 		_aoe_telegraph.visible = false
 		_aoe_fill.visible = false

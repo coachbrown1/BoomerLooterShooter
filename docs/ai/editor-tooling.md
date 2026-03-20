@@ -27,9 +27,11 @@ Document the project-specific editor tooling that helps authors tune dungeon lay
   - create and clear previews
   - jump the editor camera to preview rooms
 - The biome tab can:
+  - create new handcrafted room scenes through the built-in wizard
   - load the biome database
   - select a biome resource
   - edit biome-linked properties and scene references
+  - optionally register new handcrafted rooms into the selected biome
   - validate and save the selected biome
 
 ## Important State And Resources
@@ -37,6 +39,8 @@ Document the project-specific editor tooling that helps authors tune dungeon lay
 - The dock works primarily against:
   - `res://Scenes/World/dungeon.tscn`
   - `res://Data/biomes/biome_dungeon_database.tres`
+- The handcrafted room wizard writes new scenes under:
+  - `res://Scenes/Dungeon/Handcrafted/`
 - It dynamically discovers option lists for textures, scenes, enemies, props, handcrafted rooms, doors, and light scenes.
 - The tool is editor-only and should not be treated as a runtime gameplay dependency.
 
@@ -50,6 +54,7 @@ Document the project-specific editor tooling that helps authors tune dungeon lay
 - Prefer documenting how the project uses this addon rather than changing the addon casually.
 - If a task requires editing the tool, verify whether the change belongs in the plugin UI or in the underlying runtime/resource scripts instead.
 - Keep editor-only behavior separated from runtime code paths.
+- Wizard-generated handcrafted scenes should preserve the runtime contract expected by `DungeonManager`, especially start-room `PlayerSpawn` usage and handcrafted spawner node types.
 - Update the addon README and `docs/ai` summary if the workflow or edited resources change materially.
 
 ## Related Docs
