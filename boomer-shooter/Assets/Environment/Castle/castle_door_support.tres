@@ -1,25 +1,11 @@
-[gd_resource type="StandardMaterial3D" format=3 uid="uid://ccq7spqf12bh2"]
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://vt3rgfttxjmn"]
 
 [ext_resource type="Texture2D" uid="uid://bhjy4cq851a2o" path="res://Assets/Environment/Castle/castle_door_support_albedo.png" id="1"]
-[ext_resource type="Texture2D" uid="uid://bfbehxfgj8kke" path="res://Assets/Environment/Castle/castle_door_support_orm.png" id="2"]
-[ext_resource type="Texture2D" uid="uid://c4q1b1cq7mg5w" path="res://Assets/Environment/Castle/castle_door_support_normal.png" id="3"]
-[ext_resource type="Texture2D" uid="uid://dv3fcgwb0g85q" path="res://Assets/Environment/Castle/castle_door_support_heightmap.png" id="4"]
 
 [resource]
 albedo_texture = ExtResource("1")
-metallic_texture = ExtResource("2")
-metallic_texture_channel = 2
-roughness_texture = ExtResource("2")
-roughness_texture_channel = 1
-normal_enabled = true
-normal_texture = ExtResource("3")
-ao_enabled = true
-ao_texture = ExtResource("2")
-heightmap_scale = 0.0
-heightmap_deep_parallax = true
-heightmap_min_layers = 8
-heightmap_max_layers = 32
-heightmap_texture = ExtResource("4")
+uv1_scale = Vector3(0.3, 0.3, 0.3)
+uv1_offset = Vector3(0.285, -0.465, 0)
 uv1_triplanar = true
 uv1_world_triplanar = true
 texture_filter = 0
