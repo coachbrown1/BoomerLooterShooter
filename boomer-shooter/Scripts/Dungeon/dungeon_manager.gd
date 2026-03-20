@@ -635,6 +635,7 @@ func _spawn_handcrafted_room_overlays(parent: Node3D) -> void:
 
 		var room_overlay: Node3D = inst
 		_configure_runtime_handcrafted_room(room, room_overlay)
+		_convert_handcrafted_wall_tiles_to_sections(room_overlay)
 		room_overlay.position = room.get_world_center(DungeonBuilder.TILE_SIZE)
 		room_overlay.position.y = 0.0
 		_apply_handcrafted_room_orientation(room, room_overlay)
@@ -654,6 +655,190 @@ func _configure_runtime_handcrafted_room(room: RoomData, room_overlay: Node3D) -
 	var quadrant_pool := _get_handcrafted_quadrant_scene_pool(_active_biome_data)
 	var composite_room: HandcraftedQuadrantCompositeRoom = room_overlay
 	composite_room.populate_quadrants(quadrant_pool, _generator.rng)
+
+func _convert_handcrafted_wall_tiles_to_sections(room_overlay: Node3D) -> void:
+	if room_overlay == null:
+		return
+
+	var pending: Array[Node] = [room_overlay]
+	while not pending.is_empty():
+		var current_variant: Variant = pending.pop_back()
+		if not (current_variant is Node):
+			continue
+		var current: Node = current_variant
+		if current is Node3D and _should_convert_handcrafted_wall_container(current.name):
+			_convert_handcrafted_wall_container(current as Node3D)
+		for child in current.get_children():
+			pending.append(child)
+
+func _should_convert_handcrafted_wall_container(node_name: String) -> bool:
+	return node_name == "Walls" or node_name == "CompactWalls" or node_name == "RoomShell"
+
+func _convert_handcrafted_wall_container(container: Node3D) -> void:
+	if container == null:
+		return
+
+	var groups := {}
+	for child in container.get_children():
+		var wall_tile := child as StaticBody3D
+		if wall_tile == null or not _is_handcrafted_wall_tile(wall_tile):
+			continue
+
+		var wall_size := _get_handcrafted_wall_tile_size(wall_tile)
+		if wall_size == Vector3.ZERO:
+			continue
+
+		var tile_length := maxf(wall_size.x, wall_size.z)
+		var tile_thickness := minf(wall_size.x, wall_size.z)
+		var axis_key := _get_handcrafted_wall_axis(wall_tile)
+		var line_coord := wall_tile.position.z
+		if axis_key == "z":
+			line_coord = wall_tile.position.x
+
+		var group_key := "%s:%.3f" % [axis_key, snappedf(line_coord, 0.001)]
+		if not groups.has(group_key):
+			groups[group_key] = []
+		groups[group_key].append({
+			"node": wall_tile,
+			"axis": axis_key,
+			"line": line_coord,
+			"length": tile_length,
+			"thickness": tile_thickness,
+			"size": wall_size,
+			"position": wall_tile.position,
+		})
+
+	for group_variant in groups.values():
+		var entries: Array = group_variant
+		entries.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			var axis: String = a["axis"]
+			var pos_a: Vector3 = a["position"]
+			var pos_b: Vector3 = b["position"]
+			return pos_a.x < pos_b.x if axis == "x" else pos_a.z < pos_b.z
+		)
+
+		var run: Array = []
+		var previous_center := 0.0
+		var expected_step := 0.0
+		for entry_variant in entries:
+			var entry: Dictionary = entry_variant
+			var axis: String = entry["axis"]
+			var position: Vector3 = entry["position"]
+			var center := position.x if axis == "x" else position.z
+			var length := float(entry["length"])
+			if run.is_empty():
+				run = [entry]
+				previous_center = center
+				expected_step = length
+				continue
+			if absf(center - previous_center - expected_step) <= 0.15:
+				run.append(entry)
+				previous_center = center
+				continue
+			_emit_handcrafted_wall_run(container, run)
+			run = [entry]
+			previous_center = center
+			expected_step = length
+		if not run.is_empty():
+			_emit_handcrafted_wall_run(container, run)
+
+	for group_variant in groups.values():
+		for entry_variant in group_variant:
+			var entry: Dictionary = entry_variant
+			var wall_tile := entry["node"] as Node
+			if wall_tile != null:
+				wall_tile.queue_free()
+
+func _emit_handcrafted_wall_run(container: Node3D, run: Array) -> void:
+	if container == null or run.is_empty():
+		return
+
+	var first: Dictionary = run[0]
+	var last: Dictionary = run[run.size() - 1]
+	var axis: String = first["axis"]
+	var height := float((first["size"] as Vector3).y)
+	var length := float(first["length"])
+	var thickness := float(first["thickness"])
+	var first_pos: Vector3 = first["position"]
+	var last_pos: Vector3 = last["position"]
+	var line := float(first["line"])
+	var material := _tuned_handcrafted_wall_material(_get_handcrafted_wall_tile_material(first["node"]))
+
+	var segment := StaticBody3D.new()
+	var segment_size := Vector3(length, height, thickness)
+	var segment_pos := first_pos
+	var y_center := first_pos.y + height * 0.5
+	if axis == "x":
+		segment_size.x = absf(last_pos.x - first_pos.x) + length
+		segment_pos = Vector3((first_pos.x + last_pos.x) * 0.5, y_center, line)
+	else:
+		segment_size = Vector3(thickness, height, absf(last_pos.z - first_pos.z) + length)
+		segment_pos = Vector3(line, y_center, (first_pos.z + last_pos.z) * 0.5)
+
+	segment.position = segment_pos
+
+	var collider := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = segment_size
+	collider.shape = shape
+	segment.add_child(collider)
+
+	var mesh_instance := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = segment_size
+	mesh.material = material
+	mesh_instance.mesh = mesh
+	segment.add_child(mesh_instance)
+
+	container.add_child(segment)
+
+func _is_handcrafted_wall_tile(node: StaticBody3D) -> bool:
+	if node == null:
+		return false
+	var mesh_instance := node.get_node_or_null("MeshInstance3D") as MeshInstance3D
+	var collision := node.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	return mesh_instance != null and collision != null and collision.shape is BoxShape3D
+
+func _get_handcrafted_wall_tile_size(node: StaticBody3D) -> Vector3:
+	var collision := node.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if collision == null or not (collision.shape is BoxShape3D):
+		return Vector3.ZERO
+	var shape := collision.shape as BoxShape3D
+	return shape.size
+
+func _get_handcrafted_wall_axis(node: StaticBody3D) -> String:
+	if node == null:
+		return "x"
+	var local_x := node.transform.basis.x
+	return "x" if absf(local_x.x) >= absf(local_x.z) else "z"
+
+func _get_handcrafted_wall_tile_material(node: Node) -> Material:
+	if node == null:
+		return null
+	var mesh_instance := node.get_node_or_null("MeshInstance3D") as MeshInstance3D
+	if mesh_instance == null:
+		return null
+	if mesh_instance.material_override != null:
+		return mesh_instance.material_override
+	if mesh_instance.mesh != null and mesh_instance.mesh.get_surface_count() > 0:
+		return mesh_instance.mesh.surface_get_material(0)
+	return null
+
+func _tuned_handcrafted_wall_material(material: Material) -> Material:
+	if material is StandardMaterial3D:
+		var tuned := (material as StandardMaterial3D).duplicate() as StandardMaterial3D
+		var uv_scale := Vector3(10.0, 3.0, 2.0)
+		var use_world_triplanar := false
+		if _active_biome_data != null:
+			uv_scale = _active_biome_data.wall_uv_scale
+			use_world_triplanar = _active_biome_data.wall_use_world_triplanar
+		tuned.uv1_scale = uv_scale
+		tuned.uv1_triplanar = use_world_triplanar
+		tuned.uv1_world_triplanar = use_world_triplanar
+		if use_world_triplanar:
+			tuned.heightmap_enabled = false
+		return tuned
+	return material
 
 func _get_handcrafted_quadrant_scene_pool(biome_data: Resource) -> Array[PackedScene]:
 	var quadrant_scene_pool: Array[PackedScene] = []

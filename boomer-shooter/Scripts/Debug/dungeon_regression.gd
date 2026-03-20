@@ -52,8 +52,6 @@ func check_seed(floor_num: int, seed: int) -> Dictionary:
 		reasons.append("doorway_corridor_reference_invalid")
 	if not _doorway_span_valid(gen.doorways):
 		reasons.append("doorway_span_invalid")
-	if not _doorway_side_walls_valid(gen.tile_grid, gen.doorways):
-		reasons.append("doorway_side_walls_invalid")
 	if not _corridor_doorway_orientation_valid(gen.corridors, gen.doorways):
 		reasons.append("doorway_orientation_mismatch")
 	if not _rooms_do_not_overlap(gen.rooms):
@@ -228,72 +226,39 @@ func _doorway_span_valid(doorways: Array) -> bool:
 		if orientation != "east_west" and orientation != "north_south":
 			return false
 		var opening_span := int(doorway.get("opening_span_tiles", -1))
-		if opening_span != 2:
+		if opening_span != 4:
 			return false
 		var center_offset := float(doorway.get("opening_center_offset_tiles", -99.0))
-		if abs(center_offset - 0.5) > 0.001:
+		if abs(center_offset - 1.5) > 0.001:
 			return false
 		var opening_tiles: Array = doorway.get("opening_tiles", [])
-		if opening_tiles.size() != 2:
+		if opening_tiles.size() != 4:
 			return false
-		if typeof(opening_tiles[0]) != TYPE_VECTOR2I or typeof(opening_tiles[1]) != TYPE_VECTOR2I:
-			return false
-		var a: Vector2i = opening_tiles[0]
-		var b: Vector2i = opening_tiles[1]
-		if orientation == "east_west":
-			if a.y != b.y or abs(a.x - b.x) != 1:
-				return false
-		else:
-			if a.x != b.x or abs(a.y - b.y) != 1:
-				return false
-	return true
-
-func _doorway_side_walls_valid(tile_grid: Array, doorways: Array) -> bool:
-	var grid_w: int = tile_grid.size()
-	if grid_w <= 0:
-		return false
-	var grid_h: int = tile_grid[0].size()
-	for doorway_variant in doorways:
-		if typeof(doorway_variant) != TYPE_DICTIONARY:
-			return false
-		var doorway: Dictionary = doorway_variant
-		var orientation := str(doorway.get("orientation", ""))
-		var opening_tiles: Array = doorway.get("opening_tiles", [])
-		if opening_tiles.size() < 2:
-			return false
-		var min_x := 999999
-		var max_x := -999999
-		var min_y := 999999
-		var max_y := -999999
+		var min_axis := 999999
+		var max_axis := -999999
+		var fixed_axis := 999999
 		for tile_variant in opening_tiles:
 			if typeof(tile_variant) != TYPE_VECTOR2I:
 				return false
 			var tile: Vector2i = tile_variant
-			min_x = mini(min_x, tile.x)
-			max_x = maxi(max_x, tile.x)
-			min_y = mini(min_y, tile.y)
-			max_y = maxi(max_y, tile.y)
+			if orientation == "east_west":
+				if fixed_axis == 999999:
+					fixed_axis = tile.y
+				elif tile.y != fixed_axis:
+					return false
+				min_axis = mini(min_axis, tile.x)
+				max_axis = maxi(max_axis, tile.x)
+			else:
+				if fixed_axis == 999999:
+					fixed_axis = tile.x
+				elif tile.x != fixed_axis:
+					return false
+				min_axis = mini(min_axis, tile.y)
+				max_axis = maxi(max_axis, tile.y)
 		if orientation == "east_west":
-			var row := min_y
-			var left_x := min_x - 1
-			var right_x := max_x + 1
-			if left_x < 0 or right_x >= grid_w or row < 0 or row >= grid_h:
+			if max_axis - min_axis != 3:
 				return false
-			if int(tile_grid[left_x][row]) != 0:
-				return false
-			if int(tile_grid[right_x][row]) != 0:
-				return false
-		elif orientation == "north_south":
-			var col := min_x
-			var top_y := min_y - 1
-			var bottom_y := max_y + 1
-			if top_y < 0 or bottom_y >= grid_h or col < 0 or col >= grid_w:
-				return false
-			if int(tile_grid[col][top_y]) != 0:
-				return false
-			if int(tile_grid[col][bottom_y]) != 0:
-				return false
-		else:
+		elif max_axis - min_axis != 3:
 			return false
 	return true
 

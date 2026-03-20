@@ -3,10 +3,12 @@
 [ext_resource type="Script" path="res://Scripts/Dungeon/handcrafted_quadrant_composite_room.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/DungeonWallTile.tscn" id="2_wall_tile"]
 [ext_resource type="PackedScene" uid="uid://da6yle0euhfqj" path="res://Scenes/Props/Castle/propcastletorch.tscn" id="3_torch"]
+[ext_resource type="Material" path="res://Assets/Environment/Castle/hub_wall_mat.tres" id="4_hub_wall_mat"]
 
 [node name="CastleCrossroom" type="Node3D"]
 script = ExtResource("1_script")
 allow_random_orientation = true
 wall_tile_scene = ExtResource("2_wall_tile")
+wall_material_override = ExtResource("4_hub_wall_mat")
 torch_scene = ExtResource("3_torch")
 show_room_guides = true

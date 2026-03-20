@@ -10,14 +10,13 @@
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/Handcrafted/Castle_CrossroomQuadrant_SkullRitual.tscn" id="2_castle_quad_skull"]
 [ext_resource type="PackedScene" uid="uid://cf4cx855qa51f" path="res://Scenes/Dungeon/Handcrafted/Castle_Start.tscn" id="2_castle_start"]
 [ext_resource type="PackedScene" uid="uid://cxhwb12mhiynr" path="res://Scenes/World/door.tscn" id="3_f6bkv"]
-[ext_resource type="Material" path="res://Assets/Environment/Castle/castle_wood_floor_mat.tres" id="3_floor_mat"]
+[ext_resource type="Material" uid="uid://b3ajnbfsepeqj" path="res://Assets/Environment/Castle/castle_wood_floor_mat.tres" id="3_floor_mat"]
 [ext_resource type="PackedScene" uid="uid://gobarc483377" path="res://Scenes/Enemies/goblin_archer.tscn" id="6_gelep"]
 [ext_resource type="Texture2D" uid="uid://sbfcrpaqlvac" path="res://Assets/Environment/exit_portal.png" id="6_nd585"]
-[ext_resource type="Material" path="res://Assets/Environment/Castle/castle_wall_mat.tres" id="6_wall_mat"]
+[ext_resource type="Material" uid="uid://tv1rk3da012b" path="res://Assets/Environment/Castle/castle_wall_mat.tres" id="6_wall_mat"]
 [ext_resource type="PackedScene" uid="uid://gobm31l33777" path="res://Scenes/Enemies/goblin_melee.tscn" id="7_hpmr7"]
-[ext_resource type="Material" path="res://Assets/Environment/Castle/castle_ceiling_mat.tres" id="9_ceil1"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/court_mage.tscn" id="9_cnu8i"]
-[ext_resource type="Material" path="res://Assets/Environment/Castle/castle_ceiling_mat.tres" id="10_ceil2"]
+[ext_resource type="Material" uid="uid://bug4qhmvchpxr" path="res://Assets/Environment/Castle/castle_ceiling_mat.tres" id="10_ceil2"]
 [ext_resource type="PackedScene" path="res://Scenes/Enemies/giant_rat.tscn" id="10_fkyy1"]
 [ext_resource type="PackedScene" uid="uid://bamyeedre1p87" path="res://Scenes/Dungeon/castle_doorway_assembly.tscn" id="11_castle_doorway"]
 [ext_resource type="Texture2D" uid="uid://d4fxnoh7rr26c" path="res://Assets/Effects/cookie_grate.png" id="11_nd585"]
@@ -35,7 +34,7 @@ script = ExtResource("1_biome_data")
 biome_id = "castle"
 floor_textures = [ExtResource("3_floor_mat")]
 wall_textures = [ExtResource("6_wall_mat")]
-ceiling_textures = [ExtResource("9_ceil1"), ExtResource("10_ceil2")]
+ceiling_textures = [ExtResource("10_ceil2"), ExtResource("10_ceil2")]
 tile_emission_color = Color(0.1, 0.1, 0.1, 1)
 tile_emission_energy = 0.2
 tile_emission_operator = 0

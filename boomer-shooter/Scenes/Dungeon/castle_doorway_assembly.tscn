@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://cxhwb12mhiynr" path="res://Scenes/World/door.tscn" id="1_door"]
 [ext_resource type="Texture2D" uid="uid://d2rjp0yrr2e7r" path="res://Assets/Environment/Castle/CastleDoorwayNew.png" id="2_tex"]
-[ext_resource type="Material" path="res://Assets/Environment/Castle/castle_wall_mat.tres" id="3_wall_mat"]
+[ext_resource type="Material" uid="uid://b15qf6m8ylvun" path="res://Assets/Environment/Castle/castle_door_support.tres" id="4_support_mat"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_doorway"]
 transparency = 2
@@ -20,7 +20,7 @@ material = SubResource("StandardMaterial3D_doorway")
 size = Vector2(3, 4.5)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_jamb"]
-size = Vector3(0.5, 4, 0.6)
+size = Vector3(1.5101318, 12.187859, 1.3506836)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_top"]
 size = Vector3(3, 1, 0.6)
@@ -29,13 +29,17 @@ size = Vector3(3, 1, 0.6)
 size = Vector3(6, 8, 0.6)
 
 [sub_resource type="BoxMesh" id="BoxMesh_upper_fill"]
-material = ExtResource("3_wall_mat")
+material = ExtResource("4_support_mat")
 size = Vector3(6, 8, 0.6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_support_column"]
+material = ExtResource("4_support_mat")
+size = Vector3(3.2, 12, 0.9)
 
 [node name="DoorwayAssembly" type="Node3D" unique_id=1948476388]
 
 [node name="Door" parent="." unique_id=1594035494 instance=ExtResource("1_door")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6665525, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4831624, 0, 0)
 
 [node name="FrontDecal" type="MeshInstance3D" parent="." unique_id=1730636691]
 transform = Transform3D(2, 0, 0, 0, 0.887, 0, 0, 0, 1.066, 0, 2.069, 0.306)
@@ -48,11 +52,11 @@ mesh = SubResource("QuadMesh_doorway")
 [node name="StaticBody3D" type="StaticBody3D" parent="." unique_id=1370475562]
 
 [node name="LeftJamb" type="CollisionShape3D" parent="StaticBody3D" unique_id=642064379]
-transform = Transform3D(2.6579652, 0, 0, 0, 1, 0, 0, 0, 1, -2.5299053, 2, 0)
+transform = Transform3D(2.6579652, 0, 0, 0, 1, 0, 0, 0, 1, -4.0532384, 6.038954, 0.33035183)
 shape = SubResource("BoxShape3D_jamb")
 
 [node name="RightJamb" type="CollisionShape3D" parent="StaticBody3D" unique_id=1702758205]
-transform = Transform3D(2.930248, 0, 0, 0, 1, 0, 0, 0, 1, 2.5324826, 2, 0)
+transform = Transform3D(2.930248, 0, 0, 0, 1, 0, 0, 0, 1, 3.99, 5.958, 0.27983403)
 shape = SubResource("BoxShape3D_jamb")
 
 [node name="TopJamb" type="CollisionShape3D" parent="StaticBody3D" unique_id=1815638779]
@@ -66,3 +70,11 @@ shape = SubResource("BoxShape3D_upper_fill")
 [node name="UpperFillMesh" type="MeshInstance3D" parent="." unique_id=720000002]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
 mesh = SubResource("BoxMesh_upper_fill")
+
+[node name="LeftSupportMesh" type="MeshInstance3D" parent="." unique_id=720000003]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.5, -4.5, 6, 0.32)
+mesh = SubResource("BoxMesh_support_column")
+
+[node name="RightSupportMesh" type="MeshInstance3D" parent="." unique_id=720000004]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.5, 4.5, 6, 0.32)
+mesh = SubResource("BoxMesh_support_column")

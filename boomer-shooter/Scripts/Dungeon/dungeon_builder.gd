@@ -4,9 +4,11 @@ class_name DungeonBuilder
 # World scale
 const TILE_SIZE: float = 3.0		# meters per tile
 const WALL_HEIGHT: float = 12.0
+const WALL_THICKNESS: float = 0.4
 const DOOR_WIDTH: float = 2.7
 const DOOR_HEIGHT: float = 3.6
 const DOOR_THICKNESS: float = 0.2
+const DOORWAY_ASSEMBLY_FORWARD_OFFSET: float = 0.35
 
 # Tile types (must match DungeonGenerator)
 const TILE_WALL: int = 0
@@ -86,17 +88,17 @@ func build(
 	var geo_root := StaticBody3D.new()
 	geo_root.name = "DungeonGeometry"
 	parent.add_child(geo_root)
+	var wall_root := Node3D.new()
+	wall_root.name = "DungeonWalls"
+	parent.add_child(wall_root)
 
 	var floor_mesh_inst := MeshInstance3D.new()
-	var wall_mesh_inst  := MeshInstance3D.new()
 	var ceil_mesh_inst  := MeshInstance3D.new()
 
 	floor_mesh_inst.name = "Floors"
-	wall_mesh_inst.name  = "Walls"
 	ceil_mesh_inst.name  = "Ceilings"
 
 	geo_root.add_child(floor_mesh_inst)
-	geo_root.add_child(wall_mesh_inst)
 	geo_root.add_child(ceil_mesh_inst)
 
 	# Build surface arrays (one SurfaceTool per material variant)
@@ -106,13 +108,6 @@ func build(
 		st.begin(Mesh.PRIMITIVE_TRIANGLES)
 		st.set_material(m)
 		floor_sts.append(st)
-		
-	var wall_sts := []
-	for m in mats_wall:
-		var st = SurfaceTool.new()
-		st.begin(Mesh.PRIMITIVE_TRIANGLES)
-		st.set_material(m)
-		wall_sts.append(st)
 		
 	var ceil_sts := []
 	for m in mats_ceiling:
@@ -138,41 +133,24 @@ func build(
 			var room: RoomData = room_lookup.get(room_id, null)
 			var is_corridor_tile := corridor_tile_owner.has(tile_key)
 			var is_doorway_opening := doorway_opening_owner.has(tile_key)
-			var wall_idx = _rng.randi() % wall_sts.size()
 
 			# Fungal uses semantic ownership: room profile, corridor profile, doorway opening profile.
 			if biome == "fungal":
 				if is_doorway_opening:
 					floor_idx = fungal_corridor_profile["floor_variant"]
 					ceil_idx = fungal_corridor_profile["ceiling_variant"]
-					wall_idx = fungal_corridor_profile["wall_variant"]
 				elif room != null:
 					floor_idx = _get_room_surface_variant(room, "floor_variant", floor_sts.size(), floor_idx)
 					ceil_idx = _get_room_surface_variant(room, "ceiling_variant", ceil_sts.size(), ceil_idx)
-					wall_idx = _get_room_surface_variant(room, "wall_variant", wall_sts.size(), wall_idx)
 				elif is_corridor_tile:
 					floor_idx = fungal_corridor_profile["floor_variant"]
 					ceil_idx = fungal_corridor_profile["ceiling_variant"]
-					wall_idx = fungal_corridor_profile["wall_variant"]
 
 			# Floor quad
 			_add_floor_quad(floor_sts[floor_idx], wx, wz, TILE_SIZE, rand_val)
 
 			# Ceiling quad
 			_add_ceil_quad(ceil_sts[ceil_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, rand_val >> 4)
-
-			# Walls — pick random per wall quad
-			if x == 0               or tile_grid[x - 1][z] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(-1, 0, 0), _rng.randi())
-					
-			if x == grid_w - 1      or tile_grid[x + 1][z] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(1, 0, 0), _rng.randi())
-					
-			if z == 0               or tile_grid[x][z - 1] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, -1), _rng.randi())
-					
-			if z == grid_h - 1      or tile_grid[x][z + 1] == TILE_WALL:
-				_add_wall_quad(wall_sts[wall_idx], wx, wz, TILE_SIZE, WALL_HEIGHT, Vector3(0, 0, 1), _rng.randi())
 
 
 	var floor_mesh = ArrayMesh.new()
@@ -181,18 +159,23 @@ func build(
 		st.commit(floor_mesh)
 	floor_mesh_inst.mesh = floor_mesh
 
-	var wall_mesh = ArrayMesh.new()
-	for st in wall_sts:
-		st.generate_normals()
-		st.commit(wall_mesh)
-	wall_mesh_inst.mesh = wall_mesh
-
-
 	var ceil_mesh = ArrayMesh.new()
 	for st in ceil_sts:
 		st.generate_normals()
 		st.commit(ceil_mesh)
 	ceil_mesh_inst.mesh = ceil_mesh
+
+	_build_wall_sections(
+		wall_root,
+		tile_grid,
+		mats_wall,
+		biome,
+		room_tile_owner,
+		corridor_tile_owner,
+		doorway_opening_owner,
+		room_lookup,
+		fungal_corridor_profile
+	)
 
 	# Single trimesh collision for the whole geometry
 	var collision := CollisionShape3D.new()
@@ -202,18 +185,13 @@ func build(
 	collision.shape = shape
 	geo_root.add_child(collision)
 
-	# Separate collision for walls
-	var wall_col := CollisionShape3D.new()
-	wall_col.shape = wall_mesh_inst.mesh.create_trimesh_shape()
-	geo_root.add_child(wall_col)
-	
 	# Separate collision for ceilings
 	var ceil_col := CollisionShape3D.new()
 	ceil_col.shape = ceil_mesh_inst.mesh.create_trimesh_shape()
 	geo_root.add_child(ceil_col)
 
 	# Post-processing: Place doorways and lights
-	_place_generated_doorway_assemblies(geo_root, doorways, biome_data)
+	_place_generated_doorway_assemblies(geo_root, doorways, room_lookup, biome_data)
 	_place_lights(geo_root, rooms, tile_grid, biome, doorway_opening_owner, room_tile_owner, room_lookup, biome_data)
 
 # -------------------------------------------------------
@@ -315,6 +293,277 @@ func _add_wall_quad(
 	st.set_normal(normal); st.set_uv(uv2); st.add_vertex(v2)
 	st.set_normal(normal); st.set_uv(uv3); st.add_vertex(v3)
 
+func _build_wall_sections(
+	parent: Node3D,
+	tile_grid: Array,
+	mats_wall: Array,
+	biome: String,
+	room_tile_owner: Dictionary,
+	corridor_tile_owner: Dictionary,
+	doorway_opening_owner: Dictionary,
+	room_lookup: Dictionary,
+	fungal_corridor_profile: Dictionary
+) -> void:
+	if mats_wall.is_empty():
+		return
+
+	var grid_w := tile_grid.size()
+	var grid_h: int = tile_grid[0].size() if grid_w > 0 else 0
+
+	for x in range(grid_w):
+		var z := 0
+		while z < grid_h:
+			if not _is_exposed_wall_face(tile_grid, x, z, Vector3(-1, 0, 0)):
+				z += 1
+				continue
+			var wall_idx := _get_wall_material_index(
+				x,
+				z,
+				mats_wall.size(),
+				biome,
+				room_tile_owner,
+				corridor_tile_owner,
+				doorway_opening_owner,
+				room_lookup,
+				fungal_corridor_profile
+			)
+			var run_length := 1
+			while z + run_length < grid_h:
+				if not _is_exposed_wall_face(tile_grid, x, z + run_length, Vector3(-1, 0, 0)):
+					break
+				if _get_wall_material_index(
+					x,
+					z + run_length,
+					mats_wall.size(),
+					biome,
+					room_tile_owner,
+					corridor_tile_owner,
+					doorway_opening_owner,
+					room_lookup,
+					fungal_corridor_profile
+				) != wall_idx:
+					break
+				run_length += 1
+			_add_wall_box_section(parent, Vector3(-1, 0, 0), x, z, run_length, mats_wall[wall_idx])
+			z += run_length
+
+	for x in range(grid_w):
+		var z := 0
+		while z < grid_h:
+			if not _is_exposed_wall_face(tile_grid, x, z, Vector3(1, 0, 0)):
+				z += 1
+				continue
+			var wall_idx := _get_wall_material_index(
+				x,
+				z,
+				mats_wall.size(),
+				biome,
+				room_tile_owner,
+				corridor_tile_owner,
+				doorway_opening_owner,
+				room_lookup,
+				fungal_corridor_profile
+			)
+			var run_length := 1
+			while z + run_length < grid_h:
+				if not _is_exposed_wall_face(tile_grid, x, z + run_length, Vector3(1, 0, 0)):
+					break
+				if _get_wall_material_index(
+					x,
+					z + run_length,
+					mats_wall.size(),
+					biome,
+					room_tile_owner,
+					corridor_tile_owner,
+					doorway_opening_owner,
+					room_lookup,
+					fungal_corridor_profile
+				) != wall_idx:
+					break
+				run_length += 1
+			_add_wall_box_section(parent, Vector3(1, 0, 0), x, z, run_length, mats_wall[wall_idx])
+			z += run_length
+
+	for z in range(grid_h):
+		var x := 0
+		while x < grid_w:
+			if not _is_exposed_wall_face(tile_grid, x, z, Vector3(0, 0, -1)):
+				x += 1
+				continue
+			var wall_idx := _get_wall_material_index(
+				x,
+				z,
+				mats_wall.size(),
+				biome,
+				room_tile_owner,
+				corridor_tile_owner,
+				doorway_opening_owner,
+				room_lookup,
+				fungal_corridor_profile
+			)
+			var run_length := 1
+			while x + run_length < grid_w:
+				if not _is_exposed_wall_face(tile_grid, x + run_length, z, Vector3(0, 0, -1)):
+					break
+				if _get_wall_material_index(
+					x + run_length,
+					z,
+					mats_wall.size(),
+					biome,
+					room_tile_owner,
+					corridor_tile_owner,
+					doorway_opening_owner,
+					room_lookup,
+					fungal_corridor_profile
+				) != wall_idx:
+					break
+				run_length += 1
+			_add_wall_box_section(parent, Vector3(0, 0, -1), x, z, run_length, mats_wall[wall_idx])
+			x += run_length
+
+	for z in range(grid_h):
+		var x := 0
+		while x < grid_w:
+			if not _is_exposed_wall_face(tile_grid, x, z, Vector3(0, 0, 1)):
+				x += 1
+				continue
+			var wall_idx := _get_wall_material_index(
+				x,
+				z,
+				mats_wall.size(),
+				biome,
+				room_tile_owner,
+				corridor_tile_owner,
+				doorway_opening_owner,
+				room_lookup,
+				fungal_corridor_profile
+			)
+			var run_length := 1
+			while x + run_length < grid_w:
+				if not _is_exposed_wall_face(tile_grid, x + run_length, z, Vector3(0, 0, 1)):
+					break
+				if _get_wall_material_index(
+					x + run_length,
+					z,
+					mats_wall.size(),
+					biome,
+					room_tile_owner,
+					corridor_tile_owner,
+					doorway_opening_owner,
+					room_lookup,
+					fungal_corridor_profile
+				) != wall_idx:
+					break
+				run_length += 1
+			_add_wall_box_section(parent, Vector3(0, 0, 1), x, z, run_length, mats_wall[wall_idx])
+			x += run_length
+
+func _add_wall_box_section(
+	parent: Node3D,
+	normal: Vector3,
+	tile_x: int,
+	tile_z: int,
+	run_length: int,
+	material: Material
+) -> void:
+	var wall := StaticBody3D.new()
+	var size := Vector3.ZERO
+	var position := Vector3.ZERO
+
+	if normal == Vector3(-1, 0, 0):
+		size = Vector3(WALL_THICKNESS, WALL_HEIGHT, float(run_length) * TILE_SIZE)
+		position = Vector3(tile_x * TILE_SIZE, WALL_HEIGHT * 0.5, tile_z * TILE_SIZE + size.z * 0.5)
+	elif normal == Vector3(1, 0, 0):
+		size = Vector3(WALL_THICKNESS, WALL_HEIGHT, float(run_length) * TILE_SIZE)
+		position = Vector3((tile_x + 1) * TILE_SIZE, WALL_HEIGHT * 0.5, tile_z * TILE_SIZE + size.z * 0.5)
+	elif normal == Vector3(0, 0, -1):
+		size = Vector3(float(run_length) * TILE_SIZE, WALL_HEIGHT, WALL_THICKNESS)
+		position = Vector3(tile_x * TILE_SIZE + size.x * 0.5, WALL_HEIGHT * 0.5, tile_z * TILE_SIZE)
+	else:
+		size = Vector3(float(run_length) * TILE_SIZE, WALL_HEIGHT, WALL_THICKNESS)
+		position = Vector3(tile_x * TILE_SIZE + size.x * 0.5, WALL_HEIGHT * 0.5, (tile_z + 1) * TILE_SIZE)
+
+	wall.position = position
+	wall.set_meta("wall_normal", normal)
+	wall.set_meta("wall_tile_x", tile_x)
+	wall.set_meta("wall_tile_z", tile_z)
+	wall.set_meta("wall_run_length", run_length)
+
+	var collider := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collider.shape = shape
+	wall.add_child(collider)
+
+	var mesh_instance := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	mesh.material = material
+	mesh_instance.mesh = mesh
+	wall.add_child(mesh_instance)
+
+	parent.add_child(wall)
+
+func _get_wall_material_index(
+	x: int,
+	z: int,
+	variant_count: int,
+	biome: String,
+	room_tile_owner: Dictionary,
+	corridor_tile_owner: Dictionary,
+	doorway_opening_owner: Dictionary,
+	room_lookup: Dictionary,
+	fungal_corridor_profile: Dictionary
+) -> int:
+	if variant_count <= 0:
+		return 0
+	if biome != "fungal":
+		return abs(int((x * 73856093) ^ (z * 19349663))) % variant_count
+
+	var tile_key := _tile_key(x, z)
+	if doorway_opening_owner.has(tile_key) or corridor_tile_owner.has(tile_key):
+		return int(fungal_corridor_profile.get("wall_variant", 0)) % variant_count
+
+	var room_id := int(room_tile_owner.get(tile_key, -1))
+	var room: RoomData = room_lookup.get(room_id, null)
+	return _get_room_surface_variant(room, "wall_variant", variant_count, 0)
+
+func _get_wall_run_uv_rect(tile_grid: Array, x: int, z: int, normal: Vector3) -> Rect2:
+	var scan_x := x
+	var scan_z := z
+	var run_start := 0
+
+	if normal == Vector3(-1, 0, 0) or normal == Vector3(1, 0, 0):
+		while _is_exposed_wall_face(tile_grid, x, scan_z - 1, normal):
+			scan_z -= 1
+			run_start += 1
+	else:
+		while _is_exposed_wall_face(tile_grid, scan_x - 1, z, normal):
+			scan_x -= 1
+			run_start += 1
+
+	return Rect2(float(run_start), 0.0, 1.0, 1.0)
+
+func _is_exposed_wall_face(tile_grid: Array, x: int, z: int, normal: Vector3) -> bool:
+	if not _is_floor_tile(tile_grid, x, z):
+		return false
+
+	if normal == Vector3(-1, 0, 0):
+		return not _is_floor_tile(tile_grid, x - 1, z)
+	if normal == Vector3(1, 0, 0):
+		return not _is_floor_tile(tile_grid, x + 1, z)
+	if normal == Vector3(0, 0, -1):
+		return not _is_floor_tile(tile_grid, x, z - 1)
+	return not _is_floor_tile(tile_grid, x, z + 1)
+
+func _is_floor_tile(tile_grid: Array, x: int, z: int) -> bool:
+	if x < 0 or x >= tile_grid.size():
+		return false
+	var column: Array = tile_grid[x]
+	if z < 0 or z >= column.size():
+		return false
+	return int(column[z]) == TILE_FLOOR
+
 func _get_randomized_uvs(rand_val: int) -> Array:
 	var uv_00 := Vector2(0, 0)
 	var uv_10 := Vector2(1, 0)
@@ -357,62 +606,91 @@ func _get_materials(biome: String, surface: String, biome_data: Resource = null)
 	var mats = []
 	for tex in textures:
 		if tex is Material:
-			mats.append(tex)
+			var material: Material = tex
+			mats.append(_prepare_surface_material(material, biome, biome_data, surface))
 			continue
 
 		var mat := StandardMaterial3D.new()
 		if tex is Texture2D:
 			var albedo_tex: Texture2D = tex
 			mat.albedo_texture = albedo_tex
-			
-			# Apply standard settings
-			mat.emission_enabled = true
-			mat.emission_texture = albedo_tex
-			
-			if _has_biome_data(biome_data):
-				mat.emission = biome_data.tile_emission_color
-				mat.emission_energy_multiplier = biome_data.tile_emission_energy
-				mat.emission_operator = biome_data.tile_emission_operator
-				mat.texture_filter = biome_data.tile_texture_filter
-				var s = biome_data.tile_uv_scale
-				mat.uv1_scale = Vector3(s, s, s)
-			else:
-				# Hardcoded fallbacks if no biome data resource is provided
-				mat.emission_operator = StandardMaterial3D.EMISSION_OP_MULTIPLY
-				var emission_energy := 0.05
-				if biome == "fungal":
-					emission_energy = 0.04
-					mat.emission = Color(0.1, 0.2, 0.15)
-					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-					mat.uv1_scale = Vector3(1.0, 1.0, 1.0)
-				elif biome == "lava":
-					emission_energy = 0.4
-					mat.emission = Color(0.8, 0.15, 0.0)
-					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
-				elif biome == "crypt":
-					emission_energy = 0.08
-					mat.emission = Color(0.15, 0.25, 0.5)
-					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
-				elif biome == "castle":
-					emission_energy = 0.2
-					mat.emission = Color(0.1, 0.1, 0.1)
-					mat.emission_operator = StandardMaterial3D.EMISSION_OP_ADD
-					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
-				else:
-					mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-					mat.uv1_scale = Vector3(2.0, 2.0, 2.0)
-				
-				mat.emission_energy_multiplier = emission_energy
-		mats.append(mat)
+		mats.append(_prepare_surface_material(mat, biome, biome_data, surface))
 
 	if mats.is_empty():
-		mats.append(StandardMaterial3D.new())
+		mats.append(_prepare_surface_material(StandardMaterial3D.new(), biome, biome_data, surface))
 
 	_mat_cache[key] = mats
 	return mats
+
+func _prepare_surface_material(material: Material, biome: String, biome_data: Resource = null, surface: String = "") -> Material:
+	if material is StandardMaterial3D:
+		var source := material as StandardMaterial3D
+		var prepared := source.duplicate() as StandardMaterial3D
+		_apply_surface_material_settings(prepared, biome, biome_data, surface)
+		return prepared
+	return material
+
+func _apply_surface_material_settings(mat: StandardMaterial3D, biome: String, biome_data: Resource = null, surface: String = "") -> void:
+	if mat == null:
+		return
+
+	if mat.albedo_texture != null:
+		mat.emission_enabled = true
+		mat.emission_texture = mat.albedo_texture
+
+	if _has_biome_data(biome_data):
+		var use_world_triplanar: bool = bool(biome_data.tile_use_world_triplanar)
+		var tile_scale: float = float(biome_data.tile_uv_scale)
+		var uv_scale: Vector3 = Vector3(tile_scale, tile_scale, tile_scale)
+		if surface == "wall":
+			use_world_triplanar = bool(biome_data.wall_use_world_triplanar)
+			uv_scale = biome_data.wall_uv_scale
+		mat.emission = biome_data.tile_emission_color
+		mat.emission_energy_multiplier = biome_data.tile_emission_energy
+		mat.emission_operator = biome_data.tile_emission_operator
+		mat.texture_filter = biome_data.tile_texture_filter
+		mat.uv1_scale = uv_scale
+		mat.uv1_triplanar = use_world_triplanar
+		mat.uv1_world_triplanar = use_world_triplanar
+		if use_world_triplanar:
+			mat.heightmap_enabled = false
+		return
+
+	mat.emission_operator = StandardMaterial3D.EMISSION_OP_MULTIPLY
+	var emission_energy := 0.05
+	var uv_scale := Vector3(2.0, 2.0, 2.0)
+	var use_world_triplanar := true
+	if biome == "fungal":
+		emission_energy = 0.04
+		mat.emission = Color(0.1, 0.2, 0.15)
+		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		uv_scale = Vector3(1.0, 1.0, 1.0)
+	elif biome == "lava":
+		emission_energy = 0.4
+		mat.emission = Color(0.8, 0.15, 0.0)
+		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	elif biome == "crypt":
+		emission_energy = 0.08
+		mat.emission = Color(0.15, 0.25, 0.5)
+		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	elif biome == "castle":
+		emission_energy = 0.2
+		mat.emission = Color(0.1, 0.1, 0.1)
+		mat.emission_operator = StandardMaterial3D.EMISSION_OP_ADD
+		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	else:
+		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+
+	if surface == "wall":
+		uv_scale = Vector3(10.0, 3.0, 2.0)
+		use_world_triplanar = false
+
+	mat.uv1_scale = uv_scale
+	mat.uv1_triplanar = use_world_triplanar
+	mat.uv1_world_triplanar = use_world_triplanar
+	if use_world_triplanar:
+		mat.heightmap_enabled = false
+	mat.emission_energy_multiplier = emission_energy
 
 func _get_mural_material(biome: String, biome_data: Resource = null) -> Material:
 	var key := "mural_" + biome
@@ -853,7 +1131,7 @@ func _place_lights(
 
 
 
-func _place_generated_doors(parent: Node3D, doorways: Array, biome_data: Resource = null) -> void:
+func _place_generated_doors(parent: Node3D, doorways: Array, room_lookup: Dictionary, biome_data: Resource = null) -> void:
 	var door_scene: PackedScene = preload("res://Scenes/World/door.tscn")
 	if biome_data != null:
 		var candidate: Variant = biome_data.get("door_scene")
@@ -874,6 +1152,7 @@ func _place_generated_doors(parent: Node3D, doorways: Array, biome_data: Resourc
 			continue
 		var center_offset_tiles := float(doorway.get("opening_center_offset_tiles", 0.0))
 
+		var outward_normal := _get_generated_doorway_wall_normal(doorway, room_lookup)
 		var door = door_scene.instantiate()
 		var wx := tile.x * TILE_SIZE + TILE_SIZE / 2.0
 		var wz := tile.y * TILE_SIZE + TILE_SIZE / 2.0
@@ -881,13 +1160,13 @@ func _place_generated_doors(parent: Node3D, doorways: Array, biome_data: Resourc
 			wx += center_offset_tiles * TILE_SIZE
 		else:
 			wz += center_offset_tiles * TILE_SIZE
-		door.position = Vector3(wx, 0.0, wz)
+		door.position = Vector3(wx, 0.0, wz) + outward_normal * DOORWAY_ASSEMBLY_FORWARD_OFFSET
 		if orientation == "north_south":
 			door.rotation_degrees.y = 90.0
 
 		parent.add_child(door)
 
-func _place_generated_doorway_assemblies(parent: Node3D, doorways: Array, biome_data: Resource = null) -> void:
+func _place_generated_doorway_assemblies(parent: Node3D, doorways: Array, room_lookup: Dictionary, biome_data: Resource = null) -> void:
 	var assembly_scene: PackedScene = null
 	if biome_data != null:
 		var assembly_candidate: Variant = biome_data.get("doorway_assembly_scene")
@@ -895,7 +1174,7 @@ func _place_generated_doorway_assemblies(parent: Node3D, doorways: Array, biome_
 			assembly_scene = assembly_candidate
 	if assembly_scene == null:
 		# Fallback to legacy door placement if assembly scene is unavailable.
-		_place_generated_doors(parent, doorways, biome_data)
+		_place_generated_doors(parent, doorways, room_lookup, biome_data)
 		return
 
 	for doorway in doorways:
@@ -909,6 +1188,7 @@ func _place_generated_doorway_assemblies(parent: Node3D, doorways: Array, biome_
 		if orientation == "":
 			continue
 		var center_offset_tiles := float(doorway.get("opening_center_offset_tiles", 0.0))
+		var outward_normal := _get_generated_doorway_wall_normal(doorway, room_lookup)
 		var wx := tile.x * TILE_SIZE + TILE_SIZE / 2.0
 		var wz := tile.y * TILE_SIZE + TILE_SIZE / 2.0
 		if orientation == "east_west":
@@ -917,7 +1197,7 @@ func _place_generated_doorway_assemblies(parent: Node3D, doorways: Array, biome_
 			wz += center_offset_tiles * TILE_SIZE
 
 		var doorway_assembly = assembly_scene.instantiate()
-		doorway_assembly.position = Vector3(wx, 0.0, wz)
+		doorway_assembly.position = Vector3(wx, 0.0, wz) + outward_normal * DOORWAY_ASSEMBLY_FORWARD_OFFSET
 		if orientation == "north_south":
 			doorway_assembly.rotation_degrees.y = 90.0
 		parent.add_child(doorway_assembly)
@@ -940,6 +1220,23 @@ func _has_biome_data(biome_data: Resource) -> bool:
 		if typeof(p) == TYPE_DICTIONARY and str(p.get("name", "")) == "biome_id":
 			return true
 	return false
+
+func _get_generated_doorway_wall_normal(doorway: Dictionary, room_lookup: Dictionary) -> Vector3:
+	var room_id := int(doorway.get("room_id", -1))
+	var room: RoomData = room_lookup.get(room_id, null)
+	if room == null:
+		return Vector3.ZERO
+	var tile: Vector2i = doorway.get("tile", Vector2i(-1, -1))
+	var rect: Rect2i = room.grid_rect
+	if tile.x == rect.position.x:
+		return Vector3(-1, 0, 0)
+	if tile.x == rect.position.x + rect.size.x - 1:
+		return Vector3(1, 0, 0)
+	if tile.y == rect.position.y:
+		return Vector3(0, 0, -1)
+	if tile.y == rect.position.y + rect.size.y - 1:
+		return Vector3(0, 0, 1)
+	return Vector3.ZERO
 
 func _get_doorway_orientation(doorway: Dictionary) -> String:
 	if doorway.has("orientation"):

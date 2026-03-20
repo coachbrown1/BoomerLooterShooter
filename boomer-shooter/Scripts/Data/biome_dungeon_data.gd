@@ -14,9 +14,13 @@ class_name BiomeDungeonData
 @export var tile_emission_operator: StandardMaterial3D.EmissionOperator = StandardMaterial3D.EMISSION_OP_MULTIPLY
 @export var tile_uv_scale: float = 2.0
 @export var tile_texture_filter: BaseMaterial3D.TextureFilter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+@export var tile_use_world_triplanar: bool = true
+@export var wall_uv_scale: Vector3 = Vector3(10.0, 3.0, 2.0)
+@export var wall_use_world_triplanar: bool = false
 
 @export var door_scene: PackedScene = preload("res://Scenes/World/door.tscn")
 @export var doorway_assembly_scene: PackedScene
+@export var doorway_support_material: Material
 @export var handcrafted_start_room_scene: PackedScene
 @export var handcrafted_normal_room_scenes: Array[PackedScene] = []
 @export var handcrafted_quadrant_room_scenes: Array[PackedScene] = []

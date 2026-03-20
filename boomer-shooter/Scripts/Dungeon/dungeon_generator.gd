@@ -38,7 +38,7 @@ var _doorway_next_id: int = 0
 var _edge_keys := {}			# "a:b" -> true
 var _adjacency := {}			# room_id -> Array of neighbor room IDs
 var _room_lookup := {}			# room_id -> RoomData
-const DOORWAY_SPAN_TILES: int = 2
+const DOORWAY_SPAN_TILES: int = 4
 
 
 # -------------------------------------------------------
@@ -272,12 +272,9 @@ func _create_corridor_between_rooms(room_a: RoomData, room_b: RoomData) -> void:
 
 	var doorway_a_id := int(doorway_a["id"])
 	var doorway_b_id := int(doorway_b["id"])
-	var tile_a: Vector2i = doorway_a["tile"]
-	var tile_b: Vector2i = doorway_b["tile"]
+	var tile_a: Vector2i = _get_corridor_anchor_tile(doorway_a)
+	var tile_b: Vector2i = _get_corridor_anchor_tile(doorway_b)
 	var corridor_tiles := _carve_corridor_line(tile_a, tile_b, _corridor_next_id)
-	doorway_a["pinch_tiles"] = _enforce_doorway_side_walls(doorway_a)
-	doorway_b["pinch_tiles"] = _enforce_doorway_side_walls(doorway_b)
-
 	corridors.append({
 		"id": _corridor_next_id,
 		"room_a_id": room_a.id,
@@ -459,57 +456,18 @@ func _opening_center_offset_tiles(span: int) -> float:
 	var safe_span := maxi(1, span)
 	return float(safe_span - 1) / 2.0
 
-func _enforce_doorway_side_walls(doorway: Dictionary) -> Array:
-	var placed: Array = []
-	var orientation := str(doorway.get("orientation", ""))
+func _get_corridor_anchor_tile(doorway: Dictionary) -> Vector2i:
 	var opening_tiles: Array = doorway.get("opening_tiles", [])
 	if opening_tiles.is_empty():
-		return placed
-
-	if orientation == "east_west":
-		if typeof(opening_tiles[0]) != TYPE_VECTOR2I:
-			return placed
-		var first_tile_ew: Vector2i = opening_tiles[0]
-		var row := first_tile_ew.y
-		var min_x := 999999
-		var max_x := -999999
-		for tile_variant in opening_tiles:
-			if typeof(tile_variant) != TYPE_VECTOR2I:
-				continue
-			var tile: Vector2i = tile_variant
-			min_x = mini(min_x, tile.x)
-			max_x = maxi(max_x, tile.x)
-		var left := Vector2i(min_x - 1, row)
-		var right := Vector2i(max_x + 1, row)
-		if _is_in_bounds(left.x, left.y):
-			_set_wall(left.x, left.y)
-			placed.append(left)
-		if _is_in_bounds(right.x, right.y):
-			_set_wall(right.x, right.y)
-			placed.append(right)
-	elif orientation == "north_south":
-		if typeof(opening_tiles[0]) != TYPE_VECTOR2I:
-			return placed
-		var first_tile_ns: Vector2i = opening_tiles[0]
-		var col := first_tile_ns.x
-		var min_y := 999999
-		var max_y := -999999
-		for tile_variant in opening_tiles:
-			if typeof(tile_variant) != TYPE_VECTOR2I:
-				continue
-			var tile: Vector2i = tile_variant
-			min_y = mini(min_y, tile.y)
-			max_y = maxi(max_y, tile.y)
-		var top := Vector2i(col, min_y - 1)
-		var bottom := Vector2i(col, max_y + 1)
-		if _is_in_bounds(top.x, top.y):
-			_set_wall(top.x, top.y)
-			placed.append(top)
-		if _is_in_bounds(bottom.x, bottom.y):
-			_set_wall(bottom.x, bottom.y)
-			placed.append(bottom)
-	return placed
-
+		return doorway.get("tile", Vector2i.ZERO)
+	var offsets: Array = _corridor_width_offsets()
+	var anchor_index := 0
+	if not offsets.is_empty():
+		anchor_index = mini(opening_tiles.size() - 1, maxi(0, -int(offsets[0])))
+	var anchor_variant: Variant = opening_tiles[anchor_index]
+	if typeof(anchor_variant) == TYPE_VECTOR2I:
+		return anchor_variant
+	return doorway.get("tile", Vector2i.ZERO)
 
 # -------------------------------------------------------
 # Graph helpers
