@@ -28,19 +28,20 @@ var is_reloading: bool = false
 @export var recoil_pitch: float = 0.05
 @export var recoil_yaw: float = 0.02
 
-@export_group("2D Viewmodel")
-@export var muzzle_2d_offset: Vector2 = Vector2(-20, -110)
-@export var muzzle_2d_scale: float = 1.5
+@export_group("3D Viewmodel")
+@export var viewmodel_position: Vector3 = Vector3(0.25, -0.25, -0.42)
+@export var viewmodel_rotation_degrees: Vector3 = Vector3.ZERO
+@export var fire_kick_offset: Vector3 = Vector3(0.0, 0.015, 0.06)
+@export var reload_lower_offset: Vector3 = Vector3(0.0, -0.18, 0.10)
 
-@onready var sprite: Sprite3D = $WeaponSprite
 @onready var muzzle_flash: Node3D = $MuzzleFlash
 @onready var tracer: MeshInstance3D = $BulletTracer
 @onready var ejection_port: Node3D = $EjectionPort
+@onready var mesh_root: Node3D = get_node_or_null("WeaponMesh") as Node3D
 
 var can_fire: bool = true
 var fire_timer: float = 0.0
 var _next_fire_ready_time: float = 0.0
-var sprite_origin_z: float = 0.0
 var weapon_manager: WeaponManager = null
 var _equipment_stats: Dictionary = {}
 var _weapon_item_stats: Dictionary = {}
@@ -52,13 +53,8 @@ var _base_recoil_pitch: float = 0.0
 var _base_recoil_yaw: float = 0.0
 
 var _cached_player: CharacterBody3D = null
-
-# 2D Viewmodel elements
-var _canvas_layer: CanvasLayer
-var _viewmodel_2d: Sprite2D
-var _emissive_2d: Sprite2D
-var _muzzle_2d: Sprite2D
 var _viewmodel_enabled: bool = true
+var _world_transform: Transform3D = Transform3D.IDENTITY
 
 signal fired
 signal hit_target(target, dmg)
@@ -69,125 +65,52 @@ const BLOOD_PARTICLES_SCENE = preload("res://Scenes/Effects/blood_particles.tscn
 const CASING_SCENE = preload("res://Scenes/Effects/shell_casing.tscn")
 
 func _ready() -> void:
+	_world_transform = transform
 	_capture_base_stats()
 	muzzle_flash.visible = false
 	tracer.visible = false
 	current_mag = _get_effective_mag_size()
-	if sprite:
-		_setup_2d_viewmodel()
 	set_viewmodel_enabled(_viewmodel_enabled)
-
-func _setup_2d_viewmodel() -> void:
-	# Create a CanvasLayer to keep the weapon fixed on screen
-	_canvas_layer = CanvasLayer.new()
-	_canvas_layer.layer = 5 # Below ScreenFX/HUD (10), above world (0)
-	add_child(_canvas_layer)
-	
-	_viewmodel_2d = Sprite2D.new()
-	_viewmodel_2d.texture = sprite.texture
-	_viewmodel_2d.hframes = sprite.hframes
-	_viewmodel_2d.vframes = sprite.vframes
-	_viewmodel_2d.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	
-	# Handle Emissive/Glow for 2D
-	if sprite.texture:
-		var em_path = sprite.texture.resource_path.replace(".png", "_e.png")
-		if ResourceLoader.exists(em_path):
-			_emissive_2d = Sprite2D.new()
-			_emissive_2d.texture = load(em_path)
-			_emissive_2d.hframes = sprite.hframes
-			_emissive_2d.vframes = sprite.vframes
-			_emissive_2d.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-			# Use additive blending for the glow, like the 3D shader
-			var mat = CanvasItemMaterial.new()
-			mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-			mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
-			_emissive_2d.material = mat
-			_emissive_2d.modulate = Color(1.5, 1.5, 1.5, 1.0) 
-			_viewmodel_2d.add_child(_emissive_2d)
-	
-	_canvas_layer.add_child(_viewmodel_2d)
-	
-	# Setup 2D Muzzle Flash
-	var flash_3d = muzzle_flash.get_node_or_null("FlashSprite")
-	if flash_3d:
-		_muzzle_2d = Sprite2D.new()
-		_muzzle_2d.texture = flash_3d.texture
-		_muzzle_2d.hframes = flash_3d.hframes
-		_muzzle_2d.vframes = flash_3d.vframes
-		_muzzle_2d.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		_muzzle_2d.visible = false
-		
-		var mat = CanvasItemMaterial.new()
-		mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-		mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
-		_muzzle_2d.material = mat
-		
-		_canvas_layer.add_child(_muzzle_2d)
-	
-	_update_viewmodel_position()
-	get_viewport().size_changed.connect(_update_viewmodel_position)
-
-func _update_viewmodel_position() -> void:
-	if not _viewmodel_2d: return
-	
-	var screen_size = get_viewport().get_visible_rect().size
-	
-	# Scale based on screen height, but more conservatively
-	# If textures are 512x256, and screen is 1080p:
-	# scale_factor = 1080 / 540 = 2.0. Resulting weapon height = 256 * 2 = 512 (about half the screen)
-	# Scale: 640p base height seems good for 1080p, but let's make it slightly larger
-	var scale_factor = screen_size.y / 540.0 
-	_viewmodel_2d.scale = Vector2(scale_factor, scale_factor)
-	
-	# Position: Slightly more to the right and exactly at the bottom
-	_viewmodel_2d.position = Vector2(screen_size.x * 0.75, screen_size.y)
-	
-	_viewmodel_2d.centered = true
-	# Offset so the bottom of the texture is at the bottom of the screen
-	_viewmodel_2d.offset.y = -_viewmodel_2d.texture.get_height() / 2.0
-	
-	if _emissive_2d:
-		_emissive_2d.position = Vector2.ZERO
-		_emissive_2d.centered = true
-		_emissive_2d.offset = _viewmodel_2d.offset
-
-	if _muzzle_2d:
-		_muzzle_2d.position = _viewmodel_2d.position + (muzzle_2d_offset * scale_factor)
-		_muzzle_2d.scale = Vector2(scale_factor * muzzle_2d_scale, scale_factor * muzzle_2d_scale)
 
 func show_weapon() -> void:
 	visible = true
 	set_process(true)
 	set_physics_process(true)
-	if _canvas_layer:
-		_canvas_layer.visible = _viewmodel_enabled
 
 	# Reset animations and timers when drawn
 	can_fire = true
 	fire_timer = 0.0
 	_next_fire_ready_time = 0.0
 	is_reloading = false
-	if _viewmodel_2d:
-		_viewmodel_2d.position.y = get_viewport().get_visible_rect().size.y
+	_apply_presentation_mode()
 
 func hide_weapon() -> void:
 	visible = false
 	set_process(false)
 	set_physics_process(false)
-	if _canvas_layer:
-		_canvas_layer.visible = false
 	is_reloading = false
+	transform = _world_transform
 
 func set_viewmodel_enabled(enabled: bool) -> void:
 	_viewmodel_enabled = enabled
-	if _canvas_layer:
-		_canvas_layer.visible = visible and _viewmodel_enabled
-	if sprite:
-		sprite.visible = not _viewmodel_enabled
-	var flash_sprite := muzzle_flash.get_node_or_null("FlashSprite")
-	if flash_sprite:
-		flash_sprite.visible = (not _viewmodel_enabled) or _muzzle_2d == null
+	_apply_presentation_mode()
+	if muzzle_flash != null:
+		var flash_sprite := muzzle_flash.get_node_or_null("FlashSprite")
+		if flash_sprite:
+			flash_sprite.visible = true
+
+func _apply_presentation_mode() -> void:
+	transform = _build_viewmodel_transform() if _viewmodel_enabled else _world_transform
+	if mesh_root:
+		mesh_root.visible = visible
+
+func _build_viewmodel_transform() -> Transform3D:
+	var rotation_radians := Vector3(
+		deg_to_rad(viewmodel_rotation_degrees.x),
+		deg_to_rad(viewmodel_rotation_degrees.y),
+		deg_to_rad(viewmodel_rotation_degrees.z)
+	)
+	return Transform3D(Basis.from_euler(rotation_radians), viewmodel_position)
 
 func set_equipment_stats(stats: Dictionary) -> void:
 	_equipment_stats = stats.duplicate(true)
@@ -234,38 +157,36 @@ func reload(request_authority: bool = true) -> void:
 
 	is_reloading = true
 
-	if _viewmodel_2d:
-		var tween = create_tween()
-		var orig_y = _viewmodel_2d.position.y
-		var hidden_y = orig_y + _viewmodel_2d.texture.get_height() * _viewmodel_2d.scale.y
+	var tween = create_tween()
+	if _viewmodel_enabled:
+		var base_transform := _build_viewmodel_transform()
+		var lowered_transform := base_transform
+		lowered_transform.origin += reload_lower_offset
+		tween.tween_property(self, "transform", lowered_transform, 0.2)
+		tween.tween_interval(max(0.0, _get_effective_reload_time() - 0.4))
+		tween.tween_callback(_complete_reload_ammo)
+		tween.tween_property(self, "transform", base_transform, 0.2)
+	else:
+		tween.tween_interval(_get_effective_reload_time())
+		tween.tween_callback(_complete_reload_ammo)
 
-		# Move gun down
-		tween.tween_property(_viewmodel_2d, "position:y", hidden_y, 0.2)
+	tween.finished.connect(func():
+		is_reloading = false
+		can_fire = true
+		_apply_presentation_mode()
+	)
 
-		# Wait
-		tween.tween_interval(max(0.1, _get_effective_reload_time() - 0.4))
+func _complete_reload_ammo() -> void:
+	var ammo_needed = _get_effective_mag_size() - current_mag
+	var reserve = INF if infinite_reserve_ammo else weapon_manager.get_ammo(ammo_type)
+	var ammo_to_take = ammo_needed if infinite_reserve_ammo else min(ammo_needed, int(reserve))
 
-		# Perform ammo math
-		tween.tween_callback(func():
-			var ammo_needed = _get_effective_mag_size() - current_mag
-			var reserve = INF if infinite_reserve_ammo else weapon_manager.get_ammo(ammo_type)
-			var ammo_to_take = ammo_needed if infinite_reserve_ammo else min(ammo_needed, int(reserve))
+	if not infinite_reserve_ammo:
+		weapon_manager.consume_ammo(ammo_type, ammo_to_take)
+	current_mag += ammo_to_take
 
-			if not infinite_reserve_ammo:
-				weapon_manager.consume_ammo(ammo_type, ammo_to_take)
-			current_mag += ammo_to_take
-
-			# Force HUD update
-			if weapon_manager: weapon_manager._update_hud()
-		)
-
-		# Move gun up
-		tween.tween_property(_viewmodel_2d, "position:y", orig_y, 0.2)
-
-		tween.finished.connect(func():
-			is_reloading = false
-			can_fire = true
-		)
+	if weapon_manager:
+		weapon_manager._update_hud()
 
 func perform_authoritative_reload() -> bool:
 	if not can_reload():
@@ -360,6 +281,8 @@ func _fire_with_aim(cam_origin: Vector3, cam_forward: Vector3, play_local_feedba
 	if play_local_feedback:
 		_play_local_feedback(current_player)
 
+	_broadcast_remote_fire_visual(current_player)
+
 	if not apply_damage:
 		_show_muzzle_flash()
 		return
@@ -390,6 +313,9 @@ func _fire_with_aim(cam_origin: Vector3, cam_forward: Vector3, play_local_feedba
 		_fire_hitscan(cam_origin, final_dir, player_rid, shot_damage)
 	_show_muzzle_flash()
 
+func play_remote_fire_visual() -> void:
+	_show_muzzle_flash()
+
 func _update_fire_cooldown_gate() -> void:
 	if can_fire:
 		return
@@ -412,22 +338,13 @@ func _basis_from_forward(forward: Vector3) -> Basis:
 	return Basis(right, up, -forward_norm)
 
 func _play_local_feedback(shooter_node: Node3D) -> void:
-	if _viewmodel_2d:
-		_viewmodel_2d.frame = 1
-		if _emissive_2d:
-			_emissive_2d.frame = 1
-
+	if _viewmodel_enabled:
 		var tween = create_tween()
-		var target_y = _viewmodel_2d.position.y + 20
-		var orig_y = _viewmodel_2d.position.y
-		tween.tween_property(_viewmodel_2d, "position:y", target_y, 0.05)
-		tween.tween_property(_viewmodel_2d, "position:y", orig_y, 0.1)
-		tween.finished.connect(func():
-			if _viewmodel_2d:
-				_viewmodel_2d.frame = 0
-				if _emissive_2d:
-					_emissive_2d.frame = 0
-		)
+		var base_transform := _build_viewmodel_transform()
+		var kicked_transform := base_transform
+		kicked_transform.origin += fire_kick_offset
+		tween.tween_property(self, "transform", kicked_transform, 0.04)
+		tween.tween_property(self, "transform", base_transform, 0.09)
 
 	if ejects_shells:
 		_eject_shell()
@@ -646,17 +563,10 @@ func _find_hitbox(node: Node) -> HitboxComponent:
 
 func _show_muzzle_flash() -> void:
 	muzzle_flash.visible = true
-	if _muzzle_2d:
-		_muzzle_2d.visible = true
-		var frame_count = max(1, _muzzle_2d.hframes * _muzzle_2d.vframes)
-		_muzzle_2d.frame = randi() % frame_count
-		_muzzle_2d.rotation = randf() * TAU
 	
 	await get_tree().create_timer(0.05).timeout
 	
 	muzzle_flash.visible = false
-	if _muzzle_2d:
-		_muzzle_2d.visible = false
 
 func _show_tracer(from: Vector3, to: Vector3) -> void:
 	if tracer == null: return
@@ -706,3 +616,22 @@ func _is_network_host() -> bool:
 	if session == null:
 		return true
 	return bool(session.call("is_host"))
+
+func _broadcast_remote_fire_visual(shooter_node: Node3D) -> void:
+	if not _is_network_multiplayer_active() or not _is_network_host():
+		return
+	if shooter_node == null or not shooter_node.has_method("get_network_peer_id"):
+		return
+	if weapon_manager == null:
+		return
+	var shooter_peer_id := int(shooter_node.call("get_network_peer_id"))
+	if shooter_peer_id <= 0:
+		return
+	var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
+	if dungeon_manager != null and dungeon_manager.has_method("broadcast_weapon_fire_visual"):
+		dungeon_manager.call(
+			"broadcast_weapon_fire_visual",
+			shooter_peer_id,
+			weapon_manager.get_current_weapon_slot(),
+			weapon_manager.get_current_weapon_key()
+		)

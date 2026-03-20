@@ -361,7 +361,7 @@ func apply_network_snapshot(snapshot: Dictionary) -> void:
 	if snapshot.has("current_weapon_index") and weapon_manager:
 		var target_weapon_index: int = int(snapshot.get("current_weapon_index", -1))
 		if target_weapon_index >= 0 and target_weapon_index != weapon_manager.current_weapon_index:
-			weapon_manager.switch_to_weapon(target_weapon_index)
+			weapon_manager.switch_to_weapon(target_weapon_index, false)
 	if snapshot.has("mobility") and mobility_controller:
 		mobility_controller.apply_remote_state(snapshot.get("mobility", {}))
 

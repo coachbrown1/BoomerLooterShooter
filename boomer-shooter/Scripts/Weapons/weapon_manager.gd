@@ -51,12 +51,14 @@ func _ready() -> void:
 	_sync_default_slot_weapons()
 	_select_first_available_weapon()
 
-func switch_to_weapon(index: int) -> void:
+func switch_to_weapon(index: int, request_authority: bool = true) -> void:
 	if index < 0 or index >= _slot_weapons.size() or index == current_weapon_index:
 		return
 	var weapon_to_switch: Weapon = _slot_weapons[index]
 	if weapon_to_switch == null:
 		return
+	if request_authority:
+		_request_host_weapon_switch(index, weapon_to_switch)
 
 	if current_weapon:
 		current_weapon.hide_weapon()
@@ -209,7 +211,7 @@ func get_current_weapon_key() -> String:
 		return ""
 	return get_weapon_key_for_weapon(current_weapon)
 
-func switch_to_weapon_by_key(raw_key: String) -> bool:
+func switch_to_weapon_by_key(raw_key: String, request_authority: bool = true) -> bool:
 	var key := _normalize_weapon_name(raw_key)
 	if key.is_empty():
 		return false
@@ -219,9 +221,11 @@ func switch_to_weapon_by_key(raw_key: String) -> bool:
 
 	var slot_index := _find_slot_index_for_weapon(weapon)
 	if slot_index >= 0:
-		switch_to_weapon(slot_index)
+		switch_to_weapon(slot_index, request_authority)
 		return true
 
+	if request_authority:
+		_request_host_weapon_switch(-1, weapon)
 	if current_weapon and current_weapon != weapon:
 		current_weapon.hide_weapon()
 	current_weapon = weapon
@@ -240,7 +244,7 @@ func apply_authoritative_weapon_state(slot_index: int, current_mag_value: int, a
 		ammo_inventory[ammo_key] = int(ammo_snapshot[ammo_key])
 
 	if slot_index >= 0:
-		switch_to_weapon(slot_index)
+		switch_to_weapon(slot_index, false)
 
 	if current_weapon != null:
 		var effective_mag_size := current_weapon.mag_size
@@ -275,7 +279,7 @@ func _on_weapon_slots_changed(weapon_items: Array) -> void:
 			current_weapon.hide_weapon()
 			current_weapon = null
 			current_weapon_index = -1
-			switch_to_weapon(mapped_index)
+			switch_to_weapon(mapped_index, false)
 			return
 
 	if not _slot_has_weapon(current_weapon_index):
@@ -317,7 +321,7 @@ func _select_first_available_weapon() -> void:
 		return
 	for i in range(_slot_weapons.size()):
 		if _slot_weapons[i] != null:
-			switch_to_weapon(i)
+			switch_to_weapon(i, false)
 			return
 
 func _cycle_weapon(direction: int) -> void:
@@ -398,3 +402,16 @@ func _show_weapon_swap_feedback() -> void:
 			hud.call("show_center_status", current_weapon.weapon_name, ammo_icon_key, 1.0)
 		if hud.has_method("push_status_toast"):
 			hud.call("push_status_toast", "Switched to %s" % current_weapon.weapon_name, ammo_icon_key, 2.0)
+
+func _request_host_weapon_switch(slot_index: int, weapon: Weapon) -> void:
+	if not _is_network_multiplayer_active() or _is_network_host() or not _is_local_owner():
+		return
+	var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
+	if dungeon_manager == null or not dungeon_manager.has_method("request_weapon_switch"):
+		return
+	dungeon_manager.call(
+		"request_weapon_switch",
+		_get_owner_peer_id(),
+		slot_index,
+		get_weapon_key_for_weapon(weapon)
+	)

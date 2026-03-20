@@ -9,7 +9,11 @@ const HANDCRAFTED_LAYOUT_SCRIPT_PATH := "res://Scripts/Dungeon/handcrafted_room_
 const HANDCRAFTED_QUADRANT_SCRIPT_PATH := "res://Scripts/Dungeon/handcrafted_quadrant_composite_room.gd"
 const HANDCRAFTED_ENEMY_SPAWNER_SCRIPT_PATH := "res://Scripts/Dungeon/handcrafted_enemy_spawner.gd"
 const QUADRANT_TEMPLATE_SCENE_PATH := "res://Scenes/Dungeon/Handcrafted/Castle_Crossroom.tscn"
+const HANDCRAFTED_PLAYTEST_SCENE_PATH := "res://Scenes/World/handcrafted_room_playtest.tscn"
+const HANDCRAFTED_PLAYTEST_CONFIG_DIR := "res://.tmp"
+const HANDCRAFTED_PLAYTEST_CONFIG_PATH := "res://.tmp/handcrafted_room_playtest.cfg"
 const BIOME_TAB_INDEX := 1
+const HANDCRAFTED_TAB_INDEX := 2
 
 enum WizardRoomType {
 	START_SKELETON,
@@ -36,6 +40,7 @@ var _preview_room_selector: OptionButton
 var _wizard_name_edit: LineEdit
 var _wizard_room_type_selector: OptionButton
 var _wizard_register_selector: OptionButton
+var _playtest_room_selector: OptionButton
 var _grid_min_spin: SpinBox
 var _grid_max_spin: SpinBox
 var _room_size_spin: SpinBox
@@ -183,8 +188,6 @@ func _build_ui() -> void:
 	biome_row.add_child(_biome_selector)
 	biome_tab.add_child(biome_row)
 
-	_build_handcrafted_room_wizard(biome_tab)
-
 	var biome_header := Label.new()
 	biome_header.text = "Biome Editor"
 	biome_tab.add_child(biome_header)
@@ -198,6 +201,13 @@ func _build_ui() -> void:
 	_biome_editor_root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_biome_editor_scroll.add_child(_biome_editor_root)
 
+	var handcrafted_tab := VBoxContainer.new()
+	handcrafted_tab.name = "Handcrafted Rooms"
+	handcrafted_tab.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_tabs.add_child(handcrafted_tab)
+
+	_build_handcrafted_room_wizard(handcrafted_tab)
+
 func _make_button(text: String, callable: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
@@ -206,10 +216,19 @@ func _make_button(text: String, callable: Callable) -> Button:
 
 func _build_handcrafted_room_wizard(parent: Control) -> void:
 	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(panel)
 
+	var section = MarginContainer.new()
+	section.add_theme_constant_override("margin_left", 8)
+	section.add_theme_constant_override("margin_top", 8)
+	section.add_theme_constant_override("margin_right", 8)
+	section.add_theme_constant_override("margin_bottom", 8)
+	panel.add_child(section)
+
 	var root := VBoxContainer.new()
-	panel.add_child(root)
+	root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	section.add_child(root)
 
 	var title := Label.new()
 	title.text = "Handcrafted Room Wizard"
@@ -257,6 +276,31 @@ func _build_handcrafted_room_wizard(parent: Control) -> void:
 	actions.add_child(_make_button("Create Handcrafted Room", _on_create_handcrafted_room_pressed))
 	root.add_child(actions)
 
+	var playtest_section := VBoxContainer.new()
+	playtest_section.add_theme_constant_override("separation", 6)
+	root.add_child(playtest_section)
+
+	var playtest_title := Label.new()
+	playtest_title.text = "Room Playtest"
+	playtest_section.add_child(playtest_title)
+
+	var playtest_subtitle := Label.new()
+	playtest_subtitle.text = "Select a handcrafted room or use the currently open room scene, then launch the single-room playtest harness."
+	playtest_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	playtest_section.add_child(playtest_subtitle)
+
+	_playtest_room_selector = OptionButton.new()
+	_playtest_room_selector.fit_to_longest_item = false
+	_playtest_room_selector.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	playtest_section.add_child(_playtest_room_selector)
+
+	var playtest_actions := HFlowContainer.new()
+	playtest_actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	playtest_actions.add_child(_make_button("Refresh Room List", _on_refresh_handcrafted_room_list_pressed))
+	playtest_actions.add_child(_make_button("Open Selected Room", _on_open_selected_handcrafted_room_pressed))
+	playtest_actions.add_child(_make_button("Playtest Selected Room", _on_playtest_selected_handcrafted_room_pressed))
+	playtest_section.add_child(playtest_actions)
+
 func _add_spin_row(container: GridContainer, label_text: String, min_value: int, max_value: int, step_value: int) -> SpinBox:
 	var label := Label.new()
 	label.text = label_text
@@ -274,6 +318,7 @@ func _add_spin_row(container: GridContainer, label_text: String, min_value: int,
 func _refresh_all() -> void:
 	_refresh_manager_section()
 	_refresh_biome_section()
+	_refresh_handcrafted_room_selector()
 
 func _refresh_manager_section() -> void:
 	var manager := _get_dungeon_manager_from_edited_scene()
@@ -335,6 +380,8 @@ func _auto_refresh_biome_editor_options() -> void:
 func _on_tab_changed(tab_index: int) -> void:
 	if tab_index == BIOME_TAB_INDEX:
 		_auto_refresh_biome_editor_options()
+	elif tab_index == HANDCRAFTED_TAB_INDEX:
+		_sync_wizard_name_placeholder()
 
 func _get_dungeon_manager_from_edited_scene() -> Node:
 	if plugin == null:
@@ -473,6 +520,46 @@ func _on_go_to_preview_room_pressed() -> void:
 
 func _on_refresh_pressed() -> void:
 	_refresh_all()
+
+func _on_refresh_handcrafted_room_list_pressed() -> void:
+	_refresh_biome_option_lists()
+	_refresh_handcrafted_room_selector()
+	if _playtest_room_selector == null or _playtest_room_selector.item_count == 0:
+		_set_status("No handcrafted room scenes found.", true)
+	else:
+		_set_status("Loaded %d handcrafted room scenes." % _playtest_room_selector.item_count)
+
+func _on_open_selected_handcrafted_room_pressed() -> void:
+	if plugin == null:
+		return
+	var scene_path := _get_selected_handcrafted_room_path()
+	if scene_path == "":
+		_set_status("Select a handcrafted room scene first.", true)
+		return
+	plugin.get_editor_interface().open_scene_from_path(scene_path)
+	_set_status("Opened handcrafted room: %s" % scene_path)
+
+func _on_playtest_selected_handcrafted_room_pressed() -> void:
+	if plugin == null:
+		return
+	var room_scene_path := _get_selected_handcrafted_room_path()
+	if room_scene_path == "":
+		_set_status("Select a handcrafted room scene first.", true)
+		return
+	if not _write_handcrafted_playtest_config(room_scene_path):
+		return
+	var current_root := plugin.get_editor_interface().get_edited_scene_root()
+	if current_root != null and String(current_root.scene_file_path) == room_scene_path:
+		var save_err := plugin.get_editor_interface().save_scene()
+		if save_err != OK:
+			_set_status("Saved playtest config, but could not save the current room scene (error %d)." % save_err, true)
+			return
+	if plugin.get_editor_interface().has_method("play_custom_scene"):
+		plugin.get_editor_interface().play_custom_scene(HANDCRAFTED_PLAYTEST_SCENE_PATH)
+		_set_status("Launching handcrafted room playtest for %s." % room_scene_path.get_file())
+	else:
+		plugin.get_editor_interface().open_scene_from_path(HANDCRAFTED_PLAYTEST_SCENE_PATH)
+		_set_status("Play-custom-scene is unavailable; opened the playtest scene instead.")
 
 func _on_save_scene_pressed() -> void:
 	if plugin == null:
@@ -642,6 +729,8 @@ func _build_handcrafted_room_scene(scene_name: String, room_type: int) -> Packed
 	match room_type:
 		WizardRoomType.QUADRANT_COMPOSITE:
 			root = _build_quadrant_composite_scene_root(scene_name)
+		WizardRoomType.NORMAL_SKELETON:
+			root = _build_normal_room_scene_root(scene_name)
 		_:
 			root = _build_overlay_room_scene_root(scene_name, room_type)
 	if root == null:
@@ -702,6 +791,13 @@ func _build_overlay_room_scene_root(scene_name: String, room_type: int) -> Node3
 
 	return root
 
+func _build_normal_room_scene_root(scene_name: String) -> Node3D:
+	var root := _build_quadrant_composite_scene_root(scene_name)
+	if root == null:
+		return null
+	_ensure_normal_room_encounter_marker(root)
+	return root
+
 func _build_quadrant_composite_scene_root(scene_name: String) -> Node3D:
 	var template_variant := load(QUADRANT_TEMPLATE_SCENE_PATH)
 	if not (template_variant is PackedScene):
@@ -716,6 +812,25 @@ func _build_quadrant_composite_scene_root(scene_name: String) -> Node3D:
 	var root: Node3D = inst
 	root.name = scene_name
 	return root
+
+func _ensure_normal_room_encounter_marker(root: Node3D) -> void:
+	if root == null:
+		return
+	var encounter_root := root.get_node_or_null("Encounter") as Node3D
+	if encounter_root == null:
+		encounter_root = Node3D.new()
+		encounter_root.name = "Encounter"
+		_add_owned_child(root, encounter_root, root)
+
+	var spawner := encounter_root.get_node_or_null("EnemySpawner") as Marker3D
+	if spawner == null:
+		spawner = Marker3D.new()
+		spawner.name = "EnemySpawner"
+		spawner.position = Vector3.ZERO
+		var spawner_script := load(HANDCRAFTED_ENEMY_SPAWNER_SCRIPT_PATH)
+		if spawner_script is Script:
+			spawner.set_script(spawner_script)
+		_add_owned_child(encounter_root, spawner, root)
 
 func _make_door_socket_root(mark_start_socket: bool) -> Node3D:
 	var sockets_root := Node3D.new()
@@ -784,6 +899,7 @@ func _make_room_guides_root() -> Node3D:
 	_add_owned_child(debug_root, east_edge, debug_root)
 
 	return debug_root
+
 
 func _add_owned_child(parent: Node, child: Node, owner: Node) -> void:
 	parent.add_child(child)
@@ -875,6 +991,57 @@ func _collect_files_recursive_inner(root: String, extensions: Array[String], out
 					out.append(full_path)
 		name = dir.get_next()
 	dir.list_dir_end()
+
+func _refresh_handcrafted_room_selector() -> void:
+	if _playtest_room_selector == null:
+		return
+	_playtest_room_selector.clear()
+	for path in _handcrafted_scene_options:
+		_playtest_room_selector.add_item(path.get_file().get_basename())
+	var selected_path := _get_current_edited_handcrafted_scene_path()
+	if selected_path == "":
+		selected_path = _handcrafted_scene_options[0] if not _handcrafted_scene_options.is_empty() else ""
+	for index in range(_handcrafted_scene_options.size()):
+		if _handcrafted_scene_options[index] == selected_path:
+			_playtest_room_selector.select(index)
+			break
+
+func _get_current_edited_handcrafted_scene_path() -> String:
+	if plugin == null:
+		return ""
+	var root := plugin.get_editor_interface().get_edited_scene_root()
+	if root == null:
+		return ""
+	var scene_path := String(root.scene_file_path)
+	if scene_path.begins_with("%s/" % HANDCRAFTED_DIR_PATH):
+		return scene_path
+	return ""
+
+func _get_selected_handcrafted_room_path() -> String:
+	var edited_scene_path := _get_current_edited_handcrafted_scene_path()
+	if edited_scene_path != "":
+		return edited_scene_path
+	if _playtest_room_selector == null:
+		return ""
+	var index := _playtest_room_selector.selected
+	if index < 0 or index >= _handcrafted_scene_options.size():
+		return ""
+	return _handcrafted_scene_options[index]
+
+func _write_handcrafted_playtest_config(room_scene_path: String) -> bool:
+	var dir_err := DirAccess.make_dir_recursive_absolute(HANDCRAFTED_PLAYTEST_CONFIG_DIR)
+	if dir_err != OK and dir_err != ERR_ALREADY_EXISTS:
+		_set_status("Could not create playtest config dir (error %d)." % dir_err, true)
+		return false
+	var cfg := ConfigFile.new()
+	cfg.set_value("playtest", "room_scene_path", room_scene_path)
+	var biome_path := "" if _selected_biome == null else String(_selected_biome.resource_path)
+	cfg.set_value("playtest", "biome_resource_path", biome_path)
+	var save_err := cfg.save(HANDCRAFTED_PLAYTEST_CONFIG_PATH)
+	if save_err != OK:
+		_set_status("Could not save playtest config (error %d)." % save_err, true)
+		return false
+	return true
 
 func _rebuild_biome_editor() -> void:
 	if _biome_editor_root == null:

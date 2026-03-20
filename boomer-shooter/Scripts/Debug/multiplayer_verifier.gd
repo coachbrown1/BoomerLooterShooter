@@ -680,9 +680,12 @@ func _run_weapon_visual_replication_verification() -> void:
 		"projectile_seen": projectile_seen,
 		"counts": counts,
 	}
+	var weapon_fire_seen := int(counts.get("weapon_fire", 0)) >= 2
+	result["weapon_fire_seen"] = weapon_fire_seen
+	result["passed"] = hitscan_seen and projectile_seen and weapon_fire_seen
 	_write_json_file(_path_in_dir("client_weapon_visuals.json"), result)
 	_touch_file(_path_in_dir("client_weapon_visual_done.flag"))
-	if hitscan_seen and projectile_seen:
+	if bool(result.get("passed", false)):
 		get_tree().quit(0)
 		return
 	get_tree().quit(77)
@@ -1856,6 +1859,7 @@ func _run_weapon_state_sync_client(local_player: Node, manager: WeaponManager, t
 	_write_json_file(_path_in_dir("client_weapon_selected.json"), {
 		"role": "client",
 		"weapon_key": manager.get_current_weapon_key(),
+		"weapon_slot": manager.get_current_weapon_slot(),
 		"initial_mag": initial_mag,
 		"shot_count": shot_count,
 		"expected_fire_mag": initial_mag - shot_count,
@@ -1938,6 +1942,28 @@ func _run_weapon_state_sync_host(_local_player: Node, timeout_sec: float) -> voi
 		get_tree().quit(64)
 		return
 	var selected_weapon := _read_json_file(_path_in_dir("client_weapon_selected.json"))
+	var expected_weapon_key := String(selected_weapon.get("weapon_key", ""))
+	var expected_weapon_slot := int(selected_weapon.get("weapon_slot", remote_manager.get_current_weapon_slot()))
+	var switch_synced := await _wait_for_condition(func() -> bool:
+		return (
+			remote_manager.get_current_weapon() != null
+			and remote_manager.get_current_weapon_slot() == expected_weapon_slot
+			and remote_manager.get_current_weapon_key() == expected_weapon_key
+		)
+	, timeout_sec)
+	if not switch_synced:
+		_write_json_file(_path_in_dir("host_weapon_after_fire.json"), {
+			"role": "host",
+			"passed": false,
+			"error": "weapon_switch_not_synced",
+			"expected_weapon_key": expected_weapon_key,
+			"expected_weapon_slot": expected_weapon_slot,
+			"actual_weapon_key": remote_manager.get_current_weapon_key(),
+			"actual_weapon_slot": remote_manager.get_current_weapon_slot(),
+		})
+		_touch_file(_path_in_dir("host_weapon_after_fire.flag"))
+		get_tree().quit(61)
+		return
 	var initial_mag := int(selected_weapon.get("initial_mag", remote_manager.get_current_weapon().current_mag))
 	if not await _wait_for_file(_path_in_dir("client_weapon_fire_sent.flag"), timeout_sec):
 		_write_json_file(_path_in_dir("host_weapon_state_error.json"), {"role": "host", "error": "client_fire_sent_missing"})

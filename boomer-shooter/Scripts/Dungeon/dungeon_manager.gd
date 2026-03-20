@@ -53,6 +53,7 @@ var _pending_inventory_restore: bool = false
 var _debug_network_visual_counts := {
 	"hitscan": 0,
 	"projectile": 0,
+	"weapon_fire": 0,
 }
 
 func _ready() -> void:
@@ -635,6 +636,7 @@ func _spawn_handcrafted_room_overlays(parent: Node3D) -> void:
 
 		var room_overlay: Node3D = inst
 		_configure_runtime_handcrafted_room(room, room_overlay)
+		_hide_runtime_handcrafted_debug_nodes(room_overlay)
 		_convert_handcrafted_wall_tiles_to_sections(room_overlay)
 		room_overlay.position = room.get_world_center(DungeonBuilder.TILE_SIZE)
 		room_overlay.position.y = 0.0
@@ -655,6 +657,13 @@ func _configure_runtime_handcrafted_room(room: RoomData, room_overlay: Node3D) -
 	var quadrant_pool := _get_handcrafted_quadrant_scene_pool(_active_biome_data)
 	var composite_room: HandcraftedQuadrantCompositeRoom = room_overlay
 	composite_room.populate_quadrants(quadrant_pool, _generator.rng)
+
+func _hide_runtime_handcrafted_debug_nodes(room_overlay: Node3D) -> void:
+	if room_overlay == null or Engine.is_editor_hint():
+		return
+	var debug_root := room_overlay.get_node_or_null("RoomBoundsDebug") as Node3D
+	if debug_root != null:
+		debug_root.visible = false
 
 func _convert_handcrafted_wall_tiles_to_sections(room_overlay: Node3D) -> void:
 	if room_overlay == null:
@@ -1342,12 +1351,29 @@ func request_weapon_reload(peer_id: int, weapon_slot: int, weapon_key: String) -
 	else:
 		rpc_id(1, "rpc_request_weapon_reload", peer_id, weapon_slot, weapon_key)
 
+func request_weapon_switch(peer_id: int, weapon_slot: int, weapon_key: String) -> void:
+	if not _session_multiplayer:
+		return
+	if _session_host:
+		_handle_weapon_switch_request(peer_id, weapon_slot, weapon_key)
+	else:
+		rpc_id(1, "rpc_request_weapon_switch", peer_id, weapon_slot, weapon_key)
+
 func broadcast_projectile_visual(scene_path: String, cam_origin: Vector3, cam_forward: Vector3) -> void:
 	if not _session_multiplayer or not _session_host:
 		return
 	if scene_path.is_empty():
 		return
 	rpc("rpc_spawn_projectile_visual", scene_path, cam_origin, cam_forward)
+
+func broadcast_weapon_fire_visual(peer_id: int, weapon_slot: int, weapon_key: String) -> void:
+	if not _session_multiplayer or not _session_host:
+		return
+	for target_peer_id in _get_network_connected_peer_ids():
+		var remote_peer_id := int(target_peer_id)
+		if remote_peer_id == peer_id:
+			continue
+		rpc_id(remote_peer_id, "rpc_play_remote_weapon_fire_visual", peer_id, weapon_slot, weapon_key)
 
 func _handle_weapon_fire_request(peer_id: int, weapon_slot: int, weapon_key: String, cam_origin: Vector3, cam_forward: Vector3, _shot_id: int) -> void:
 	var player_node = _get_player_node_for_peer(peer_id)
@@ -1357,12 +1383,12 @@ func _handle_weapon_fire_request(peer_id: int, weapon_slot: int, weapon_key: Str
 	if manager == null:
 		return
 	if not weapon_key.is_empty() and manager.has_method("switch_to_weapon_by_key"):
-		manager.call("switch_to_weapon_by_key", weapon_key)
+		manager.call("switch_to_weapon_by_key", weapon_key, false)
 	else:
-		manager.switch_to_weapon(weapon_slot)
+		manager.switch_to_weapon(weapon_slot, false)
 	var weapon := manager.get_current_weapon()
 	if weapon == null and not weapon_key.is_empty() and manager.has_method("switch_to_weapon_by_key"):
-		var switched := bool(manager.call("switch_to_weapon_by_key", weapon_key))
+		var switched := bool(manager.call("switch_to_weapon_by_key", weapon_key, false))
 		if switched:
 			weapon = manager.get_current_weapon()
 	if weapon == null:
@@ -1382,12 +1408,12 @@ func _handle_weapon_reload_request(peer_id: int, weapon_slot: int, weapon_key: S
 	if manager == null:
 		return
 	if not weapon_key.is_empty() and manager.has_method("switch_to_weapon_by_key"):
-		manager.call("switch_to_weapon_by_key", weapon_key)
+		manager.call("switch_to_weapon_by_key", weapon_key, false)
 	else:
-		manager.switch_to_weapon(weapon_slot)
+		manager.switch_to_weapon(weapon_slot, false)
 	var weapon := manager.get_current_weapon()
 	if weapon == null and not weapon_key.is_empty() and manager.has_method("switch_to_weapon_by_key"):
-		var switched := bool(manager.call("switch_to_weapon_by_key", weapon_key))
+		var switched := bool(manager.call("switch_to_weapon_by_key", weapon_key, false))
 		if switched:
 			weapon = manager.get_current_weapon()
 	if weapon == null:
@@ -1396,6 +1422,27 @@ func _handle_weapon_reload_request(peer_id: int, weapon_slot: int, weapon_key: S
 		return
 	var success := bool(weapon.call("perform_authoritative_reload"))
 	if not success:
+		return
+	rpc_id(peer_id, "rpc_sync_weapon_state", peer_id, manager.get_current_weapon_slot(), weapon.current_mag, manager.get_ammo_snapshot())
+
+func _handle_weapon_switch_request(peer_id: int, weapon_slot: int, weapon_key: String) -> void:
+	var player_node = _get_player_node_for_peer(peer_id)
+	if not is_instance_valid(player_node):
+		return
+	var manager: WeaponManager = player_node.get("weapon_manager")
+	if manager == null:
+		return
+	var switched := false
+	if not weapon_key.is_empty() and manager.has_method("switch_to_weapon_by_key"):
+		switched = bool(manager.call("switch_to_weapon_by_key", weapon_key, false))
+	elif weapon_slot >= 0:
+		var previous_slot := manager.get_current_weapon_slot()
+		manager.switch_to_weapon(weapon_slot, false)
+		switched = manager.get_current_weapon_slot() != previous_slot
+	if not switched and manager.get_current_weapon() == null:
+		return
+	var weapon := manager.get_current_weapon()
+	if weapon == null:
 		return
 	rpc_id(peer_id, "rpc_sync_weapon_state", peer_id, manager.get_current_weapon_slot(), weapon.current_mag, manager.get_ammo_snapshot())
 
@@ -1893,6 +1940,7 @@ func _on_network_session_ended(_reason: String) -> void:
 func _reset_debug_network_visual_counts() -> void:
 	_debug_network_visual_counts["hitscan"] = 0
 	_debug_network_visual_counts["projectile"] = 0
+	_debug_network_visual_counts["weapon_fire"] = 0
 
 func get_debug_network_visual_counts() -> Dictionary:
 	return _debug_network_visual_counts.duplicate(true)
@@ -1962,6 +2010,14 @@ func rpc_request_weapon_fire(peer_id: int, weapon_slot: int, weapon_key: String,
 	if multiplayer.get_remote_sender_id() != peer_id:
 		return
 	_handle_weapon_fire_request(peer_id, weapon_slot, weapon_key, cam_origin, cam_forward, shot_id)
+
+@rpc("any_peer", "reliable")
+func rpc_request_weapon_switch(peer_id: int, weapon_slot: int, weapon_key: String) -> void:
+	if not _session_host:
+		return
+	if multiplayer.get_remote_sender_id() != peer_id:
+		return
+	_handle_weapon_switch_request(peer_id, weapon_slot, weapon_key)
 
 func broadcast_hitscan_visual(from: Vector3, to: Vector3) -> void:
 	if not _session_multiplayer or not _session_host:
@@ -2228,6 +2284,28 @@ func rpc_spawn_projectile_visual(scene_path: String, cam_origin: Vector3, cam_fo
 		projectile.look_at(projectile.global_position + projectile.direction, Vector3.RIGHT)
 	else:
 		projectile.look_at(projectile.global_position + projectile.direction, Vector3.UP)
+
+@rpc("authority", "call_remote", "unreliable")
+func rpc_play_remote_weapon_fire_visual(peer_id: int, weapon_slot: int, weapon_key: String) -> void:
+	if _session_host:
+		return
+	var player_node = NetworkPlayerManager.get_player(peer_id)
+	if not (player_node is Node):
+		return
+	if not is_instance_valid(player_node):
+		return
+	var manager: WeaponManager = player_node.get("weapon_manager")
+	if manager == null:
+		return
+	if not weapon_key.is_empty() and manager.has_method("switch_to_weapon_by_key"):
+		manager.call("switch_to_weapon_by_key", weapon_key, false)
+	elif weapon_slot >= 0:
+		manager.switch_to_weapon(weapon_slot, false)
+	var weapon := manager.get_current_weapon()
+	if weapon == null or not weapon.has_method("play_remote_fire_visual"):
+		return
+	weapon.call("play_remote_fire_visual")
+	_debug_network_visual_counts["weapon_fire"] = int(_debug_network_visual_counts.get("weapon_fire", 0)) + 1
 
 @rpc("authority", "call_remote", "unreliable")
 func rpc_spawn_hitscan_visual(from: Vector3, to: Vector3) -> void:

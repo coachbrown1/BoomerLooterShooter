@@ -1,10 +1,9 @@
-[gd_scene load_steps=10 format=3 uid="uid://d1sh07g1nuid02"]
+[gd_scene load_steps=9 format=3 uid="uid://d1sh07g1nuid02"]
 
 [ext_resource type="Script" path="res://Scripts/Weapons/weapon.gd" id="1_xxx"]
-[ext_resource type="Texture2D" uid="uid://c0tq5urk62w0d" path="res://Assets/Weapons/weapon_shotgun_viewmodel.png" id="2_yyy"]
-[ext_resource type="Material" uid="uid://d1g4a3h8j6p2" path="res://Materials/weapon_outline_material.tres" id="3_mat"]
 [ext_resource type="Texture2D" uid="uid://digww5bj0dly0" path="res://Assets/Effects/vfx_muzzle_shotgun.png" id="4_flash"]
 [ext_resource type="Texture2D" path="res://Assets/Icons/Weapons/icon_shotgun.png" id="5_icon"]
+[ext_resource type="PackedScene" uid="uid://cmek0ekb7ih2o" path="res://Assets/Weapons/Models/weapon_shotgun.glb" id="6_mesh"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_muzzle"]
 radius = 0.04
@@ -40,17 +39,14 @@ mag_size = 2
 pellet_count = 8
 spread_angle = 18.0
 ray_range = 18.0
-muzzle_2d_offset = Vector2(0, -200)
-muzzle_2d_scale = 0.4
+viewmodel_position = Vector3(0.24, -0.2, -0.46)
+viewmodel_rotation_degrees = Vector3(0, 0, 0)
+fire_kick_offset = Vector3(0, 0.016, 0.08)
+reload_lower_offset = Vector3(0, -0.18, 0.12)
 
-[node name="WeaponSprite" type="Sprite3D" parent="."]
-material_override = ExtResource("3_mat")
-transform = Transform3D(0.35, 0, 0, 0, 0.35, 0, 0, 0, 0.35, 0.25, -0.3, -0.6)
-texture = ExtResource("2_yyy")
-no_depth_test = true
-render_priority = 10
-pixel_size = 0.004
-hframes = 2
+[node name="WeaponMesh" parent="." instance=ExtResource("6_mesh")]
+transform = Transform3D(-0.3, 0, 0, 0, 0.3, 0, 0, 0, -0.3, 0.25, -0.35, -0.37)
+visible = false
 
 [node name="EjectionPort" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, -0.2, -0.3)

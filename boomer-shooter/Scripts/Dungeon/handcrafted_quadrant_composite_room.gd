@@ -95,7 +95,7 @@ func _rebuild_layout() -> void:
 	_build_outer_walls(shell)
 	_build_torches(shell)
 	_build_quadrant_anchors()
-	if show_room_guides:
+	if Engine.is_editor_hint() and show_room_guides:
 		_build_room_guides()
 
 	_layout_built = true

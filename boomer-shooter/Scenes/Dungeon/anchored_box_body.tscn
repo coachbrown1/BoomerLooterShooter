@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Dungeon/anchored_box_body.gd" id="1_script"]
+
+[sub_resource type="BoxShape3D" id="1_shape"]
+size = Vector3(1, 1, 1)
+
+[sub_resource type="BoxMesh" id="2_mesh"]
+size = Vector3(1, 1, 1)
+
+[node name="AnchoredBoxBody" type="StaticBody3D"]
+script = ExtResource("1_script")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("1_shape")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("2_mesh")

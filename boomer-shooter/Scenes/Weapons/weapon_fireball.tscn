@@ -1,11 +1,10 @@
-[gd_scene load_steps=10 format=3 uid="uid://f1reballu1d04"]
+[gd_scene load_steps=9 format=3 uid="uid://f1reballu1d04"]
 
 [ext_resource type="Script" path="res://Scripts/Weapons/weapon.gd" id="1_xxx"]
-[ext_resource type="Texture2D" uid="uid://crtfskfmjd234" path="res://Assets/Weapons/weapon_heavy_incinerator_viewmodel.png" id="2_yyy"]
 [ext_resource type="PackedScene" path="res://Scenes/Projectiles/fireball.tscn" id="5_fireball"]
-[ext_resource type="Material" uid="uid://d1g4a3h8j6p2" path="res://Materials/weapon_outline_material.tres" id="3_mat"]
 [ext_resource type="Texture2D" uid="uid://hhrsjb6bax3" path="res://Assets/Effects/vfx_muzzle_fireball.png" id="4_flash"]
 [ext_resource type="Texture2D" path="res://Assets/Icons/Weapons/icon_fireball.png" id="6_icon"]
+[ext_resource type="PackedScene" uid="uid://fp2ec6kjiwc4" path="res://Assets/Weapons/Models/weapon_fireball.glb" id="7_mesh"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_muzzle"]
 radius = 0.04
@@ -42,17 +41,14 @@ reload_time = 2.0
 is_projectile = true
 projectile_scene = ExtResource("5_fireball")
 ejects_shells = false
-muzzle_2d_offset = Vector2(-30, -220)
-muzzle_2d_scale = 0.5
+viewmodel_position = Vector3(0.28, -0.14, -0.38)
+viewmodel_rotation_degrees = Vector3(0, 0, 0)
+fire_kick_offset = Vector3(0, 0.01, 0.05)
+reload_lower_offset = Vector3(0, -0.14, 0.1)
 
-[node name="WeaponSprite" type="Sprite3D" parent="."]
-material_override = ExtResource("3_mat")
-transform = Transform3D(0.35, 0, 0, 0, 0.35, 0, 0, 0, 0.35, 0.25, -0.3, -0.6)
-texture = ExtResource("2_yyy")
-no_depth_test = true
-render_priority = 10
-pixel_size = 0.004
-hframes = 2
+[node name="WeaponMesh" parent="." instance=ExtResource("7_mesh")]
+transform = Transform3D(-0.28, 0, 0, 0, 0.28, 0, 0, 0, -0.28, 0.24, -0.33, -0.47)
+visible = false
 
 [node name="EjectionPort" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, -0.2, -0.3)

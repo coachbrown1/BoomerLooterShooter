@@ -17,9 +17,10 @@ Document the project-specific editor tooling that helps authors tune dungeon lay
 
 - The `dungeon_designer_tool` plugin is enabled in `project.godot`.
 - `plugin.gd` registers a dock named `Dungeon Designer` in the Godot editor.
-- `dungeon_designer_dock.gd` builds a two-tab editor workflow:
+- `dungeon_designer_dock.gd` builds a three-tab editor workflow:
   - `Dungeon Layout`
   - `Biome Data`
+  - `Handcrafted Rooms`
 - The layout tab can:
   - open the dungeon scene
   - inspect `DungeonManager`
@@ -27,12 +28,15 @@ Document the project-specific editor tooling that helps authors tune dungeon lay
   - create and clear previews
   - jump the editor camera to preview rooms
 - The biome tab can:
-  - create new handcrafted room scenes through the built-in wizard
   - load the biome database
   - select a biome resource
   - edit biome-linked properties and scene references
-  - optionally register new handcrafted rooms into the selected biome
   - validate and save the selected biome
+- The handcrafted rooms tab can:
+  - create new handcrafted room scenes through the built-in wizard
+  - optionally register new handcrafted rooms into the selected biome
+  - open the new room scene immediately for authoring
+  - launch a dedicated single-room playtest harness for a selected handcrafted room
 
 ## Important State And Resources
 
@@ -41,6 +45,15 @@ Document the project-specific editor tooling that helps authors tune dungeon lay
   - `res://Data/biomes/biome_dungeon_database.tres`
 - The handcrafted room wizard writes new scenes under:
   - `res://Scenes/Dungeon/Handcrafted/`
+- Single-room handcrafted playtests use:
+  - `res://Scenes/World/handcrafted_room_playtest.tscn`
+  - `res://Scripts/World/handcrafted_room_playtest.gd`
+  - `res://.tmp/handcrafted_room_playtest.cfg`
+- Handcrafted-room authoring helpers also include:
+  - `res://Scenes/Dungeon/anchored_box_body.tscn`
+  - This reusable `StaticBody3D` keeps mesh and collision aligned while letting designers scale from a chosen anchored side instead of always expanding from the center.
+  - `res://Scripts/Dungeon/handcrafted_enemy_spawner.gd`
+  - In the editor, handcrafted enemy spawners render an in-scene radius preview ring and spawn point ticks based on `spawn_radius`, `spawn_count`, and `vertical_offset`.
 - It dynamically discovers option lists for textures, scenes, enemies, props, handcrafted rooms, doors, and light scenes.
 - The tool is editor-only and should not be treated as a runtime gameplay dependency.
 
@@ -55,6 +68,8 @@ Document the project-specific editor tooling that helps authors tune dungeon lay
 - If a task requires editing the tool, verify whether the change belongs in the plugin UI or in the underlying runtime/resource scripts instead.
 - Keep editor-only behavior separated from runtime code paths.
 - Wizard-generated handcrafted scenes should preserve the runtime contract expected by `DungeonManager`, especially start-room `PlayerSpawn` usage and handcrafted spawner node types.
+- Normal-room wizard output is based directly on the crossroom shell so designers start from the same authored room shape used by the existing handcrafted crossroom setup.
+- The room playtest harness is intentionally lightweight and does not replace full dungeon or multiplayer verification; use it for local room iteration, not replication validation.
 - Update the addon README and `docs/ai` summary if the workflow or edited resources change materially.
 
 ## Related Docs
