@@ -55,6 +55,8 @@ func _run_verification() -> void:
 			await _run_weapon_state_sync_verification()
 		"weapon-visual-replication":
 			await _run_weapon_visual_replication_verification()
+		"hub-weapon-visual-replication":
+			await _run_weapon_visual_replication_verification()
 		"projectile-damage-replication":
 			await _run_projectile_damage_replication_verification()
 		"enemy-damage-replication":
@@ -618,9 +620,9 @@ func _run_weapon_visual_replication_verification() -> void:
 		_write_json_file(_path_in_dir("%s_weapon_visual_error.json" % role), {"role": role, "error": "local_player_not_found"})
 		get_tree().quit(68)
 		return
-	var dungeon_manager := get_parent()
-	if dungeon_manager == null:
-		_write_json_file(_path_in_dir("%s_weapon_visual_error.json" % role), {"role": role, "error": "dungeon_manager_missing"})
+	var combat_manager := _get_combat_network_manager()
+	if combat_manager == null:
+		_write_json_file(_path_in_dir("%s_weapon_visual_error.json" % role), {"role": role, "error": "combat_manager_missing"})
 		get_tree().quit(69)
 		return
 	_touch_file(_path_in_dir("%s_weapon_visual_ready.flag" % role))
@@ -641,6 +643,7 @@ func _run_weapon_visual_replication_verification() -> void:
 			get_tree().quit(72)
 			return
 		var rifle: Weapon = manager.get_current_weapon()
+		var host_counts_before_client := {}
 		rifle.fire()
 		_touch_file(_path_in_dir("host_hitscan_fired.flag"))
 
@@ -652,43 +655,117 @@ func _run_weapon_visual_replication_verification() -> void:
 		var fireball: Weapon = manager.get_current_weapon()
 		fireball.fire()
 		_touch_file(_path_in_dir("host_projectile_fired.flag"))
-
-		if not await _wait_for_file(_path_in_dir("client_weapon_visual_done.flag"), timeout_sec):
-			_write_json_file(_path_in_dir("host_weapon_visual_error.json"), {"role": role, "error": "client_result_missing"})
+		if not await _wait_for_file(_path_in_dir("client_seen_host_weapon_visuals.flag"), timeout_sec):
+			_write_json_file(_path_in_dir("host_weapon_visual_error.json"), {"role": role, "error": "client_host_visual_result_missing"})
 			get_tree().quit(74)
 			return
-		get_tree().quit(0)
+
+		host_counts_before_client = _get_network_visual_counts_snapshot(combat_manager)
+		_touch_file(_path_in_dir("host_begin_client_weapon_visual_phase.flag"))
+		if not await _wait_for_file(_path_in_dir("client_hitscan_fired.flag"), timeout_sec):
+			_write_json_file(_path_in_dir("host_weapon_visual_error.json"), {"role": role, "error": "client_hitscan_missing"})
+			get_tree().quit(75)
+			return
+		if not await _wait_for_file(_path_in_dir("client_projectile_fired.flag"), timeout_sec):
+			_write_json_file(_path_in_dir("host_weapon_visual_error.json"), {"role": role, "error": "client_projectile_missing"})
+			get_tree().quit(76)
+			return
+		var host_observed_client := await _wait_for_network_visuals(
+			combat_manager,
+			host_counts_before_client,
+			{"hitscan": 1, "projectile": 1, "weapon_fire": 2},
+			timeout_sec
+		)
+		host_observed_client["role"] = role
+		host_observed_client["direction"] = "client_to_host"
+		_write_json_file(_path_in_dir("host_seen_client_weapon_visuals.json"), host_observed_client)
+		_touch_file(_path_in_dir("host_seen_client_weapon_visuals.flag"))
+		if not await _wait_for_file(_path_in_dir("client_weapon_visual_done.flag"), timeout_sec):
+			_write_json_file(_path_in_dir("host_weapon_visual_error.json"), {"role": role, "error": "client_final_result_missing"})
+			get_tree().quit(77)
+			return
+		var client_summary := _read_json_file(_path_in_dir("client_weapon_visuals.json"))
+		if bool(host_observed_client.get("passed", false)) and bool(client_summary.get("passed", false)):
+			get_tree().quit(0)
+			return
+		get_tree().quit(78)
 		return
 
+	var client_counts_before_host := _get_network_visual_counts_snapshot(combat_manager)
 	if not await _wait_for_file(_path_in_dir("host_hitscan_fired.flag"), timeout_sec):
 		_write_json_file(_path_in_dir("client_weapon_visual_error.json"), {"role": role, "error": "host_hitscan_missing"})
-		get_tree().quit(75)
+		get_tree().quit(79)
 		return
-	var hitscan_seen := await _wait_for_network_visual_count(dungeon_manager, "hitscan", 1, timeout_sec)
 	if not await _wait_for_file(_path_in_dir("host_projectile_fired.flag"), timeout_sec):
 		_write_json_file(_path_in_dir("client_weapon_visual_error.json"), {"role": role, "error": "host_projectile_missing"})
-		get_tree().quit(76)
+		get_tree().quit(80)
 		return
-	var projectile_seen := await _wait_for_network_visual_count(dungeon_manager, "projectile", 1, timeout_sec)
-	var counts := {}
-	if dungeon_manager.has_method("get_debug_network_visual_counts"):
-		counts = dungeon_manager.call("get_debug_network_visual_counts")
+	var client_observed_host := await _wait_for_network_visuals(
+		combat_manager,
+		client_counts_before_host,
+		{"hitscan": 1, "projectile": 1, "weapon_fire": 2},
+		timeout_sec
+	)
+	client_observed_host["role"] = role
+	client_observed_host["direction"] = "host_to_client"
+	_write_json_file(_path_in_dir("client_seen_host_weapon_visuals.json"), client_observed_host)
+	_touch_file(_path_in_dir("client_seen_host_weapon_visuals.flag"))
+	if not await _wait_for_file(_path_in_dir("host_begin_client_weapon_visual_phase.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("client_weapon_visual_error.json"), {"role": role, "error": "host_phase_barrier_missing"})
+		get_tree().quit(81)
+		return
+
+	var manager: WeaponManager = local_player.get("weapon_manager")
+	if manager == null:
+		_write_json_file(_path_in_dir("client_weapon_visual_error.json"), {"role": role, "error": "weapon_manager_missing"})
+		get_tree().quit(82)
+		return
+	var client_counts_before_own_fire := _get_network_visual_counts_snapshot(combat_manager)
+	if not _switch_weapon_by_key(manager, "rifle"):
+		_write_json_file(_path_in_dir("client_weapon_visual_error.json"), {"role": role, "error": "rifle_missing"})
+		get_tree().quit(83)
+		return
+	var client_rifle: Weapon = manager.get_current_weapon()
+	if client_rifle == null or not client_rifle.has_method("_request_host_fire"):
+		_write_json_file(_path_in_dir("client_weapon_visual_error.json"), {"role": role, "error": "client_rifle_fire_missing"})
+		get_tree().quit(84)
+		return
+	client_rifle.call("_request_host_fire")
+	_touch_file(_path_in_dir("client_hitscan_fired.flag"))
+
+	await get_tree().create_timer(0.3).timeout
+	if not _switch_weapon_by_key(manager, "fireball"):
+		_write_json_file(_path_in_dir("client_weapon_visual_error.json"), {"role": role, "error": "fireball_missing"})
+		get_tree().quit(85)
+		return
+	var client_fireball: Weapon = manager.get_current_weapon()
+	if client_fireball == null or not client_fireball.has_method("_request_host_fire"):
+		_write_json_file(_path_in_dir("client_weapon_visual_error.json"), {"role": role, "error": "client_fireball_fire_missing"})
+		get_tree().quit(86)
+		return
+	client_fireball.call("_request_host_fire")
+	_touch_file(_path_in_dir("client_projectile_fired.flag"))
+
+	if not await _wait_for_file(_path_in_dir("host_seen_client_weapon_visuals.flag"), timeout_sec):
+		_write_json_file(_path_in_dir("client_weapon_visual_error.json"), {"role": role, "error": "host_client_visual_result_missing"})
+		get_tree().quit(87)
+		return
+	var host_observed_client := _read_json_file(_path_in_dir("host_seen_client_weapon_visuals.json"))
+	var own_counts_after_fire := _get_network_visual_counts_snapshot(combat_manager)
 	var result := {
 		"role": role,
-		"passed": hitscan_seen and projectile_seen,
-		"hitscan_seen": hitscan_seen,
-		"projectile_seen": projectile_seen,
-		"counts": counts,
+		"passed": bool(client_observed_host.get("passed", false)) and bool(host_observed_client.get("passed", false)),
+		"host_to_client": client_observed_host,
+		"client_to_host": host_observed_client,
+		"client_counts_before_own_fire": client_counts_before_own_fire,
+		"client_counts_after_own_fire": own_counts_after_fire,
 	}
-	var weapon_fire_seen := int(counts.get("weapon_fire", 0)) >= 2
-	result["weapon_fire_seen"] = weapon_fire_seen
-	result["passed"] = hitscan_seen and projectile_seen and weapon_fire_seen
 	_write_json_file(_path_in_dir("client_weapon_visuals.json"), result)
 	_touch_file(_path_in_dir("client_weapon_visual_done.flag"))
 	if bool(result.get("passed", false)):
 		get_tree().quit(0)
 		return
-	get_tree().quit(77)
+	get_tree().quit(88)
 
 func _run_projectile_damage_replication_verification() -> void:
 	var role := _get_role()
@@ -2198,6 +2275,39 @@ func _wait_for_network_visual_count(dungeon_manager: Node, key: String, expected
 		return int(counts.get(key, 0)) >= expected_min
 	, timeout_sec)
 
+func _get_network_visual_counts_snapshot(dungeon_manager: Node) -> Dictionary:
+	var snapshot := {
+		"hitscan": 0,
+		"projectile": 0,
+		"weapon_fire": 0,
+	}
+	if dungeon_manager == null or not dungeon_manager.has_method("get_debug_network_visual_counts"):
+		return snapshot
+	var raw_counts: Dictionary = dungeon_manager.call("get_debug_network_visual_counts")
+	for key in snapshot.keys():
+		snapshot[key] = int(raw_counts.get(key, 0))
+	return snapshot
+
+func _wait_for_network_visuals(dungeon_manager: Node, baseline: Dictionary, deltas: Dictionary, timeout_sec: float) -> Dictionary:
+	var expected := {}
+	for key_variant in deltas.keys():
+		var key := String(key_variant)
+		expected[key] = int(baseline.get(key, 0)) + int(deltas.get(key, 0))
+	var passed := await _wait_for_condition(func() -> bool:
+		var live_counts := _get_network_visual_counts_snapshot(dungeon_manager)
+		for key_variant in expected.keys():
+			var key := String(key_variant)
+			if int(live_counts.get(key, 0)) < int(expected.get(key, 0)):
+				return false
+		return true
+	, timeout_sec)
+	return {
+		"passed": passed,
+		"baseline": baseline,
+		"expected": expected,
+		"counts": _get_network_visual_counts_snapshot(dungeon_manager),
+	}
+
 func _sample_enemy_animation(dungeon_manager: Node, enemy_id: int, duration_sec: float) -> Dictionary:
 	var start_state := _get_debug_network_enemy_state(dungeon_manager, enemy_id)
 	var start_pos: Vector3 = start_state.get("position", Vector3.ZERO)
@@ -2230,6 +2340,9 @@ func _sample_enemy_animation(dungeon_manager: Node, enemy_id: int, duration_sec:
 	}
 
 func _fire_network_weapon_requests(dungeon_manager: Node, local_player: Node, manager: WeaponManager, aim_target: Vector3, shot_count: int, shot_seed_offset: int) -> void:
+	var combat_manager := _get_combat_network_manager()
+	if combat_manager == null:
+		return
 	var fire_offsets := [
 		Vector3(0.0, 0.3, 2.5),
 		Vector3(0.0, 0.3, -2.5),
@@ -2240,7 +2353,7 @@ func _fire_network_weapon_requests(dungeon_manager: Node, local_player: Node, ma
 	for i in range(shot_count):
 		var fire_origin: Vector3 = aim_target + fire_offsets[i % fire_offsets.size()]
 		var fire_direction: Vector3 = (aim_target - fire_origin).normalized()
-		dungeon_manager.call(
+		combat_manager.call(
 			"request_weapon_fire",
 			local_peer_id,
 			manager.get_current_weapon_slot(),
@@ -2250,6 +2363,9 @@ func _fire_network_weapon_requests(dungeon_manager: Node, local_player: Node, ma
 			int(Time.get_ticks_msec()) + shot_seed_offset + i
 		)
 		await get_tree().create_timer(0.35).timeout
+
+func _get_combat_network_manager() -> Node:
+	return get_node_or_null("/root/CombatNetworkManager")
 
 func _wait_for_enemy_state(dungeon_manager: Node, predicate: Callable, timeout_sec: float) -> Dictionary:
 	var start_ms := Time.get_ticks_msec()

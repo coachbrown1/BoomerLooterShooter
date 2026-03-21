@@ -924,8 +924,8 @@ func _on_slot_drop_requested(from_slot: SlotRef, to_slot: SlotRef) -> void:
 func _on_world_drop_requested(from_slot: SlotRef) -> void:
 	if _inventory_system == null:
 		return
-	if from_slot == null or (from_slot.section != &"storage" and from_slot.section != &"equipment"):
-		_set_feedback("Only storage and equipped gear can be dropped into the world.", true)
+	if from_slot == null or (from_slot.section != &"storage" and from_slot.section != &"equipment" and from_slot.section != &"weapons"):
+		_set_feedback("Only storage, equipped gear, and weapons can be dropped into the world.", true)
 		return
 	var dropped: bool = _inventory_system.request_drop_item(from_slot)
 	if not dropped:

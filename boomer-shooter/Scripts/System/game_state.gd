@@ -13,8 +13,6 @@ static var hub_chest_snapshots: Array = [[], [], []]
 static var initialized: bool = false
 
 ## Dungeon generation config set via the hub portal menu.
-## biome_override: "" = auto-select by floor number; otherwise "castle", "crypt", "fungal", "lava".
-static var dungeon_biome_override: String = ""
 static var dungeon_grid_min: int = 10
 static var dungeon_grid_max: int = 10
 static var dungeon_seed: int = 0

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Describe the high-level runtime path from project startup through hub and dungeon play so agents can quickly identify which scene and manager own a behavior.
+Describe the high-level runtime path from startup through hub and dungeon play after the dungeon cutover to a single default content set.
 
 ## Key Files
 
@@ -17,41 +17,36 @@ Describe the high-level runtime path from project startup through hub and dungeo
 
 ## Main Data Flow
 
-- Godot launches `bootstrap.tscn` as the main scene.
-- `network_bootstrap.gd` handles the title/menu flow for:
-  - single-player
-  - hosting
-  - joining
-  - verifier automation runs from command-line args
-- Normal play starts in the hub scene after match start.
-- `HubManager` configures storage chests, connects the portal menu, bakes navigation, and delegates player spawning to `NetworkPlayerManager`.
-- Entering the portal writes biome/grid/seed settings into `GameState`, snapshots the local inventory, saves hub chest payloads, then changes scene to the dungeon.
-- `DungeonManager` reads `GameState`, generates or receives the floor, places players, owns world-spawned enemies and loot, and coordinates host-authoritative dungeon replication.
+- Godot launches `bootstrap.tscn`.
+- `network_bootstrap.gd` handles title/menu flow, multiplayer startup, and verifier automation.
+- Normal play starts in the hub scene.
+- `HubManager` owns hub chests, the portal menu, navigation bake, and player spawning.
+- Entering the portal writes only grid and seed settings into `GameState`, snapshots inventory, saves hub chest contents, and changes to the dungeon scene.
+- `DungeonManager` reads that config, generates the lattice floor, assigns room scenes from the default dungeon content resource, stitches authored rooms/corridors, and owns host-authoritative dungeon gameplay.
 
 ## Important State And Resources
 
-- `GameState.player_inventory_snapshot`: inventory/equipment/weapons carried between hub and dungeon.
-- `GameState.hub_chest_snapshots`: three hub storage chest payloads persisted across scene changes.
-- `GameState.dungeon_biome_override`, `dungeon_grid_min`, `dungeon_grid_max`, `dungeon_seed`: portal-selected dungeon configuration.
-- Bootstrap command-line automation args support local verification flows and auto-start behavior.
+- `GameState.player_inventory_snapshot`
+- `GameState.hub_chest_snapshots`
+- `GameState.initialized`
+- `GameState.dungeon_grid_min`
+- `GameState.dungeon_grid_max`
+- `GameState.dungeon_seed`
 
 ## Multiplayer/Authority Notes
 
-- Match setup starts in bootstrap, but gameplay authority shifts to the active world manager.
-- `HubManager` handles replicated hub interactions such as entering the dungeon and syncing world loot drops.
-- `DungeonManager` is the main authoritative runtime owner once the dungeon scene is active.
-- Clients in multiplayer generally wait for host-owned world state rather than generating gameplay-critical state locally.
+- `HubManager` owns hub-side replicated interactions.
+- `DungeonManager` is the authoritative world manager once the dungeon scene loads.
+- Clients still wait for host-owned gameplay state even though the stitched geometry is deterministic.
 
 ## Safe Edit Guidance
 
-- For startup or session-flow changes, inspect `network_bootstrap.gd` first.
-- For hub-only behaviors, prefer `HubManager` and hub scene nodes instead of patching dungeon logic.
-- For dungeon behavior, check whether the change belongs in generation, encounter spawning, player management, or combat before editing.
-- Preserve `GameState` handoff fields when modifying scene transitions.
+- For scene-flow changes, inspect `network_bootstrap.gd`, `hub_manager.gd`, and `dungeon_manager.gd` together.
+- Preserve `GameState` handoff fields when modifying hub-to-dungeon transitions.
+- If you add a new cross-scene dungeon option, update both this doc and `system-singletons-and-state.md`.
 
 ## Related Docs
 
-- [repo-map.md](repo-map.md)
-- [networking-and-replication.md](networking-and-replication.md)
 - [dungeon-generation-and-world.md](dungeon-generation-and-world.md)
-- [inventory-gear-and-chests.md](inventory-gear-and-chests.md)
+- [hub-workflow-and-persistence.md](hub-workflow-and-persistence.md)
+- [networking-and-replication.md](networking-and-replication.md)

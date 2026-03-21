@@ -338,6 +338,7 @@ func build_network_snapshot(include_health: bool = true) -> Dictionary:
 		snapshot["health"] = current_health
 	if weapon_manager:
 		snapshot["current_weapon_index"] = weapon_manager.current_weapon_index
+		snapshot["current_weapon_key"] = weapon_manager.get_current_weapon_key()
 	if mobility_controller:
 		snapshot["mobility"] = mobility_controller.build_state_snapshot()
 	return snapshot
@@ -358,10 +359,14 @@ func apply_network_snapshot(snapshot: Dictionary) -> void:
 				if hud:
 					hud.update_health(current_health)
 
-	if snapshot.has("current_weapon_index") and weapon_manager:
-		var target_weapon_index: int = int(snapshot.get("current_weapon_index", -1))
-		if target_weapon_index >= 0 and target_weapon_index != weapon_manager.current_weapon_index:
-			weapon_manager.switch_to_weapon(target_weapon_index, false)
+	if weapon_manager:
+		var target_weapon_key := String(snapshot.get("current_weapon_key", ""))
+		if not target_weapon_key.is_empty() and target_weapon_key != weapon_manager.get_current_weapon_key():
+			weapon_manager.switch_to_weapon_by_key(target_weapon_key, false)
+		elif snapshot.has("current_weapon_index"):
+			var target_weapon_index: int = int(snapshot.get("current_weapon_index", -1))
+			if target_weapon_index >= 0 and target_weapon_index != weapon_manager.current_weapon_index:
+				weapon_manager.switch_to_weapon(target_weapon_index, false)
 	if snapshot.has("mobility") and mobility_controller:
 		mobility_controller.apply_remote_state(snapshot.get("mobility", {}))
 

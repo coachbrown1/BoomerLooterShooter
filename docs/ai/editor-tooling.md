@@ -2,78 +2,55 @@
 
 ## Purpose
 
-Document the project-specific editor tooling that helps authors tune dungeon layout and biome content without editing everything manually in raw scenes and resources.
+Document the project-specific editor tooling that now targets single default dungeon content authoring instead of biome authoring.
 
 ## Key Files
 
-- `boomer-shooter/addons/dungeon_designer_tool/README.md`
-- `boomer-shooter/addons/dungeon_designer_tool/plugin.gd`
 - `boomer-shooter/addons/dungeon_designer_tool/dungeon_designer_dock.gd`
-- `boomer-shooter/project.godot`
+- `boomer-shooter/addons/dungeon_designer_tool/README.md`
+- `boomer-shooter/addons/dungeon_designer_tool/plugin.cfg`
 - `boomer-shooter/Scenes/World/dungeon.tscn`
-- `boomer-shooter/Data/biomes/biome_dungeon_database.tres`
+- `boomer-shooter/Data/dungeons/default_dungeon_content.tres`
+- `boomer-shooter/Scenes/World/handcrafted_room_playtest.tscn`
+- `boomer-shooter/Scripts/World/handcrafted_room_playtest.gd`
 
 ## Main Data Flow
 
-- The `dungeon_designer_tool` plugin is enabled in `project.godot`.
-- `plugin.gd` registers a dock named `Dungeon Designer` in the Godot editor.
-- `dungeon_designer_dock.gd` builds a three-tab editor workflow:
+- The `Dungeon Designer` dock still has three editor workflows:
   - `Dungeon Layout`
-  - `Biome Data`
+  - `Dungeon Content`
   - `Handcrafted Rooms`
-- The layout tab can:
-  - open the dungeon scene
-  - inspect `DungeonManager`
-  - load and apply generation values
-  - create and clear previews
-  - jump the editor camera to preview rooms
-- The biome tab can:
-  - load the biome database
-  - select a biome resource
-  - edit biome-linked properties and scene references
-  - validate and save the selected biome
-- The handcrafted rooms tab can:
-  - create new handcrafted room scenes through the built-in wizard
-  - optionally register new handcrafted rooms into the selected biome
-  - open the new room scene immediately for authoring
-  - launch a dedicated single-room playtest harness for a selected handcrafted room
+- The layout tab edits `DungeonManager` settings on `res://Scenes/World/dungeon.tscn`, generates preview floors, and jumps to preview room locations.
+- The content tab edits `res://Data/dungeons/default_dungeon_content.tres`:
+  - start room scene
+  - default room scene
+  - special room pool and chance
+  - corridor scene
+  - fog color
+  - enemy scene pool
+- The room wizard clones authored template scenes from the active content resource instead of generating runtime-shell skeletons.
+- The playtest harness now only needs a room scene path; it no longer carries biome data.
 
 ## Important State And Resources
 
-- The dock works primarily against:
-  - `res://Scenes/World/dungeon.tscn`
-  - `res://Data/biomes/biome_dungeon_database.tres`
-- The handcrafted room wizard writes new scenes under:
-  - `res://Scenes/Dungeon/Handcrafted/`
-- Single-room handcrafted playtests use:
-  - `res://Scenes/World/handcrafted_room_playtest.tscn`
-  - `res://Scripts/World/handcrafted_room_playtest.gd`
-  - `res://.tmp/handcrafted_room_playtest.cfg`
-- Handcrafted-room authoring helpers also include:
-  - `res://Scenes/Dungeon/anchored_box_body.tscn`
-  - This reusable `StaticBody3D` keeps mesh and collision aligned while letting designers scale from a chosen anchored side instead of always expanding from the center.
-  - `res://Scripts/Dungeon/handcrafted_enemy_spawner.gd`
-  - In the editor, handcrafted enemy spawners render an in-scene radius preview ring and spawn point ticks based on `spawn_radius`, `spawn_count`, and `vertical_offset`.
-- It dynamically discovers option lists for textures, scenes, enemies, props, handcrafted rooms, doors, and light scenes.
-- The tool is editor-only and should not be treated as a runtime gameplay dependency.
+- The dock's runtime-facing content contract is `DefaultDungeonContent`.
+- Room playtests write `res://.tmp/handcrafted_room_playtest.cfg`.
+- Room authoring still happens under `res://Scenes/Dungeon/Handcrafted/`, but the playtest picker also includes stitched room scenes under `res://Scenes/Dungeon/Rooms/`.
 
 ## Multiplayer/Authority Notes
 
-- Editor tooling does not own networking behavior directly, but it can influence multiplayer by changing dungeon generation data, room scenes, enemy rosters, and biome assets.
-- If a tooling edit changes content contracts used at runtime, make sure the corresponding runtime docs and validation expectations stay aligned.
+- The addon is editor-only, but it edits resources consumed by host-authoritative dungeon generation.
+- Changes to doorway profiles, room scenes, corridor scenes, or enemy pools can affect verifier stability and multiplayer consistency.
 
 ## Safe Edit Guidance
 
-- Prefer documenting how the project uses this addon rather than changing the addon casually.
-- If a task requires editing the tool, verify whether the change belongs in the plugin UI or in the underlying runtime/resource scripts instead.
-- Keep editor-only behavior separated from runtime code paths.
-- Wizard-generated handcrafted scenes should preserve the runtime contract expected by `DungeonManager`, especially start-room `PlayerSpawn` usage and handcrafted spawner node types.
-- Normal-room wizard output is based directly on the crossroom shell so designers start from the same authored room shape used by the existing handcrafted crossroom setup.
-- The room playtest harness is intentionally lightweight and does not replace full dungeon or multiplayer verification; use it for local room iteration, not replication validation.
-- Update the addon README and `docs/ai` summary if the workflow or edited resources change materially.
+- Keep tool changes aligned with the runtime content contract in `default_dungeon_content.gd`.
+- Prefer cloning or editing authored room scenes over adding more runtime generation behavior.
+- Wizard-generated room scenes should preserve exported room metadata so `DungeonManager` can fit and rotate them correctly.
+- The single-room playtest is for local room iteration only; use the multiplayer verifier harness for replication checks.
 
 ## Related Docs
 
 - [dungeon-generation-and-world.md](dungeon-generation-and-world.md)
 - [data-resources-and-content.md](data-resources-and-content.md)
-- [repo-map.md](repo-map.md)
+- [runtime-overview.md](runtime-overview.md)

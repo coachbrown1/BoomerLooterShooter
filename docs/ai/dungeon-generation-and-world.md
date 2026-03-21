@@ -2,80 +2,105 @@
 
 ## Purpose
 
-Explain how the dungeon scene is built, how biome and run settings flow in, and which systems own world-spawned enemies, props, exits, loot, and room progression.
+Explain how the dungeon scene is built after the single-default-dungeon cutover, which systems own layout fitting, scene stitching, exits, enemy spawning, and multiplayer sync.
 
 ## Key Files
 
 - `boomer-shooter/Scripts/Dungeon/dungeon_manager.gd`
 - `boomer-shooter/Scripts/Dungeon/dungeon_generator.gd`
-- `boomer-shooter/Scripts/Dungeon/dungeon_builder.gd`
-- `boomer-shooter/Scripts/Dungeon/prop_placer.gd`
+- `boomer-shooter/Scripts/Dungeon/dungeon_stitcher.gd`
 - `boomer-shooter/Scripts/Dungeon/room_data.gd`
+- `boomer-shooter/Scripts/Dungeon/standard_dungeon_room.gd`
+- `boomer-shooter/Scripts/Dungeon/handcrafted_room_layout.gd`
 - `boomer-shooter/Scripts/Systems/encounter_system.gd`
-- `boomer-shooter/Scripts/World/hub_manager.gd`
-- `boomer-shooter/Scripts/System/game_state.gd`
-- `boomer-shooter/Scripts/Data/biome_dungeon_database.gd`
-- `boomer-shooter/Data/biomes/biome_dungeon_database.tres`
+- `boomer-shooter/Scripts/Data/default_dungeon_content.gd`
+- `boomer-shooter/Data/dungeons/default_dungeon_content.tres`
+
+## Architecture
+
+1. `DungeonGenerator` produces the lattice graph: room cells, corridor links, start/exit assignment, and the raw doorway candidates for each room.
+2. `DungeonManager` assigns authored scenes from `DefaultDungeonContent` before stitching:
+   - one authored start room
+   - one default room scene for most normal rooms
+   - a seeded subset of special room scenes
+3. `DungeonManager` fits those scenes to the topology by:
+   - checking each room scene's exported doorway profiles
+   - rotating the scene to a valid orientation
+   - pruning only non-critical side branches when a special room intentionally supports fewer openings
+   - falling back to another scene or the default room if no valid fit exists
+4. `DungeonStitcher` instantiates only authored room scenes and authored corridor scenes. Runtime structural work is limited to scene rotation and doorway filler enable/disable.
+5. `EncounterSystem` consumes the active dungeon content resource for enemy scene selection.
+
+## Room And Corridor Contract
+
+### Standard rooms
+
+- `StandardDungeonRoom` is the minimal stitched-room contract for default authored rooms.
+- Scenes expose:
+  - `room_role_tags`
+  - `supported_doorway_profiles`
+  - `allowed_rotation_degrees`
+- Runtime only toggles `Walls/Wall{Dir}/Wall{Dir}_Fill` collision/visibility to match finalized open walls.
+
+### Handcrafted rooms
+
+- `HandcraftedRoomLayout` now behaves as a metadata + doorway-toggle base only.
+- It no longer generates shell meshes, floors, ceilings, or walls at runtime.
+- Designers must author final geometry, collision, props, and lights directly in the scene.
+- Scenes can intentionally support reduced doorway sets such as a single-door start room or special room.
+
+### Corridors
+
+- Corridors are fully authored scenes referenced by `DefaultDungeonContent.corridor_scene`.
+- Runtime instantiates and rotates them for east-west versus north-south placement only.
 
 ## Main Data Flow
 
-- The hub portal writes dungeon configuration into `GameState`.
-- `DungeonManager._ready()` decides whether the local scene is:
-  - single-player
-  - multiplayer host
-  - multiplayer client waiting for host sync
-- On the host or in single-player, `generate_floor()` performs the generation pipeline:
-  - clear previous world children under `NavigationRegion3D`
-  - configure `DungeonGenerator` from `GameState`
-  - generate the tile grid, rooms, corridors, doorways, and seed
-  - resolve biome data from the biome database
-  - assign handcrafted room layouts and overlays
-  - build geometry through `DungeonBuilder`
-  - place props through `PropPlacer`
-  - bake navigation
-  - place players
-  - place the exit
-  - initialize progressive enemy spawning
-- `EncounterSystem` turns room metadata plus biome roster data into enemy scene instances using a threat-budget model.
-- During runtime, `DungeonManager._process()` watches the authoritative player room and spawns room-local enemies as progression advances.
+- The hub portal writes grid min, grid max, and seed into `GameState`.
+- `DungeonManager.generate_floor()`:
+  - clears old world children
+  - runs `DungeonGenerator`
+  - loads the single `dungeon_content` resource
+  - assigns room scenes and fits topology
+  - stitches authored rooms and corridors
+  - bakes navigation from static colliders
+  - places players and the exit
+  - initializes host-authoritative enemy spawning
+- `DungeonManager._process()` advances progressive room spawning based on the authoritative player's current room.
 
 ## Important State And Resources
 
 - `DungeonManager` stores:
   - `_rooms`
   - `_room_lookup`
-  - `_room_tile_owner`
-  - `_spawned_enemy_rooms`
-  - `_active_biome_data`
-  - network maps for enemies and loot pickups
-- Biome resources live under `boomer-shooter/Data/biomes/`.
-- Enemy roster data can come from biome data or fall back to `Data/enemies/fallback_enemy_roster.tres`.
-- Handcrafted room scenes live under `boomer-shooter/Scenes/Dungeon/Handcrafted/`.
-- The verifier path can force a deterministic dungeon seed when needed.
-
-## Hub To Dungeon Handoff
-
-- `HubManager` opens the dungeon config menu from the portal.
-- Confirming the menu updates `GameState.dungeon_biome_override`, grid size bounds, and seed.
-- `HubManager` snapshots the local inventory and hub chest payloads before scene change.
-- In multiplayer, clients request dungeon entry from the host and the host broadcasts the scene transition RPC.
+  - `_active_dungeon_content`
+  - `_room_instances_by_id`
+  - `_room_scene_contract_cache`
+- `RoomData` active placement fields are:
+  - `assigned_scene`
+  - `assigned_scene_path`
+  - `assigned_scene_role`
+  - `chosen_rotation_degrees`
+  - `doorway_walls`
+- `default_dungeon_content.tres` is the active content contract for stitched dungeon presentation.
 
 ## Multiplayer/Authority Notes
 
-- In multiplayer, only the host should generate the gameplay-critical floor and own authoritative enemy or shared world state.
-- Clients can enter the dungeon scene before all replicated floor state is ready, so avoid assuming local world generation ran on clients.
-- Enemy snapshots, chest sync, loot pickup replication, weapon-state replication, and floor sync all route through `DungeonManager`.
-- Keep deterministic seed handling stable for verifier scenarios and debugging.
+- The host remains authoritative for gameplay-critical floor state, enemy spawning, loot, exits, and other shared world objects.
+- Clients still rely on deterministic layout generation plus replicated world state from the host.
+- Geometry is now simpler to reason about because the runtime no longer generates structural meshes, material overrides, props, or doorway assemblies after the fact.
 
 ## Safe Edit Guidance
 
-- Generation-shape changes usually belong in `dungeon_generator.gd` or `dungeon_builder.gd`, not in combat or networking code.
-- Room-progression enemy spawn changes usually belong in `DungeonManager` plus `EncounterSystem`.
-- If a new world object needs replication, decide whether `DungeonManager` should own its network identity and sync lifecycle.
-- Preserve hub-to-dungeon `GameState` fields when adjusting portal or generation settings.
+- Layout-graph rules belong in `dungeon_generator.gd`.
+- Scene assignment, rotation fitting, and branch pruning belong in `dungeon_manager.gd`.
+- Room and corridor presentation changes belong in the authored `.tscn` files.
+- If a room scene changes its doorway profile support, update the exported metadata in the scene root to match the authored walls.
+- If you expand the default content contract, update this doc and `editor-tooling.md` together.
 
 ## Related Docs
 
 - [runtime-overview.md](runtime-overview.md)
+- [data-resources-and-content.md](data-resources-and-content.md)
+- [editor-tooling.md](editor-tooling.md)
 - [networking-and-replication.md](networking-and-replication.md)
-- [combat-actors-and-weapons.md](combat-actors-and-weapons.md)

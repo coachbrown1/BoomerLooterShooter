@@ -354,7 +354,7 @@ func try_add_to_storage(item: InventoryItemData) -> bool:
 func request_drop_item(slot_ref: SlotRef) -> bool:
 	if slot_ref == null:
 		return false
-	if slot_ref.section != &"storage" and slot_ref.section != &"equipment":
+	if slot_ref.section != &"storage" and slot_ref.section != &"equipment" and slot_ref.section != &"weapons":
 		return false
 	if not _is_valid_slot(slot_ref):
 		return false
@@ -401,7 +401,7 @@ func _is_multiplayer_active() -> bool:
 func _drop_item_to_world(slot_ref: SlotRef, drop_origin: Vector3, launch_direction: Vector3, show_toast: bool = false) -> bool:
 	if slot_ref == null or not _is_valid_slot(slot_ref):
 		return false
-	if slot_ref.section != &"storage" and slot_ref.section != &"equipment":
+	if slot_ref.section != &"storage" and slot_ref.section != &"equipment" and slot_ref.section != &"weapons":
 		return false
 	var item: InventoryItemData = _get_item(slot_ref)
 	if item == null:
@@ -413,6 +413,8 @@ func _drop_item_to_world(slot_ref: SlotRef, drop_origin: Vector3, launch_directi
 	_emit_inventory_changed()
 	if slot_ref.section == &"equipment":
 		_emit_equipment_stats_changed()
+	if slot_ref.section == &"weapons":
+		_emit_weapon_slots_changed()
 	world_drop_manager.call("spawn_network_item_pickup", item.to_dict(), drop_origin, launch_direction)
 	if show_toast:
 		_push_owner_toast("Dropped %s" % item.display_name, "loot")

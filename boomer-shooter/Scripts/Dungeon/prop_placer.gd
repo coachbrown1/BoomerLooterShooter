@@ -6,7 +6,6 @@ const TILE_SIZE: float = 3.0
 func populate(
 	parent: Node3D,
 	rooms: Array,
-	tile_grid: Array,
 	rng: RandomNumberGenerator,
 	biome_data: Resource = null
 ) -> void:
@@ -36,21 +35,20 @@ func populate(
 		var area: int = room.grid_rect.size.x * room.grid_rect.size.y
 		var prop_count: int = mini(8, max(3, area / 15))
 
+		var rect := room.grid_rect
 		for _i in range(prop_count):
-			var rx = room.grid_rect.position.x + 1 + rng.randi() % maxi(1, room.grid_rect.size.x - 2)
-			var rz = room.grid_rect.position.y + 1 + rng.randi() % maxi(1, room.grid_rect.size.y - 2)
+			var rx = rect.position.x + 1 + rng.randi() % maxi(1, rect.size.x - 2)
+			var rz = rect.position.y + 1 + rng.randi() % maxi(1, rect.size.y - 2)
 
-			if tile_grid[rx][rz] != 1:
-				continue
-
+			# Detect wall proximity using room bounds
 			var wall_offset := Vector3.ZERO
-			if tile_grid[rx - 1][rz] == 0:
+			if rx <= rect.position.x:
 				wall_offset = Vector3(-0.3, 0, 0)
-			elif tile_grid[rx + 1][rz] == 0:
+			elif rx >= rect.position.x + rect.size.x - 1:
 				wall_offset = Vector3(0.3, 0, 0)
-			elif tile_grid[rx][rz - 1] == 0:
+			elif rz <= rect.position.y:
 				wall_offset = Vector3(0, 0, -0.3)
-			elif tile_grid[rx][rz + 1] == 0:
+			elif rz >= rect.position.y + rect.size.y - 1:
 				wall_offset = Vector3(0, 0, 0.3)
 
 			var world_x = rx * TILE_SIZE + TILE_SIZE / 2.0

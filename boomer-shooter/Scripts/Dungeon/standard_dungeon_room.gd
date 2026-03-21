@@ -1,18 +1,16 @@
-@tool
 extends Node3D
-class_name HandcraftedRoomLayout
+class_name StandardDungeonRoom
 
-@export var room_role_tags: PackedStringArray = []
-@export var supported_doorway_profiles: PackedStringArray = []
-@export var allowed_rotation_degrees: PackedInt32Array = [0, 90, 180, 270]
+## Script for default room scenes used by the DungeonStitcher.
+## Each wall has three sub-nodes: _Left, _Right, and _Fill.
+## The _Fill segment is the center piece (doorway-width) that gets
+## hidden when a doorway is open on that wall.
 
+const WALL_NAMES := ["North", "South", "East", "West"]
 
-func _ready() -> void:
-	return
-
-
-func prepare_runtime_layout() -> void:
-	return
+@export var room_role_tags: PackedStringArray = ["default"]
+@export var supported_doorway_profiles: PackedStringArray = ["*"]
+@export var allowed_rotation_degrees: PackedInt32Array = [0]
 
 
 func get_room_role_tags() -> PackedStringArray:
@@ -32,20 +30,16 @@ func set_doorway_open(wall: String, is_open: bool) -> void:
 	var fill_path := "Walls/Wall%s/Wall%s_Fill" % [capitalized, capitalized]
 	var fill_node := get_node_or_null(fill_path)
 	if fill_node == null:
+		push_warning("StandardDungeonRoom: fill node not found at '%s'" % fill_path)
 		return
 	fill_node.visible = not is_open
 	_set_collision_disabled_recursive(fill_node, is_open)
 
 
 func configure_doorways(open_walls: Array) -> void:
-	var wall_names := ["North", "South", "East", "West"]
-	for wall_name in wall_names:
+	for wall_name in WALL_NAMES:
 		var wall_lower: String = wall_name.to_lower()
 		set_doorway_open(wall_lower, wall_lower in open_walls)
-
-
-func supports_runtime_doorway_configuration() -> bool:
-	return _has_doorway_fill_nodes()
 
 
 func _set_collision_disabled_recursive(node: Node, disabled: bool) -> void:
@@ -53,17 +47,3 @@ func _set_collision_disabled_recursive(node: Node, disabled: bool) -> void:
 		(node as CollisionShape3D).disabled = disabled
 	for child in node.get_children():
 		_set_collision_disabled_recursive(child, disabled)
-
-
-func _has_shell_layout() -> bool:
-	return get_node_or_null("ShellFloor") != null \
-		and get_node_or_null("ShellCeiling") != null \
-		and get_node_or_null("Walls") != null
-
-
-func _has_doorway_fill_nodes() -> bool:
-	for wall_name in ["North", "South", "East", "West"]:
-		var fill_path := "Walls/Wall%s/Wall%s_Fill" % [wall_name, wall_name]
-		if get_node_or_null(fill_path) == null:
-			return false
-	return true

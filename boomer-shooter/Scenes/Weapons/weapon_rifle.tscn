@@ -39,6 +39,8 @@ viewmodel_position = Vector3(0.22, -0.16, -0.42)
 viewmodel_rotation_degrees = Vector3(0, 0, 0)
 fire_kick_offset = Vector3(0, 0.012, 0.055)
 reload_lower_offset = Vector3(0, -0.16, 0.1)
+world_position = Vector3(0.4, -0.18, 0.08)
+world_rotation_degrees = Vector3(0, 0, 0)
 
 [node name="WeaponMesh" parent="." instance=ExtResource("6_mesh")]
 transform = Transform3D(-0.3, 0, 0, 0, 0.3, 0, 0, 0, -0.3, 0.25, -0.34, -0.34)

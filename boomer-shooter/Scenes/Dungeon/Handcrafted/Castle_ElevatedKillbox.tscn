@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://pp2wiqahthwo"]
 
-[ext_resource type="Script" uid="uid://w6a3xkdc1hqy" path="res://Scripts/Dungeon/handcrafted_quadrant_composite_room.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://t53xeyjn3fuq" path="res://Scripts/Dungeon/handcrafted_room_layout.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/DungeonWallTile.tscn" id="2_wall_tile"]
 [ext_resource type="PackedScene" uid="uid://da6yle0euhfqj" path="res://Scenes/Props/Castle/propcastletorch.tscn" id="3_torch"]
 [ext_resource type="Material" uid="uid://cuqpevl0d1k65" path="res://Assets/Environment/Castle/hub_wall_mat.tres" id="4_hub_wall_mat"]
@@ -11,143 +11,121 @@
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/anchored_box_body.tscn" id="9_jf1we"]
 [ext_resource type="PackedScene" uid="uid://bamyeedre1p87" path="res://Scenes/Dungeon/castle_doorway_assembly.tscn" id="10_4vrn1"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pgwks"]
+[sub_resource type="BoxShape3D" id="BoxShape3D_rat_spawner"]
+size = Vector3(39.41, 0.1, 42.325)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mage_spawner"]
+size = Vector3(24.385, 0.1, 1.005)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kpjbx"]
 transparency = 1
 shading_mode = 0
 albedo_color = Color(0.8, 0.7, 0.45, 0.55)
 
-[sub_resource type="BoxMesh" id="BoxMesh_utx0b"]
-material = SubResource("StandardMaterial3D_pgwks")
+[sub_resource type="BoxMesh" id="BoxMesh_o5pph"]
+material = SubResource("StandardMaterial3D_kpjbx")
 size = Vector3(60, 0.2, 0.25)
 
-[sub_resource type="BoxMesh" id="BoxMesh_c1ctw"]
-material = SubResource("StandardMaterial3D_pgwks")
+[sub_resource type="BoxMesh" id="BoxMesh_ovkv0"]
+material = SubResource("StandardMaterial3D_kpjbx")
 size = Vector3(60, 0.2, 0.25)
 
-[sub_resource type="BoxMesh" id="BoxMesh_4fr44"]
-material = SubResource("StandardMaterial3D_pgwks")
+[sub_resource type="BoxMesh" id="BoxMesh_jf1we"]
+material = SubResource("StandardMaterial3D_kpjbx")
 size = Vector3(0.25, 0.2, 60)
 
-[sub_resource type="BoxMesh" id="BoxMesh_ei5oe"]
-material = SubResource("StandardMaterial3D_pgwks")
+[sub_resource type="BoxMesh" id="BoxMesh_4vrn1"]
+material = SubResource("StandardMaterial3D_kpjbx")
 size = Vector3(0.25, 0.2, 60)
 
-[sub_resource type="BoxMesh" id="BoxMesh_4m3nw"]
-material = SubResource("StandardMaterial3D_pgwks")
+[sub_resource type="BoxMesh" id="BoxMesh_pgwks"]
+material = SubResource("StandardMaterial3D_kpjbx")
 size = Vector3(6, 0.12, 60)
 
-[sub_resource type="BoxMesh" id="BoxMesh_mv2al"]
-material = SubResource("StandardMaterial3D_pgwks")
+[sub_resource type="BoxMesh" id="BoxMesh_utx0b"]
+material = SubResource("StandardMaterial3D_kpjbx")
 size = Vector3(60, 0.12, 6)
 
 [node name="Castle_ElevatedKillbox" type="Node3D" unique_id=638476889]
 script = ExtResource("1_script")
-wall_tile_scene = ExtResource("2_wall_tile")
-wall_material_override = ExtResource("4_hub_wall_mat")
-torch_scene = ExtResource("3_torch")
-allow_random_orientation = true
+room_role_tags = PackedStringArray("special")
+supported_doorway_profiles = PackedStringArray("*")
 
 [node name="Encounter" type="Node3D" parent="." unique_id=1914939401]
 
-[node name="EnemySpawner" type="Marker3D" parent="Encounter" unique_id=1236169966]
+[node name="RatSpawner" type="Area3D" parent="Encounter" unique_id=1236169966]
+collision_layer = 0
+collision_mask = 0
+monitoring = false
+monitorable = false
 script = ExtResource("5_spawner_script")
 enemy_scene = ExtResource("6_kpjbx")
 spawn_count = 8
+spawn_box_size = Vector3(39.41, 0, 42.325)
 
-[node name="EnemySpawner2" type="Marker3D" parent="Encounter" unique_id=887430295]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.7620373, 23.31307)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Encounter/RatSpawner" unique_id=666077637]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+shape = SubResource("BoxShape3D_rat_spawner")
+
+[node name="MAgeSpawner" type="Area3D" parent="Encounter" unique_id=887430295]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.7620373, 17.74772)
+collision_layer = 0
+collision_mask = 0
+monitoring = false
+monitorable = false
 script = ExtResource("5_spawner_script")
 enemy_scene = ExtResource("7_o5pph")
 spawn_count = 5
-spawn_radius = 1.8
+spawn_box_size = Vector3(24.385, 0, 1.005)
 
-[node name="ShellGenerated" type="Node3D" parent="." unique_id=1026290839]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Encounter/MAgeSpawner" unique_id=294023381]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+shape = SubResource("BoxShape3D_mage_spawner")
 
-[node name="@StaticBody3D@38723" type="StaticBody3D" parent="ShellGenerated" unique_id=540902463]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.5, 6, -30)
+[node name="MAgeSpawner2" type="Area3D" parent="Encounter" unique_id=825416118]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.7620373, -18.615225)
+collision_layer = 0
+collision_mask = 0
+monitoring = false
+monitorable = false
+script = ExtResource("5_spawner_script")
+enemy_scene = ExtResource("7_o5pph")
+spawn_count = 5
+spawn_box_size = Vector3(24.385, 0, 1.005)
 
-[node name="@StaticBody3D@38726" type="StaticBody3D" parent="ShellGenerated" unique_id=180653099]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.5, 6, -30)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Encounter/MAgeSpawner2" unique_id=1898398296]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+shape = SubResource("BoxShape3D_mage_spawner")
 
-[node name="@StaticBody3D@38729" type="StaticBody3D" parent="ShellGenerated" unique_id=859354088]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.5, 6, 30)
+[node name="MAgeSpawner3" type="Area3D" parent="Encounter" unique_id=1717151556]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 18.440825, 6.7620373, 0.63028145)
+collision_layer = 0
+collision_mask = 0
+monitoring = false
+monitorable = false
+script = ExtResource("5_spawner_script")
+enemy_scene = ExtResource("7_o5pph")
+spawn_count = 5
+spawn_box_size = Vector3(24.385, 0, 1.005)
 
-[node name="@StaticBody3D@38732" type="StaticBody3D" parent="ShellGenerated" unique_id=699536035]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.5, 6, 30)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Encounter/MAgeSpawner3" unique_id=2136814696]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+shape = SubResource("BoxShape3D_mage_spawner")
 
-[node name="@StaticBody3D@38735" type="StaticBody3D" parent="ShellGenerated" unique_id=1729440459]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 6, 16.5)
+[node name="MAgeSpawner4" type="Area3D" parent="Encounter" unique_id=1938207461]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -18.010645, 6.7620373, 0.63028145)
+collision_layer = 0
+collision_mask = 0
+monitoring = false
+monitorable = false
+script = ExtResource("5_spawner_script")
+enemy_scene = ExtResource("7_o5pph")
+spawn_count = 5
+spawn_box_size = Vector3(24.385, 0, 1.005)
 
-[node name="@StaticBody3D@38738" type="StaticBody3D" parent="ShellGenerated" unique_id=563186980]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 6, -16.5)
-
-[node name="@StaticBody3D@38741" type="StaticBody3D" parent="ShellGenerated" unique_id=171647995]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 6, 16.5)
-
-[node name="@StaticBody3D@38744" type="StaticBody3D" parent="ShellGenerated" unique_id=1416593027]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 6, -16.5)
-
-[node name="CastleTorch" type="Node3D" parent="ShellGenerated" unique_id=1445474904 instance=ExtResource("3_torch")]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -9, 0, -29.6)
-script = ExtResource("8_ovkv0")
-
-[node name="@Node3D@38745" type="Node3D" parent="ShellGenerated" unique_id=2145155163 instance=ExtResource("3_torch")]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 9, 0, -29.6)
-script = ExtResource("8_ovkv0")
-
-[node name="@Node3D@38746" type="Node3D" parent="ShellGenerated" unique_id=830852785 instance=ExtResource("3_torch")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, 0, 29.6)
-script = ExtResource("8_ovkv0")
-
-[node name="@Node3D@38747" type="Node3D" parent="ShellGenerated" unique_id=802892743 instance=ExtResource("3_torch")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, 29.6)
-script = ExtResource("8_ovkv0")
-
-[node name="Quadrants" type="Node3D" parent="." unique_id=184531931]
-
-[node name="NWAnchor" type="Node3D" parent="Quadrants" unique_id=806623650]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.5, 0, -16.5)
-
-[node name="NEAnchor" type="Node3D" parent="Quadrants" unique_id=1462290529]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.5, 0, -16.5)
-
-[node name="SWAnchor" type="Node3D" parent="Quadrants" unique_id=2139195915]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.5, 0, 16.5)
-
-[node name="SEAnchor" type="Node3D" parent="Quadrants" unique_id=1353981515]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.5, 0, 16.5)
-
-[node name="RoomBoundsDebug" type="Node3D" parent="." unique_id=1813756497]
-
-[node name="@MeshInstance3D@38748" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=899088058]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, -30)
-cast_shadow = 0
-mesh = SubResource("BoxMesh_utx0b")
-
-[node name="@MeshInstance3D@38749" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=1106894980]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 30)
-cast_shadow = 0
-mesh = SubResource("BoxMesh_c1ctw")
-
-[node name="@MeshInstance3D@38750" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=2098445361]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 0.1, 0)
-cast_shadow = 0
-mesh = SubResource("BoxMesh_4fr44")
-
-[node name="@MeshInstance3D@38751" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=2030816535]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 0.1, 0)
-cast_shadow = 0
-mesh = SubResource("BoxMesh_ei5oe")
-
-[node name="@MeshInstance3D@38752" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=1674781488]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 0)
-cast_shadow = 0
-mesh = SubResource("BoxMesh_4m3nw")
-
-[node name="@MeshInstance3D@38753" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=1446181960]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 0)
-cast_shadow = 0
-mesh = SubResource("BoxMesh_mv2al")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Encounter/MAgeSpawner4" unique_id=14311456]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+shape = SubResource("BoxShape3D_mage_spawner")
 
 [node name="AnchoredBoxBody" parent="." unique_id=1979866758 instance=ExtResource("9_jf1we")]
 transform = Transform3D(59.094, 0, 0, 0, 1, 0, 0, 0, 13.629666, -29.69557, 5.7258716, -29.900124)
@@ -163,3 +141,105 @@ transform = Transform3D(-2.583081e-06, 0, 13.629666, 0, 1, 0, -59.094, 0, -5.957
 
 [node name="DoorwayAssembly" parent="." unique_id=1948476388 instance=ExtResource("10_4vrn1")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5596672, 0, -32.625935)
+
+[node name="ShellGenerated" type="Node3D" parent="." unique_id=1753239107]
+
+[node name="CastleTorch" type="Node3D" parent="ShellGenerated" unique_id=1445474904 instance=ExtResource("3_torch")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -9, 0, -29.6)
+script = ExtResource("8_ovkv0")
+
+[node name="@Node3D@21596" type="Node3D" parent="ShellGenerated" unique_id=371225531 instance=ExtResource("3_torch")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 9, 0, -29.6)
+script = ExtResource("8_ovkv0")
+
+[node name="@Node3D@21597" type="Node3D" parent="ShellGenerated" unique_id=335554123 instance=ExtResource("3_torch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, 0, 29.6)
+script = ExtResource("8_ovkv0")
+
+[node name="@Node3D@21598" type="Node3D" parent="ShellGenerated" unique_id=1604604852 instance=ExtResource("3_torch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, 29.6)
+script = ExtResource("8_ovkv0")
+
+[node name="Walls" type="Node3D" parent="." unique_id=539976598]
+
+[node name="WallNorth" type="Node3D" parent="Walls" unique_id=1680320821]
+
+[node name="WallNorth_Left" type="StaticBody3D" parent="Walls/WallNorth" unique_id=1742268327]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 6, -30)
+
+[node name="WallNorth_Fill" type="StaticBody3D" parent="Walls/WallNorth" unique_id=952144849]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, -30)
+
+[node name="WallNorth_Right" type="StaticBody3D" parent="Walls/WallNorth" unique_id=241508598]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 6, -30)
+
+[node name="WallSouth" type="Node3D" parent="Walls" unique_id=216832279]
+
+[node name="WallSouth_Left" type="StaticBody3D" parent="Walls/WallSouth" unique_id=694928440]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 6, 30)
+
+[node name="WallSouth_Fill" type="StaticBody3D" parent="Walls/WallSouth" unique_id=777515588]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 30)
+
+[node name="WallSouth_Right" type="StaticBody3D" parent="Walls/WallSouth" unique_id=59084587]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 6, 30)
+
+[node name="WallEast" type="Node3D" parent="Walls" unique_id=495369834]
+
+[node name="WallEast_Left" type="StaticBody3D" parent="Walls/WallEast" unique_id=564458317]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 6, -18)
+
+[node name="WallEast_Fill" type="StaticBody3D" parent="Walls/WallEast" unique_id=1359043938]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 6, 0)
+
+[node name="WallEast_Right" type="StaticBody3D" parent="Walls/WallEast" unique_id=1258173697]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 6, 18)
+
+[node name="WallWest" type="Node3D" parent="Walls" unique_id=2068959483]
+
+[node name="WallWest_Left" type="StaticBody3D" parent="Walls/WallWest" unique_id=852673396]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 6, -18)
+
+[node name="WallWest_Fill" type="StaticBody3D" parent="Walls/WallWest" unique_id=1836434124]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 6, 0)
+
+[node name="WallWest_Right" type="StaticBody3D" parent="Walls/WallWest" unique_id=23401674]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 6, 18)
+
+[node name="ShellFloor" type="StaticBody3D" parent="." unique_id=128109864]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+
+[node name="ShellCeiling" type="StaticBody3D" parent="." unique_id=1892558259]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12.1, 0)
+
+[node name="RoomBoundsDebug" type="Node3D" parent="." unique_id=1162472230]
+
+[node name="@MeshInstance3D@21603" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=1987333408]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, -30)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_o5pph")
+
+[node name="@MeshInstance3D@21604" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=1166666800]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 30)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_ovkv0")
+
+[node name="@MeshInstance3D@21605" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=416809151]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 0.1, 0)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_jf1we")
+
+[node name="@MeshInstance3D@21606" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=1153105335]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 0.1, 0)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_4vrn1")
+
+[node name="@MeshInstance3D@21607" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=1155145106]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 0)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_pgwks")
+
+[node name="@MeshInstance3D@21608" type="MeshInstance3D" parent="RoomBoundsDebug" unique_id=778247059]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 0)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_utx0b")

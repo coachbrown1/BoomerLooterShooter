@@ -1,63 +1,47 @@
-# Biomes And Handcrafted Content
+# Dungeon Content And Handcrafted Rooms
 
 ## Purpose
 
-Describe how biome resources shape dungeon presentation and how handcrafted room scenes fit into the otherwise procedural generation pipeline.
+Describe the current stitched dungeon content contract and how handcrafted room scenes fit into the single-default-dungeon pipeline.
 
 ## Key Files
 
-- `boomer-shooter/Scripts/Data/biome_dungeon_data.gd`
-- `boomer-shooter/Scripts/Data/biome_dungeon_database.gd`
-- `boomer-shooter/Data/biomes/biome_dungeon_database.tres`
-- `boomer-shooter/Data/biomes/*.tres`
+- `boomer-shooter/Scripts/Data/default_dungeon_content.gd`
+- `boomer-shooter/Data/dungeons/default_dungeon_content.tres`
 - `boomer-shooter/Scripts/Dungeon/dungeon_manager.gd`
-- `boomer-shooter/Scripts/Dungeon/dungeon_builder.gd`
-- `boomer-shooter/Scripts/Dungeon/prop_placer.gd`
+- `boomer-shooter/Scripts/Dungeon/handcrafted_room_layout.gd`
 - `boomer-shooter/Scenes/Dungeon/Handcrafted/`
-- `boomer-shooter/addons/dungeon_designer_tool/dungeon_designer_dock.gd`
+- `boomer-shooter/Scenes/Dungeon/Rooms/`
 
 ## Main Data Flow
 
-- `DungeonManager` resolves the active biome through the biome database after generation chooses or inherits a biome ID.
-- `BiomeDungeonData` acts as the content contract that feeds multiple systems:
-  - tile textures and material settings
-  - door and doorway scenes
-  - handcrafted start and normal room scenes
-  - lighting defaults
-  - prop pools
-  - enemy scene pools
-  - exit portal texture
-- After generation, `DungeonManager` uses biome data to:
-  - assign handcrafted room overlays
-  - update environment and materials
-  - pass content into `DungeonBuilder`
-  - pass prop pools into `PropPlacer`
-  - pass enemy pools into `EncounterSystem`
-- Handcrafted room scenes under `Scenes/Dungeon/Handcrafted/` are layered into the generated floor rather than replacing the entire dungeon system.
+- `DefaultDungeonContent` is the active dungeon content contract for runtime generation.
+- `DungeonManager` uses that resource to choose the authored start room, default room, special room pool, corridor scene, and enemy pool.
+- Handcrafted rooms are no longer overlays on top of generated shell geometry.
+- Instead, every stitched room scene is treated as authoritative authored content, with runtime limited to rotation and doorway filler toggling.
 
 ## Important State And Resources
 
-- `BiomeDungeonData` contains both visual and gameplay-relevant content references, which makes it one of the broadest authored resource contracts in the project.
-- `handcrafted_start_room_scene`, `handcrafted_normal_room_scenes`, and `handcrafted_quadrant_room_scenes` are especially important for authored set pieces.
-- Doorway and light scene references in biome data can change how generated spaces feel without changing the generator itself.
-- The dungeon designer plugin is the main editor workflow for tuning these resources without editing every property manually.
+- The current castle-authored content acts as the canonical default dungeon presentation.
+- Handcrafted room roots should export:
+  - `room_role_tags`
+  - `supported_doorway_profiles`
+  - `allowed_rotation_degrees`
+- Special rooms may intentionally support fewer openings than a raw lattice cell, which allows topology pruning before stitching.
 
 ## Multiplayer/Authority Notes
 
-- Even though biome data is resource-driven, authoritative world generation still belongs to the host in multiplayer.
-- Any new biome-driven content that affects shared gameplay must still be replicated correctly once spawned into the world.
-- Deterministic biome content choices matter for verifier stability and client consistency.
+- Authored room content still participates in host-authoritative dungeon generation.
+- Deterministic scene selection and rotation remain important for verifier stability and client consistency.
 
 ## Safe Edit Guidance
 
-- Treat `BiomeDungeonData` as a shared schema. If you add or rename properties, trace every consumer before landing the change.
-- Prefer biome-resource edits for presentation or content-variation work and generation-script edits only when the procedural rules themselves need to change.
-- When adding handcrafted content, document whether it is start-only, normal-room only, quadrant-only, or reusable across multiple biome contexts.
-- If a biome change affects enemy rosters, props, doors, or lighting, update the relevant subsystem docs as well.
+- Prefer editing the room `.tscn` directly when changing presentation.
+- If a room deliberately closes certain doorways, make sure its exported doorway profiles match the authored layout.
+- Do not reintroduce runtime shell generation, runtime structural prop placement, or biome-driven content lookups without updating the whole content model and docs.
 
 ## Related Docs
 
 - [dungeon-generation-and-world.md](dungeon-generation-and-world.md)
-- [data-resources-and-content.md](data-resources-and-content.md)
 - [editor-tooling.md](editor-tooling.md)
-- [enemies-and-rosters.md](enemies-and-rosters.md)
+- [data-resources-and-content.md](data-resources-and-content.md)

@@ -3,7 +3,7 @@ extends Node3D
 class_name DungeonManager
 
 @export var floor_number: int = 1
-@export var biome_database: Resource = preload("res://Data/biomes/biome_dungeon_database.tres")
+@export var dungeon_content: Resource = preload("res://Data/dungeons/default_dungeon_content.tres")
 
 # Lattice generation config
 @export var grid_size_min: int = 10
@@ -21,13 +21,14 @@ const CASTLE_INNER_CHAMBER_SCENE_PATH := "res://Scenes/Dungeon/Handcrafted/Castl
 const LOOT_PICKUP_SCENE: PackedScene = preload("res://Scenes/Props/loot_pickup.tscn")
 const VERIFIER_DEFAULT_DUNGEON_SEED := 1773666431
 
+const TILE_SIZE: float = 3.0
+
 var _generator: DungeonGenerator
-var _builder: DungeonBuilder
+var _stitcher: DungeonStitcher
 var _encounter: EncounterSystem
 var _rooms: Array = []
-var _active_biome_data: Resource = null
+var _active_dungeon_content: Resource = null
 var _room_lookup := {}
-var _room_tile_owner := {}
 var _spawned_enemy_rooms := {}
 var _last_player_room_id: int = -1
 
@@ -46,10 +47,11 @@ var _floor_sync_in_progress := false
 var _floor_sync_ready_by_peer: Dictionary = {}
 var _pending_player_roster: Array = []
 var _pending_enemy_spawns: Array = []
-var _handcrafted_room_overlays_by_id := {}
+var _room_instances_by_id := {}
 var _suppressed_enemies_by_room_id := {}
 var _players_ready_callback: Callable = Callable()
 var _pending_inventory_restore: bool = false
+var _room_scene_contract_cache := {}
 var _debug_network_visual_counts := {
 	"hitscan": 0,
 	"projectile": 0,
@@ -119,23 +121,22 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 		child.queue_free()
 
 	_room_lookup = {}
-	_room_tile_owner = {}
+
 	_spawned_enemy_rooms = {}
 	_last_player_room_id = -1
-	_active_biome_data = null
+	_active_dungeon_content = null
 	_chest_viewers_by_path.clear()
 	_enemy_by_network_id.clear()
 	_enemy_network_id_by_instance_id.clear()
 	_next_enemy_network_id = 1
 	_loot_pickup_by_network_id.clear()
 	_next_loot_pickup_network_id = 1
-	_handcrafted_room_overlays_by_id.clear()
+	_room_instances_by_id.clear()
 	_suppressed_enemies_by_room_id.clear()
 	_reset_debug_network_visual_counts()
 
 	# Generate tile layout
 	_generator = DungeonGenerator.new()
-	_generator.biome_override = GameState.dungeon_biome_override
 	_generator.grid_size_min = grid_size_min
 	_generator.grid_size_max = grid_size_max
 	_generator.min_start_end_distance_rooms = min_start_end_distance_rooms
@@ -148,35 +149,22 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 	_generator.generate(floor_num, requested_seed)
 	generation_seed = int(_generator.rng.seed)
 	_rooms = _generator.rooms
-	_room_tile_owner = _generator._room_tile_owner
+	_build_room_lookup()
 
-	var biome_id := "crypt"
-	if _rooms.size() > 0:
-		biome_id = _rooms[0].biome
-	var biome_data = _get_biome_data(biome_id)
-	_active_biome_data = biome_data
-	_assign_handcrafted_layouts(biome_data)
+	_active_dungeon_content = dungeon_content
+	_assign_room_scenes_and_fit_topology(_active_dungeon_content)
 
-	_update_environment(biome_data)
+	_update_environment(_active_dungeon_content)
 
-	# Build 3D geometry inside the NavigationRegion3D
-	_builder = DungeonBuilder.new()
-	_builder.build(
-		_generator.tile_grid,
+	# Stitch room and corridor scenes inside the NavigationRegion3D
+	_stitcher = DungeonStitcher.new()
+	_stitcher.stitch(
 		_rooms,
 		_generator.corridors,
-		_generator.doorways,
 		nav_region,
-		biome_data,
-		_generator._room_tile_owner,
-		_generator._corridor_tile_owner,
-		generation_seed
+		_active_dungeon_content
 	)
-	_spawn_handcrafted_room_overlays(nav_region)
-
-	# Place props (static, not streamed)
-	var prop_placer = PropPlacer.new()
-	prop_placer.populate(nav_region, _rooms, _generator.tile_grid, _generator.rng, biome_data)
+	_post_process_stitched_rooms()
 
 	# Bake navigation mesh
 	var nav_mesh := NavigationMesh.new()
@@ -222,13 +210,13 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 			_next_loot_pickup_network_id = 1
 
 		# Place exit portal in exit room
-		_place_exit(biome_data)
+		_place_exit()
 
 		# Spawn only the start-room neighborhood; expand as player progresses.
 		_prime_progressive_enemy_spawning()
 	else:
 		_encounter = null
-		_place_exit(biome_data)
+		_place_exit()
 
 	print(
 		"DungeonManager: Floor %d generated with %d rooms (grid=%dx%d seed=%d)." % [
@@ -254,11 +242,11 @@ func clear_editor_preview() -> void:
 		child.queue_free()
 	_rooms = []
 	_room_lookup = {}
-	_room_tile_owner = {}
+
 	_spawned_enemy_rooms = {}
 	_last_player_room_id = -1
 	_encounter = null
-	_handcrafted_room_overlays_by_id.clear()
+	_room_instances_by_id.clear()
 	_suppressed_enemies_by_room_id.clear()
 
 func get_editor_preview_room_targets() -> Array:
@@ -269,19 +257,20 @@ func get_editor_preview_room_targets() -> Array:
 			continue
 		var is_start := room.room_type == RoomData.RoomType.START
 		var is_exit := room.room_type == RoomData.RoomType.EXIT
-		var include := is_start or is_exit or room.has_handcrafted_layout
+		var is_custom := room.assigned_scene_role != "default"
+		var include := is_start or is_exit or is_custom
 		if not include:
 			continue
 
 		var type_name := _room_type_name(room.room_type)
-		var handcrafted_tag := " [custom]" if room.has_handcrafted_layout else ""
+		var custom_tag := " [custom]" if is_custom else ""
 		var scene_tag := ""
-		if room.has_handcrafted_layout and room.handcrafted_scene_path != "":
-			var scene_name := room.handcrafted_scene_path.get_file().get_basename()
+		if room.assigned_scene_path != "":
+			var scene_name := room.assigned_scene_path.get_file().get_basename()
 			scene_tag = " | %s" % scene_name
 		var label := "%s%s%s | room %d | lattice (%d,%d)" % [
 			type_name,
-			handcrafted_tag,
+			custom_tag,
 			scene_tag,
 			room.id,
 			room.lattice_coord.x,
@@ -292,9 +281,9 @@ func get_editor_preview_room_targets() -> Array:
 			"label": label,
 			"room_type": int(room.room_type),
 			"lattice_coord": room.lattice_coord,
-			"world_position": room.get_world_center(DungeonBuilder.TILE_SIZE),
-			"is_handcrafted": room.has_handcrafted_layout,
-			"handcrafted_scene_path": room.handcrafted_scene_path,
+			"world_position": room.get_world_center(TILE_SIZE),
+			"is_custom": is_custom,
+			"assigned_scene_path": room.assigned_scene_path,
 		})
 
 	targets.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -334,25 +323,18 @@ func _update_environment(biome_data: Resource = null) -> void:
 	var env = $WorldEnvironment.environment
 	if not env:
 		return
-	var biome = _rooms[0].biome
 	if biome_data and biome_data.has_method("get"):
 		var fog_color: Variant = biome_data.get("fog_light_color")
 		if typeof(fog_color) == TYPE_COLOR:
 			env.fog_light_color = fog_color
-			return
-	if biome == "crypt":
-		env.fog_light_color = Color(0.05, 0.03, 0.08)
-	elif biome == "fungal":
-		env.fog_light_color = Color(0.02, 0.06, 0.03)
-	elif biome == "lava":
-		env.fog_light_color = Color(0.08, 0.02, 0.01)
+	return
 
 func _place_player() -> void:
 	var start_room := _get_room_by_type(RoomData.RoomType.START)
 	if start_room == null:
 		return
 	var spawn_data := _get_start_player_spawn_data(start_room)
-	var base_pos: Vector3 = spawn_data.get("position", start_room.get_world_center(DungeonBuilder.TILE_SIZE)) as Vector3
+	var base_pos: Vector3 = spawn_data.get("position", start_room.get_world_center(TILE_SIZE)) as Vector3
 	var look_target: Vector3 = spawn_data.get("look_target", base_pos + Vector3(0.0, 0.0, 1.0)) as Vector3
 	base_pos.y = 1.0
 
@@ -370,9 +352,9 @@ func _place_player() -> void:
 	_on_players_ready_for_floor(NetworkPlayerManager.get_all_players(), look_target)
 
 func _get_start_player_spawn_data(start_room: RoomData) -> Dictionary:
-	var fallback_pos := start_room.get_world_center(DungeonBuilder.TILE_SIZE)
+	var fallback_pos := start_room.get_world_center(TILE_SIZE)
 	var fallback_look_target := fallback_pos + Vector3(0.0, 0.0, 1.0)
-	var room_overlay = _handcrafted_room_overlays_by_id.get(start_room.id, null)
+	var room_overlay = _room_instances_by_id.get(start_room.id, null)
 	if not is_instance_valid(room_overlay):
 		return {
 			"position": fallback_pos,
@@ -417,7 +399,7 @@ func _on_players_ready_for_floor(_players: Dictionary, look_target: Vector3) -> 
 			inv.apply_slot_snapshot(GameState.player_inventory_snapshot)
 			_pending_inventory_restore = false
 
-func _place_exit(_biome_data: Resource = null) -> void:
+func _place_exit() -> void:
 	var exit_room := _get_room_by_type(RoomData.RoomType.EXIT)
 	if exit_room == null:
 		return
@@ -463,7 +445,7 @@ func _place_exit(_biome_data: Resource = null) -> void:
 
 
 func _find_portal_wall_transform(exit_room: RoomData) -> Transform3D:
-	var tile_size: float = DungeonBuilder.TILE_SIZE
+	var tile_size: float = TILE_SIZE
 	var center := exit_room.get_world_center(tile_size)
 	var rect := exit_room.grid_rect
 
@@ -526,13 +508,6 @@ func _on_exit_entered(body: Node3D) -> void:
 func rpc_dungeon_exit_to_hub() -> void:
 	get_tree().call_deferred("change_scene_to_file", HUB_SCENE_PATH)
 
-func _get_biome_data(biome_id: String) -> Resource:
-	if biome_database == null:
-		return null
-	if biome_database.has_method("get_biome"):
-		return biome_database.call("get_biome", biome_id)
-	return null
-
 func _build_room_lookup() -> void:
 	_room_lookup = {}
 	for room_variant in _rooms:
@@ -546,381 +521,469 @@ func _get_room_by_type(room_type: int) -> RoomData:
 			return room
 	return null
 
-func _assign_handcrafted_layouts(biome_data: Resource = null) -> void:
+func _assign_room_scenes_and_fit_topology(content: Resource) -> void:
+	_reset_room_scene_assignments()
+	if content == null:
+		push_error("DungeonManager: default dungeon content is missing.")
+		return
+
+	var default_scene := _get_packed_scene_property(content, "default_room_scene")
+	if default_scene == null:
+		push_error("DungeonManager: default_room_scene is missing from dungeon content.")
+		return
+	var start_scene := _get_packed_scene_property(content, "start_room_scene")
+	var start_room := _get_room_by_type(RoomData.RoomType.START)
+	if start_room != null:
+		var start_assignment := start_scene if start_scene != null else default_scene
+		if not _assign_scene_to_room_with_fit(start_room, start_assignment, "start", false):
+			push_error("DungeonManager: failed to fit the start room scene.")
+
+	var special_room_scenes := _get_packed_scene_array_property(content, "special_room_scenes")
+	var special_room_chance := 0.0
+	if _resource_has_property(content, "special_room_chance"):
+		special_room_chance = clampf(float(content.get("special_room_chance")), 0.0, 1.0)
+	var rng := _generator.rng if _generator != null and _generator.rng != null else RandomNumberGenerator.new()
+	if _generator == null or _generator.rng == null:
+		rng.seed = generation_seed
+	var normal_rooms: Array = []
 	for room_variant in _rooms:
 		var room: RoomData = room_variant
-		room.has_handcrafted_layout = false
-		room.handcrafted_scene = null
-		room.handcrafted_scene_path = ""
-
-	if biome_data == null:
-		return
-
-	var biome_id := ""
-	if _resource_has_property(biome_data, "biome_id"):
-		biome_id = str(biome_data.get("biome_id"))
-
-	var start_scene: PackedScene = null
-	if _resource_has_property(biome_data, "handcrafted_start_room_scene"):
-		var start_scene_variant: Variant = biome_data.get("handcrafted_start_room_scene")
-		if start_scene_variant is PackedScene:
-			start_scene = start_scene_variant
-
-	if start_scene != null:
-		var start_room := _get_room_by_type(RoomData.RoomType.START)
-		_assign_handcrafted_scene_to_room(start_room, start_scene)
-	else:
-		push_warning("DungeonManager: biome '%s' has no handcrafted_start_room_scene; start room will be procedural." % biome_id)
-
-	var chance := 0.25
-	if _resource_has_property(biome_data, "handcrafted_normal_room_chance"):
-		chance = clampf(float(biome_data.get("handcrafted_normal_room_chance")), 0.0, 1.0)
-	if chance <= 0.0:
-		return
-
-	var normal_scene_pool: Array[PackedScene] = []
-	if _resource_has_property(biome_data, "handcrafted_normal_room_scenes"):
-		var normal_scene_variant: Variant = biome_data.get("handcrafted_normal_room_scenes")
-		if typeof(normal_scene_variant) == TYPE_ARRAY:
-			for scene_variant in normal_scene_variant:
-				if scene_variant is PackedScene:
-					normal_scene_pool.append(scene_variant)
-
-	if normal_scene_pool.is_empty():
-		return
+		if room.room_type == RoomData.RoomType.NORMAL:
+			normal_rooms.append(room)
+	_shuffle_array(normal_rooms, rng)
+	for room_variant in normal_rooms:
+		var room: RoomData = room_variant
+		if special_room_scenes.is_empty():
+			break
+		if rng.randf() >= special_room_chance:
+			continue
+		var shuffled_specials := special_room_scenes.duplicate()
+		_shuffle_array(shuffled_specials, rng)
+		for scene_variant in shuffled_specials:
+			if not (scene_variant is PackedScene):
+				continue
+			if _assign_scene_to_room_with_fit(room, scene_variant, "special", true):
+				break
 
 	for room_variant in _rooms:
 		var room: RoomData = room_variant
-		if room.room_type != RoomData.RoomType.NORMAL:
+		if room.assigned_scene != null:
 			continue
-		if _generator == null or _generator.rng == null:
-			continue
-		if _generator.rng.randf() >= chance:
-			continue
-		var scene: PackedScene = normal_scene_pool[_generator.rng.randi() % normal_scene_pool.size()]
-		_assign_handcrafted_scene_to_room(room, scene)
+		var role := "default"
+		if room.room_type == RoomData.RoomType.EXIT:
+			role = "exit"
+		if not _assign_scene_to_room_with_fit(room, default_scene, role, false):
+			push_error("DungeonManager: failed to assign a valid scene for room %d." % room.id)
 
-func _assign_handcrafted_scene_to_room(room: RoomData, scene: PackedScene) -> void:
+	_rebuild_room_doorway_walls()
+
+func _reset_room_scene_assignments() -> void:
+	for room_variant in _rooms:
+		var room: RoomData = room_variant
+		room.assigned_scene = null
+		room.assigned_scene_path = ""
+		room.assigned_scene_role = "default"
+		room.chosen_rotation_degrees = 0
+
+func _assign_scene_to_room_with_fit(room: RoomData, scene: PackedScene, role: String, allow_pruning: bool) -> bool:
 	if room == null or scene == null:
-		return
-	room.has_handcrafted_layout = true
-	room.handcrafted_scene = scene
-	room.handcrafted_scene_path = scene.resource_path
+		return false
+	var contract := _get_room_scene_contract(scene)
+	if contract.is_empty():
+		return false
+	if role == "start" and not bool(contract.get("has_player_spawn", false)):
+		push_error("DungeonManager: start room scene '%s' is missing PlayerSpawn." % scene.resource_path)
+		return false
+	if bool(contract.get("supports_any_profile", false)) and not bool(contract.get("supports_runtime_doorways", false)):
+		push_error("DungeonManager: default room scene '%s' must support runtime doorway toggling." % scene.resource_path)
+		return false
 
-func _spawn_handcrafted_room_overlays(parent: Node3D) -> void:
-	if parent == null:
-		return
+	var current_open_walls := _get_room_open_walls(room)
+	if bool(contract.get("supports_any_profile", false)):
+		_set_room_assignment(room, scene, role, int(contract.get("default_rotation_degrees", 0)), current_open_walls)
+		return true
 
-	var root := Node3D.new()
-	root.name = "HandcraftedRooms"
-	parent.add_child(root)
+	var supported_profiles: Array = contract.get("supported_profiles", [])
+	var allowed_rotations: Array = contract.get("allowed_rotations", [0])
+	for profile_variant in supported_profiles:
+		if typeof(profile_variant) != TYPE_ARRAY:
+			continue
+		var base_profile: Array = profile_variant
+		for rotation_variant in allowed_rotations:
+			var rotation_degrees := int(rotation_variant)
+			var rotated_profile := _rotate_walls(base_profile, rotation_degrees)
+			if not _is_wall_subset(rotated_profile, current_open_walls):
+				continue
+			var walls_to_prune := _subtract_wall_sets(current_open_walls, rotated_profile)
+			if not allow_pruning and not walls_to_prune.is_empty():
+				continue
+			if not walls_to_prune.is_empty() and not _try_prune_room_walls(room.id, walls_to_prune):
+				continue
+			_set_room_assignment(room, scene, role, rotation_degrees, rotated_profile)
+			return true
+	return false
 
+func _set_room_assignment(room: RoomData, scene: PackedScene, role: String, rotation_degrees: int, open_walls: Array) -> void:
+	room.assigned_scene = scene
+	room.assigned_scene_path = scene.resource_path
+	room.assigned_scene_role = role
+	room.chosen_rotation_degrees = rotation_degrees
+	room.doorway_walls = _sort_wall_set(open_walls)
+
+func _get_room_scene_contract(scene: PackedScene) -> Dictionary:
+	if scene == null:
+		return {}
+	var cache_key := scene.resource_path if scene.resource_path != "" else str(scene.get_instance_id())
+	if _room_scene_contract_cache.has(cache_key):
+		return _room_scene_contract_cache[cache_key]
+
+	var instance_variant: Variant = scene.instantiate()
+	if not (instance_variant is Node3D):
+		if instance_variant is Node:
+			(instance_variant as Node).free()
+		return {}
+	var instance: Node3D = instance_variant
+	var profile_strings := PackedStringArray()
+	var role_tags := PackedStringArray()
+	var rotation_values := PackedInt32Array([0])
+	var has_player_spawn := instance.get_node_or_null("PlayerSpawn") != null
+	var supports_runtime_doorways := false
+	if instance.has_method("get_supported_doorway_profiles"):
+		var profile_variant: Variant = instance.call("get_supported_doorway_profiles")
+		if profile_variant is PackedStringArray:
+			profile_strings = profile_variant
+	if instance.has_method("get_room_role_tags"):
+		var role_variant: Variant = instance.call("get_room_role_tags")
+		if role_variant is PackedStringArray:
+			role_tags = role_variant
+	if instance.has_method("get_allowed_rotation_degrees"):
+		var rotation_variant: Variant = instance.call("get_allowed_rotation_degrees")
+		if rotation_variant is PackedInt32Array and not rotation_variant.is_empty():
+			rotation_values = rotation_variant
+	if instance is StandardDungeonRoom:
+		supports_runtime_doorways = true
+	elif instance.has_method("supports_runtime_doorway_configuration"):
+		supports_runtime_doorways = bool(instance.call("supports_runtime_doorway_configuration"))
+	else:
+		supports_runtime_doorways = instance.has_method("configure_doorways") or instance.has_method("set_doorway_open")
+	instance.free()
+	if profile_strings.is_empty():
+		push_error("DungeonManager: stitched room scene '%s' is missing supported doorway profile metadata." % scene.resource_path)
+		return {}
+
+	var contract := {
+		"supports_any_profile": false,
+		"supported_profiles": [],
+		"allowed_rotations": [],
+		"room_role_tags": role_tags,
+		"default_rotation_degrees": 0,
+		"has_player_spawn": has_player_spawn,
+		"supports_runtime_doorways": supports_runtime_doorways,
+	}
+	var normalized_rotations: Array = []
+	for rotation_variant in rotation_values:
+		normalized_rotations.append(int(rotation_variant))
+	if normalized_rotations.is_empty():
+		normalized_rotations.append(0)
+	contract["allowed_rotations"] = normalized_rotations
+	contract["default_rotation_degrees"] = int(normalized_rotations[0])
+
+	var parsed_profiles: Array = []
+	for profile_string_variant in profile_strings:
+		var profile_string := String(profile_string_variant).strip_edges().to_lower()
+		if profile_string == "*":
+			contract["supports_any_profile"] = true
+			parsed_profiles.clear()
+			break
+		parsed_profiles.append(_parse_doorway_profile_string(profile_string))
+	contract["supported_profiles"] = parsed_profiles
+	_room_scene_contract_cache[cache_key] = contract
+	return contract
+
+func _parse_doorway_profile_string(profile_string: String) -> Array:
+	if profile_string.is_empty():
+		return []
+	var walls: Array = []
+	for part_variant in profile_string.split(","):
+		var wall := String(part_variant).strip_edges().to_lower()
+		if wall not in ["north", "south", "east", "west"]:
+			continue
+		if wall not in walls:
+			walls.append(wall)
+	return _sort_wall_set(walls)
+
+func _get_room_open_walls(room: RoomData) -> Array:
+	var walls: Array = []
+	for neighbor_id_variant in room.connected_to:
+		var neighbor_id := int(neighbor_id_variant)
+		var neighbor: RoomData = _room_lookup.get(neighbor_id, null)
+		if neighbor == null:
+			continue
+		var delta := neighbor.lattice_coord - room.lattice_coord
+		if delta == Vector2i(0, -1):
+			walls.append("north")
+		elif delta == Vector2i(0, 1):
+			walls.append("south")
+		elif delta == Vector2i(1, 0):
+			walls.append("east")
+		elif delta == Vector2i(-1, 0):
+			walls.append("west")
+	return _sort_wall_set(walls)
+
+func _rotate_walls(walls: Array, rotation_degrees: int) -> Array:
+	var rotated: Array = []
+	for wall_variant in walls:
+		var rotated_wall := _rotate_wall_name(String(wall_variant), rotation_degrees)
+		if rotated_wall not in rotated:
+			rotated.append(rotated_wall)
+	return _sort_wall_set(rotated)
+
+func _rotate_wall_name(wall: String, rotation_degrees: int) -> String:
+	var wall_order := ["north", "east", "south", "west"]
+	var wall_index := wall_order.find(wall)
+	if wall_index < 0:
+		return wall
+	var steps := int(posmod(rotation_degrees, 360) / 90)
+	return wall_order[(wall_index + steps) % wall_order.size()]
+
+func _is_wall_subset(candidate_walls: Array, current_open_walls: Array) -> bool:
+	for wall_variant in candidate_walls:
+		if String(wall_variant) not in current_open_walls:
+			return false
+	return true
+
+func _subtract_wall_sets(source_walls: Array, walls_to_keep: Array) -> Array:
+	var remainder: Array = []
+	for wall_variant in source_walls:
+		var wall := String(wall_variant)
+		if wall not in walls_to_keep:
+			remainder.append(wall)
+	return _sort_wall_set(remainder)
+
+func _sort_wall_set(walls: Array) -> Array:
+	var order := {
+		"north": 0,
+		"east": 1,
+		"south": 2,
+		"west": 3,
+	}
+	var normalized: Array = []
+	for wall_variant in walls:
+		var wall := String(wall_variant)
+		if wall == "" or wall in normalized:
+			continue
+		normalized.append(wall)
+	normalized.sort_custom(func(a: String, b: String) -> bool:
+		return int(order.get(a, 99)) < int(order.get(b, 99))
+	)
+	return normalized
+
+func _try_prune_room_walls(room_id: int, walls_to_prune: Array) -> bool:
+	if walls_to_prune.is_empty():
+		return true
+	var snapshot := _snapshot_topology_state()
+	for wall_variant in walls_to_prune:
+		if not _prune_room_wall(room_id, String(wall_variant)):
+			_restore_topology_state(snapshot)
+			return false
+	if not _is_room_graph_connected():
+		_restore_topology_state(snapshot)
+		return false
+	_rebuild_room_doorway_walls()
+	return true
+
+func _snapshot_topology_state() -> Dictionary:
+	var room_state := {}
 	for room_variant in _rooms:
 		var room: RoomData = room_variant
-		if not room.has_handcrafted_layout:
-			continue
-		if room.handcrafted_scene == null:
-			continue
+		room_state[room.id] = {
+			"connected_to": room.connected_to.duplicate(),
+			"corridor_ids": room.corridor_ids.duplicate(),
+			"doorway_ids": room.doorway_ids.duplicate(),
+			"doorway_walls": room.doorway_walls.duplicate(),
+		}
+	return {
+		"corridors": _generator.corridors.duplicate(true),
+		"doorways": _generator.doorways.duplicate(true),
+		"rooms": room_state,
+	}
 
-		var inst := room.handcrafted_scene.instantiate()
-		if inst == null:
-			push_warning("DungeonManager: failed to instantiate handcrafted room scene for room %d." % room.id)
-			continue
-		if not (inst is Node3D):
-			push_warning(
-				"DungeonManager: handcrafted scene '%s' is not a Node3D root; skipping room %d."
-				% [room.handcrafted_scene_path, room.id]
-			)
-			inst.free()
-			continue
-
-		var room_overlay: Node3D = inst
-		_configure_runtime_handcrafted_room(room, room_overlay)
-		_hide_runtime_handcrafted_debug_nodes(room_overlay)
-		_convert_handcrafted_wall_tiles_to_sections(room_overlay)
-		room_overlay.position = room.get_world_center(DungeonBuilder.TILE_SIZE)
-		room_overlay.position.y = 0.0
-		_apply_handcrafted_room_orientation(room, room_overlay)
-		_apply_handcrafted_room_position_offset(room, room_overlay)
-		room_overlay.set_meta("room_id", room.id)
-		room_overlay.set_meta("room_type", room.room_type)
-		room_overlay.set_meta("lattice_coord", room.lattice_coord)
-		root.add_child(room_overlay)
-		_handcrafted_room_overlays_by_id[room.id] = room_overlay
-		_configure_handcrafted_room_overlay(room, room_overlay)
-
-func _configure_runtime_handcrafted_room(room: RoomData, room_overlay: Node3D) -> void:
-	if room == null or room_overlay == null:
+func _restore_topology_state(snapshot: Dictionary) -> void:
+	if snapshot.is_empty():
 		return
-	if not (room_overlay is HandcraftedQuadrantCompositeRoom):
-		return
-	var quadrant_pool := _get_handcrafted_quadrant_scene_pool(_active_biome_data)
-	var composite_room: HandcraftedQuadrantCompositeRoom = room_overlay
-	composite_room.populate_quadrants(quadrant_pool, _generator.rng)
+	_generator.corridors = snapshot.get("corridors", []).duplicate(true)
+	_generator.doorways = snapshot.get("doorways", []).duplicate(true)
+	var room_state: Dictionary = snapshot.get("rooms", {})
+	for room_variant in _rooms:
+		var room: RoomData = room_variant
+		var state: Dictionary = room_state.get(room.id, {})
+		room.connected_to = state.get("connected_to", []).duplicate()
+		room.corridor_ids = state.get("corridor_ids", []).duplicate()
+		room.doorway_ids = state.get("doorway_ids", []).duplicate()
+		room.doorway_walls = state.get("doorway_walls", []).duplicate()
 
-func _hide_runtime_handcrafted_debug_nodes(room_overlay: Node3D) -> void:
+func _prune_room_wall(room_id: int, wall: String) -> bool:
+	var room: RoomData = _room_lookup.get(room_id, null)
+	if room == null:
+		return false
+	var neighbor_id := _get_neighbor_id_for_wall(room, wall)
+	if neighbor_id < 0:
+		return false
+	var corridor_id := _find_corridor_id_between_rooms(room_id, neighbor_id)
+	if corridor_id < 0:
+		return false
+	room.connected_to.erase(neighbor_id)
+	room.corridor_ids.erase(corridor_id)
+	var neighbor: RoomData = _room_lookup.get(neighbor_id, null)
+	if neighbor != null:
+		neighbor.connected_to.erase(room_id)
+		neighbor.corridor_ids.erase(corridor_id)
+	_generator.corridors = _generator.corridors.filter(func(entry: Dictionary) -> bool:
+		return int(entry.get("id", -1)) != corridor_id
+	)
+	var removed_doorway_ids: Array = []
+	_generator.doorways = _generator.doorways.filter(func(entry: Dictionary) -> bool:
+		var keep := int(entry.get("corridor_id", -1)) != corridor_id
+		if not keep:
+			removed_doorway_ids.append(int(entry.get("id", -1)))
+		return keep
+	)
+	for doorway_id_variant in removed_doorway_ids:
+		var doorway_id := int(doorway_id_variant)
+		room.doorway_ids.erase(doorway_id)
+		if neighbor != null:
+			neighbor.doorway_ids.erase(doorway_id)
+	return true
+
+func _get_neighbor_id_for_wall(room: RoomData, wall: String) -> int:
+	for neighbor_id_variant in room.connected_to:
+		var neighbor_id := int(neighbor_id_variant)
+		var neighbor: RoomData = _room_lookup.get(neighbor_id, null)
+		if neighbor == null:
+			continue
+		var delta := neighbor.lattice_coord - room.lattice_coord
+		if wall == "north" and delta == Vector2i(0, -1):
+			return neighbor_id
+		if wall == "south" and delta == Vector2i(0, 1):
+			return neighbor_id
+		if wall == "east" and delta == Vector2i(1, 0):
+			return neighbor_id
+		if wall == "west" and delta == Vector2i(-1, 0):
+			return neighbor_id
+	return -1
+
+func _find_corridor_id_between_rooms(room_a_id: int, room_b_id: int) -> int:
+	for corridor_variant in _generator.corridors:
+		if typeof(corridor_variant) != TYPE_DICTIONARY:
+			continue
+		var corridor: Dictionary = corridor_variant
+		var a_id := int(corridor.get("room_a_id", -1))
+		var b_id := int(corridor.get("room_b_id", -1))
+		if (a_id == room_a_id and b_id == room_b_id) or (a_id == room_b_id and b_id == room_a_id):
+			return int(corridor.get("id", -1))
+	return -1
+
+func _is_room_graph_connected() -> bool:
+	if _rooms.is_empty():
+		return true
+	var visited := {}
+	var start_room := _get_room_by_type(RoomData.RoomType.START)
+	var start_id := start_room.id if start_room != null else int((_rooms[0] as RoomData).id)
+	var queue: Array = [start_id]
+	var index := 0
+	visited[start_id] = true
+	while index < queue.size():
+		var room_id := int(queue[index])
+		index += 1
+		var room: RoomData = _room_lookup.get(room_id, null)
+		if room == null:
+			continue
+		for neighbor_id_variant in room.connected_to:
+			var neighbor_id := int(neighbor_id_variant)
+			if visited.has(neighbor_id):
+				continue
+			visited[neighbor_id] = true
+			queue.append(neighbor_id)
+	return visited.size() == _rooms.size()
+
+func _rebuild_room_doorway_walls() -> void:
+	var doorway_walls_by_room := {}
+	for doorway_variant in _generator.doorways:
+		if typeof(doorway_variant) != TYPE_DICTIONARY:
+			continue
+		var doorway: Dictionary = doorway_variant
+		var room_id := int(doorway.get("room_id", -1))
+		var room: RoomData = _room_lookup.get(room_id, null)
+		if room == null:
+			continue
+		var tile: Vector2i = doorway.get("tile", Vector2i.ZERO)
+		var rect := room.grid_rect
+		var wall := ""
+		if tile.x <= rect.position.x:
+			wall = "west"
+		elif tile.x >= rect.position.x + rect.size.x - 1:
+			wall = "east"
+		elif tile.y <= rect.position.y:
+			wall = "north"
+		elif tile.y >= rect.position.y + rect.size.y - 1:
+			wall = "south"
+		if wall == "":
+			continue
+		if not doorway_walls_by_room.has(room_id):
+			doorway_walls_by_room[room_id] = []
+		if wall not in doorway_walls_by_room[room_id]:
+			doorway_walls_by_room[room_id].append(wall)
+	for room_variant in _rooms:
+		var room: RoomData = room_variant
+		room.doorway_walls = _sort_wall_set(doorway_walls_by_room.get(room.id, []))
+
+func _get_packed_scene_property(resource: Resource, property_name: String) -> PackedScene:
+	if resource == null or not _resource_has_property(resource, property_name):
+		return null
+	var value: Variant = resource.get(property_name)
+	if value is PackedScene:
+		return value
+	return null
+
+func _get_packed_scene_array_property(resource: Resource, property_name: String) -> Array:
+	var scenes: Array = []
+	if resource == null or not _resource_has_property(resource, property_name):
+		return scenes
+	var value: Variant = resource.get(property_name)
+	if typeof(value) != TYPE_ARRAY:
+		return scenes
+	for scene_variant in value:
+		if scene_variant is PackedScene:
+			scenes.append(scene_variant)
+	return scenes
+
+func _shuffle_array(values: Array, rng: RandomNumberGenerator) -> void:
+	if rng == null:
+		return
+	for index in range(values.size() - 1, 0, -1):
+		var swap_index := rng.randi_range(0, index)
+		var temp: Variant = values[index]
+		values[index] = values[swap_index]
+		values[swap_index] = temp
+
+func _post_process_stitched_rooms() -> void:
+	if _stitcher == null:
+		return
+	for room_variant in _rooms:
+		var room: RoomData = room_variant
+		var instance := _stitcher.get_room_instance(room.id)
+		if not is_instance_valid(instance):
+			continue
+		_hide_room_debug_nodes(instance)
+		_room_instances_by_id[room.id] = instance
+		_configure_handcrafted_room_overlay(room, instance)
+
+func _hide_room_debug_nodes(room_overlay: Node3D) -> void:
 	if room_overlay == null or Engine.is_editor_hint():
 		return
 	var debug_root := room_overlay.get_node_or_null("RoomBoundsDebug") as Node3D
 	if debug_root != null:
 		debug_root.visible = false
-
-func _convert_handcrafted_wall_tiles_to_sections(room_overlay: Node3D) -> void:
-	if room_overlay == null:
-		return
-
-	var pending: Array[Node] = [room_overlay]
-	while not pending.is_empty():
-		var current_variant: Variant = pending.pop_back()
-		if not (current_variant is Node):
-			continue
-		var current: Node = current_variant
-		if current is Node3D and _should_convert_handcrafted_wall_container(current.name):
-			_convert_handcrafted_wall_container(current as Node3D)
-		for child in current.get_children():
-			pending.append(child)
-
-func _should_convert_handcrafted_wall_container(node_name: String) -> bool:
-	return node_name == "Walls" or node_name == "CompactWalls" or node_name == "RoomShell"
-
-func _convert_handcrafted_wall_container(container: Node3D) -> void:
-	if container == null:
-		return
-
-	var groups := {}
-	for child in container.get_children():
-		var wall_tile := child as StaticBody3D
-		if wall_tile == null or not _is_handcrafted_wall_tile(wall_tile):
-			continue
-
-		var wall_size := _get_handcrafted_wall_tile_size(wall_tile)
-		if wall_size == Vector3.ZERO:
-			continue
-
-		var tile_length := maxf(wall_size.x, wall_size.z)
-		var tile_thickness := minf(wall_size.x, wall_size.z)
-		var axis_key := _get_handcrafted_wall_axis(wall_tile)
-		var line_coord := wall_tile.position.z
-		if axis_key == "z":
-			line_coord = wall_tile.position.x
-
-		var group_key := "%s:%.3f" % [axis_key, snappedf(line_coord, 0.001)]
-		if not groups.has(group_key):
-			groups[group_key] = []
-		groups[group_key].append({
-			"node": wall_tile,
-			"axis": axis_key,
-			"line": line_coord,
-			"length": tile_length,
-			"thickness": tile_thickness,
-			"size": wall_size,
-			"position": wall_tile.position,
-		})
-
-	for group_variant in groups.values():
-		var entries: Array = group_variant
-		entries.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-			var axis: String = a["axis"]
-			var pos_a: Vector3 = a["position"]
-			var pos_b: Vector3 = b["position"]
-			return pos_a.x < pos_b.x if axis == "x" else pos_a.z < pos_b.z
-		)
-
-		var run: Array = []
-		var previous_center := 0.0
-		var expected_step := 0.0
-		for entry_variant in entries:
-			var entry: Dictionary = entry_variant
-			var axis: String = entry["axis"]
-			var position: Vector3 = entry["position"]
-			var center := position.x if axis == "x" else position.z
-			var length := float(entry["length"])
-			if run.is_empty():
-				run = [entry]
-				previous_center = center
-				expected_step = length
-				continue
-			if absf(center - previous_center - expected_step) <= 0.15:
-				run.append(entry)
-				previous_center = center
-				continue
-			_emit_handcrafted_wall_run(container, run)
-			run = [entry]
-			previous_center = center
-			expected_step = length
-		if not run.is_empty():
-			_emit_handcrafted_wall_run(container, run)
-
-	for group_variant in groups.values():
-		for entry_variant in group_variant:
-			var entry: Dictionary = entry_variant
-			var wall_tile := entry["node"] as Node
-			if wall_tile != null:
-				wall_tile.queue_free()
-
-func _emit_handcrafted_wall_run(container: Node3D, run: Array) -> void:
-	if container == null or run.is_empty():
-		return
-
-	var first: Dictionary = run[0]
-	var last: Dictionary = run[run.size() - 1]
-	var axis: String = first["axis"]
-	var height := float((first["size"] as Vector3).y)
-	var length := float(first["length"])
-	var thickness := float(first["thickness"])
-	var first_pos: Vector3 = first["position"]
-	var last_pos: Vector3 = last["position"]
-	var line := float(first["line"])
-	var material := _tuned_handcrafted_wall_material(_get_handcrafted_wall_tile_material(first["node"]))
-
-	var segment := StaticBody3D.new()
-	var segment_size := Vector3(length, height, thickness)
-	var segment_pos := first_pos
-	var y_center := first_pos.y + height * 0.5
-	if axis == "x":
-		segment_size.x = absf(last_pos.x - first_pos.x) + length
-		segment_pos = Vector3((first_pos.x + last_pos.x) * 0.5, y_center, line)
-	else:
-		segment_size = Vector3(thickness, height, absf(last_pos.z - first_pos.z) + length)
-		segment_pos = Vector3(line, y_center, (first_pos.z + last_pos.z) * 0.5)
-
-	segment.position = segment_pos
-
-	var collider := CollisionShape3D.new()
-	var shape := BoxShape3D.new()
-	shape.size = segment_size
-	collider.shape = shape
-	segment.add_child(collider)
-
-	var mesh_instance := MeshInstance3D.new()
-	var mesh := BoxMesh.new()
-	mesh.size = segment_size
-	mesh.material = material
-	mesh_instance.mesh = mesh
-	segment.add_child(mesh_instance)
-
-	container.add_child(segment)
-
-func _is_handcrafted_wall_tile(node: StaticBody3D) -> bool:
-	if node == null:
-		return false
-	var mesh_instance := node.get_node_or_null("MeshInstance3D") as MeshInstance3D
-	var collision := node.get_node_or_null("CollisionShape3D") as CollisionShape3D
-	return mesh_instance != null and collision != null and collision.shape is BoxShape3D
-
-func _get_handcrafted_wall_tile_size(node: StaticBody3D) -> Vector3:
-	var collision := node.get_node_or_null("CollisionShape3D") as CollisionShape3D
-	if collision == null or not (collision.shape is BoxShape3D):
-		return Vector3.ZERO
-	var shape := collision.shape as BoxShape3D
-	return shape.size
-
-func _get_handcrafted_wall_axis(node: StaticBody3D) -> String:
-	if node == null:
-		return "x"
-	var local_x := node.transform.basis.x
-	return "x" if absf(local_x.x) >= absf(local_x.z) else "z"
-
-func _get_handcrafted_wall_tile_material(node: Node) -> Material:
-	if node == null:
-		return null
-	var mesh_instance := node.get_node_or_null("MeshInstance3D") as MeshInstance3D
-	if mesh_instance == null:
-		return null
-	if mesh_instance.material_override != null:
-		return mesh_instance.material_override
-	if mesh_instance.mesh != null and mesh_instance.mesh.get_surface_count() > 0:
-		return mesh_instance.mesh.surface_get_material(0)
-	return null
-
-func _tuned_handcrafted_wall_material(material: Material) -> Material:
-	if material is StandardMaterial3D:
-		var tuned := (material as StandardMaterial3D).duplicate() as StandardMaterial3D
-		var uv_scale := Vector3(10.0, 3.0, 2.0)
-		var use_world_triplanar := false
-		if _active_biome_data != null:
-			uv_scale = _active_biome_data.wall_uv_scale
-			use_world_triplanar = _active_biome_data.wall_use_world_triplanar
-		tuned.uv1_scale = uv_scale
-		tuned.uv1_triplanar = use_world_triplanar
-		tuned.uv1_world_triplanar = use_world_triplanar
-		if use_world_triplanar:
-			tuned.heightmap_enabled = false
-		return tuned
-	return material
-
-func _get_handcrafted_quadrant_scene_pool(biome_data: Resource) -> Array[PackedScene]:
-	var quadrant_scene_pool: Array[PackedScene] = []
-	if biome_data == null:
-		return quadrant_scene_pool
-	if not _resource_has_property(biome_data, "handcrafted_quadrant_room_scenes"):
-		return quadrant_scene_pool
-	var pool_variant: Variant = biome_data.get("handcrafted_quadrant_room_scenes")
-	if typeof(pool_variant) != TYPE_ARRAY:
-		return quadrant_scene_pool
-	for scene_variant in pool_variant:
-		if scene_variant is PackedScene:
-			quadrant_scene_pool.append(scene_variant)
-	return quadrant_scene_pool
-
-func _apply_handcrafted_room_orientation(room: RoomData, room_overlay: Node3D) -> void:
-	if room == null or room_overlay == null:
-		return
-	if room.room_type == RoomData.RoomType.START:
-		var doorway_side := _get_room_primary_doorway_side(room)
-		if doorway_side != "":
-			room_overlay.rotation_degrees.y = _rotation_for_start_room_doorway_side(doorway_side)
-			return
-	if room_overlay is HandcraftedRoomLayout:
-		var handcrafted_layout: HandcraftedRoomLayout = room_overlay
-		handcrafted_layout.rotation.y = handcrafted_layout.get_random_y_rotation_radians(_generator.rng)
-
-func _get_room_primary_doorway_side(room: RoomData) -> String:
-	if room == null:
-		return ""
-	var rect := room.grid_rect
-	for doorway_id_variant in room.doorway_ids:
-		var doorway_id := int(doorway_id_variant)
-		for doorway_variant in _generator.doorways:
-			if typeof(doorway_variant) != TYPE_DICTIONARY:
-				continue
-			var doorway: Dictionary = doorway_variant
-			if int(doorway.get("id", -1)) != doorway_id:
-				continue
-			var tile: Vector2i = doorway.get("tile", Vector2i(-1, -1))
-			if tile.x == rect.position.x:
-				return "west"
-			if tile.x == rect.position.x + rect.size.x - 1:
-				return "east"
-			if tile.y == rect.position.y:
-				return "north"
-			if tile.y == rect.position.y + rect.size.y - 1:
-				return "south"
-	return ""
-
-func _rotation_for_start_room_doorway_side(doorway_side: String) -> float:
-	match doorway_side:
-		"east":
-			return 90.0
-		"north":
-			return 180.0
-		"west":
-			return -90.0
-		_:
-			return 0.0
-
-func _apply_handcrafted_room_position_offset(room: RoomData, room_overlay: Node3D) -> void:
-	if room == null or room_overlay == null:
-		return
-	if room.room_type != RoomData.RoomType.START:
-		return
-	var doorway_side := _get_room_primary_doorway_side(room)
-	if doorway_side == "":
-		return
-	# Compact start layouts are authored with their doorway on the local +Z edge.
-	# Shift the whole overlay toward the procedural doorway so the room opening
-	# lines up with the actual room exit instead of using an internal corridor.
-	room_overlay.position += room_overlay.basis * Vector3(0.0, 0.0, 20.0)
 
 func _resource_has_property(resource: Resource, property_name: String) -> bool:
 	if resource == null:
@@ -958,18 +1021,18 @@ func _spawn_room_once(room_id: int) -> void:
 		return
 	_spawned_enemy_rooms[room_id] = true
 	var spawned_enemies: Array = []
-	var room_overlay = _handcrafted_room_overlays_by_id.get(room_id, null)
+	var room_overlay = _room_instances_by_id.get(room_id, null)
 	var handcrafted_spawners := _collect_handcrafted_enemy_spawners(room_overlay)
 	if not handcrafted_spawners.is_empty():
 		spawned_enemies = _encounter.populate_handcrafted_spawners(
 			room,
 			floor_number,
 			nav_region,
-			_active_biome_data,
+			_active_dungeon_content,
 			handcrafted_spawners
 		)
 	else:
-		spawned_enemies = _encounter.populate_room(room, floor_number, nav_region, _active_biome_data)
+		spawned_enemies = _encounter.populate_room(room, floor_number, nav_region, _active_dungeon_content)
 	_configure_handcrafted_room_enemy_behavior(room, spawned_enemies)
 	if not _session_multiplayer or not _session_host:
 		return
@@ -980,9 +1043,15 @@ func _spawn_room_once(room_id: int) -> void:
 		_register_network_enemy(enemy)
 
 func _find_room_id_for_world_position(world_pos: Vector3) -> int:
-	var tx := int(floor(world_pos.x / DungeonBuilder.TILE_SIZE))
-	var tz := int(floor(world_pos.z / DungeonBuilder.TILE_SIZE))
-	return int(_room_tile_owner.get("%d:%d" % [tx, tz], -1))
+	var tx := int(floor(world_pos.x / TILE_SIZE))
+	var tz := int(floor(world_pos.z / TILE_SIZE))
+	for room_variant in _rooms:
+		var room: RoomData = room_variant
+		var rect := room.grid_rect
+		if tx >= rect.position.x and tx < rect.position.x + rect.size.x \
+			and tz >= rect.position.y and tz < rect.position.y + rect.size.y:
+			return room.id
+	return -1
 
 func get_room_id_for_world_position(world_pos: Vector3) -> int:
 	return _find_room_id_for_world_position(world_pos)
@@ -1056,7 +1125,6 @@ func _build_floor_sync_config() -> Dictionary:
 		"room_size_tiles": room_size_tiles,
 		"corridor_width_tiles": corridor_width_tiles,
 		"corridor_length_tiles": corridor_length_tiles,
-		"biome_override": GameState.dungeon_biome_override,
 	}
 
 func _apply_floor_sync_config(floor_cfg: Dictionary) -> void:
@@ -1068,7 +1136,6 @@ func _apply_floor_sync_config(floor_cfg: Dictionary) -> void:
 	room_size_tiles = int(floor_cfg.get("room_size_tiles", room_size_tiles))
 	corridor_width_tiles = int(floor_cfg.get("corridor_width_tiles", corridor_width_tiles))
 	corridor_length_tiles = int(floor_cfg.get("corridor_length_tiles", corridor_length_tiles))
-	GameState.dungeon_biome_override = String(floor_cfg.get("biome_override", GameState.dungeon_biome_override))
 	GameState.dungeon_grid_min = grid_size_min
 	GameState.dungeon_grid_max = grid_size_max
 	GameState.dungeon_seed = generation_seed
@@ -1167,7 +1234,7 @@ func _get_player_node_for_peer(peer_id: int) -> Node3D:
 func _configure_handcrafted_room_overlay(room: RoomData, room_overlay: Node3D) -> void:
 	if room == null or room_overlay == null:
 		return
-	if room.handcrafted_scene_path != CASTLE_INNER_CHAMBER_SCENE_PATH:
+	if room.assigned_scene_path != CASTLE_INNER_CHAMBER_SCENE_PATH:
 		return
 	var door := room_overlay.get_node_or_null("InnerDoorway/Door") as DungeonDoor
 	if door == null:
@@ -1178,9 +1245,9 @@ func _configure_handcrafted_room_overlay(room: RoomData, room_overlay: Node3D) -
 		door.connect("door_opened", open_cb)
 
 func _configure_handcrafted_room_enemy_behavior(room: RoomData, spawned_enemies: Array) -> void:
-	if room == null or room.handcrafted_scene_path != CASTLE_INNER_CHAMBER_SCENE_PATH:
+	if room == null or room.assigned_scene_path != CASTLE_INNER_CHAMBER_SCENE_PATH:
 		return
-	var room_overlay = _handcrafted_room_overlays_by_id.get(room.id, null)
+	var room_overlay = _room_instances_by_id.get(room.id, null)
 	if not is_instance_valid(room_overlay):
 		return
 	var door := room_overlay.get_node_or_null("InnerDoorway/Door") as DungeonDoor
@@ -1359,21 +1426,19 @@ func request_weapon_switch(peer_id: int, weapon_slot: int, weapon_key: String) -
 	else:
 		rpc_id(1, "rpc_request_weapon_switch", peer_id, weapon_slot, weapon_key)
 
-func broadcast_projectile_visual(scene_path: String, cam_origin: Vector3, cam_forward: Vector3) -> void:
+func broadcast_projectile_visual(scene_path: String, shooter_peer_id: int, origin: Vector3, cam_forward: Vector3) -> void:
 	if not _session_multiplayer or not _session_host:
 		return
-	if scene_path.is_empty():
+	if scene_path.is_empty() or shooter_peer_id <= 0:
 		return
-	rpc("rpc_spawn_projectile_visual", scene_path, cam_origin, cam_forward)
+	rpc("rpc_spawn_projectile_visual", shooter_peer_id, scene_path, origin, cam_forward)
 
-func broadcast_weapon_fire_visual(peer_id: int, weapon_slot: int, weapon_key: String) -> void:
+func broadcast_weapon_fire_visual(peer_id: int, muzzle_pos: Vector3) -> void:
 	if not _session_multiplayer or not _session_host:
 		return
-	for target_peer_id in _get_network_connected_peer_ids():
-		var remote_peer_id := int(target_peer_id)
-		if remote_peer_id == peer_id:
-			continue
-		rpc_id(remote_peer_id, "rpc_play_remote_weapon_fire_visual", peer_id, weapon_slot, weapon_key)
+	if peer_id <= 0:
+		return
+	rpc("rpc_spawn_weapon_fire_visual", peer_id, muzzle_pos)
 
 func _handle_weapon_fire_request(peer_id: int, weapon_slot: int, weapon_key: String, cam_origin: Vector3, cam_forward: Vector3, _shot_id: int) -> void:
 	var player_node = _get_player_node_for_peer(peer_id)
@@ -1398,7 +1463,15 @@ func _handle_weapon_fire_request(peer_id: int, weapon_slot: int, weapon_key: Str
 	var fired := bool(weapon.call("fire_authoritative_from_network", cam_origin, cam_forward, player_node))
 	if not fired:
 		return
-	rpc_id(peer_id, "rpc_sync_weapon_state", peer_id, manager.get_current_weapon_slot(), weapon.current_mag, manager.get_ammo_snapshot())
+	rpc_id(
+		peer_id,
+		"rpc_sync_weapon_state",
+		peer_id,
+		manager.get_current_weapon_slot(),
+		weapon.current_mag,
+		manager.get_ammo_snapshot(),
+		manager.get_current_weapon_key()
+	)
 
 func _handle_weapon_reload_request(peer_id: int, weapon_slot: int, weapon_key: String) -> void:
 	var player_node = _get_player_node_for_peer(peer_id)
@@ -1423,7 +1496,15 @@ func _handle_weapon_reload_request(peer_id: int, weapon_slot: int, weapon_key: S
 	var success := bool(weapon.call("perform_authoritative_reload"))
 	if not success:
 		return
-	rpc_id(peer_id, "rpc_sync_weapon_state", peer_id, manager.get_current_weapon_slot(), weapon.current_mag, manager.get_ammo_snapshot())
+	rpc_id(
+		peer_id,
+		"rpc_sync_weapon_state",
+		peer_id,
+		manager.get_current_weapon_slot(),
+		weapon.current_mag,
+		manager.get_ammo_snapshot(),
+		manager.get_current_weapon_key()
+	)
 
 func _handle_weapon_switch_request(peer_id: int, weapon_slot: int, weapon_key: String) -> void:
 	var player_node = _get_player_node_for_peer(peer_id)
@@ -1444,7 +1525,15 @@ func _handle_weapon_switch_request(peer_id: int, weapon_slot: int, weapon_key: S
 	var weapon := manager.get_current_weapon()
 	if weapon == null:
 		return
-	rpc_id(peer_id, "rpc_sync_weapon_state", peer_id, manager.get_current_weapon_slot(), weapon.current_mag, manager.get_ammo_snapshot())
+	rpc_id(
+		peer_id,
+		"rpc_sync_weapon_state",
+		peer_id,
+		manager.get_current_weapon_slot(),
+		weapon.current_mag,
+		manager.get_ammo_snapshot(),
+		manager.get_current_weapon_key()
+	)
 
 func request_interaction(interactor: Node, target: Node) -> void:
 	if target == null:
@@ -1547,13 +1636,15 @@ func _sync_pickup_state_to_peer(peer_id: int, interactor: Node) -> void:
 	var weapon_slot := -1
 	var current_mag := -1
 	var ammo_snapshot := {}
+	var weapon_key := ""
 	var weapon_manager: WeaponManager = interactor.get("weapon_manager") as WeaponManager
 	if weapon_manager != null:
 		weapon_slot = weapon_manager.get_current_weapon_slot()
 		var weapon := weapon_manager.get_current_weapon()
 		current_mag = weapon.current_mag if weapon != null else -1
 		ammo_snapshot = weapon_manager.get_ammo_snapshot()
-	rpc_id(peer_id, "rpc_sync_pickup_state", peer_id, inventory_snapshot, health, weapon_slot, current_mag, ammo_snapshot)
+		weapon_key = weapon_manager.get_current_weapon_key()
+	rpc_id(peer_id, "rpc_sync_pickup_state", peer_id, inventory_snapshot, health, weapon_slot, current_mag, ammo_snapshot, weapon_key)
 
 func _resolve_interaction_target(target: Node) -> Node:
 	var current := target
@@ -2019,10 +2110,12 @@ func rpc_request_weapon_switch(peer_id: int, weapon_slot: int, weapon_key: Strin
 		return
 	_handle_weapon_switch_request(peer_id, weapon_slot, weapon_key)
 
-func broadcast_hitscan_visual(from: Vector3, to: Vector3) -> void:
+func broadcast_hitscan_visual(shooter_peer_id: int, from: Vector3, to: Vector3) -> void:
 	if not _session_multiplayer or not _session_host:
 		return
-	rpc("rpc_spawn_hitscan_visual", from, to)
+	if shooter_peer_id <= 0:
+		return
+	rpc("rpc_spawn_hitscan_visual", shooter_peer_id, from, to)
 
 @rpc("any_peer", "reliable")
 func rpc_request_weapon_reload(peer_id: int, weapon_slot: int, weapon_key: String) -> void:
@@ -2033,7 +2126,7 @@ func rpc_request_weapon_reload(peer_id: int, weapon_slot: int, weapon_key: Strin
 	_handle_weapon_reload_request(peer_id, weapon_slot, weapon_key)
 
 @rpc("authority", "call_remote", "reliable")
-func rpc_sync_weapon_state(peer_id: int, slot_index: int, current_mag: int, ammo_snapshot: Dictionary) -> void:
+func rpc_sync_weapon_state(peer_id: int, slot_index: int, current_mag: int, ammo_snapshot: Dictionary, weapon_key: String = "") -> void:
 	if _local_peer_id != peer_id:
 		return
 	var local_player = NetworkPlayerManager.get_local_player()
@@ -2042,10 +2135,10 @@ func rpc_sync_weapon_state(peer_id: int, slot_index: int, current_mag: int, ammo
 	var manager: WeaponManager = local_player.get("weapon_manager")
 	if manager == null:
 		return
-	manager.apply_authoritative_weapon_state(slot_index, current_mag, ammo_snapshot)
+	manager.apply_authoritative_weapon_state(slot_index, current_mag, ammo_snapshot, weapon_key)
 
 @rpc("authority", "call_remote", "reliable")
-func rpc_sync_pickup_state(peer_id: int, inventory_snapshot: Dictionary, health: int, weapon_slot: int, current_mag: int, ammo_snapshot: Dictionary) -> void:
+func rpc_sync_pickup_state(peer_id: int, inventory_snapshot: Dictionary, health: int, weapon_slot: int, current_mag: int, ammo_snapshot: Dictionary, weapon_key: String = "") -> void:
 	if _local_peer_id != peer_id:
 		return
 	var local_player = NetworkPlayerManager.get_local_player()
@@ -2064,7 +2157,7 @@ func rpc_sync_pickup_state(peer_id: int, inventory_snapshot: Dictionary, health:
 		local_player.call("apply_authoritative_health", health)
 	var manager: WeaponManager = local_player.get("weapon_manager")
 	if manager != null and not ammo_snapshot.is_empty():
-		manager.apply_authoritative_weapon_state(weapon_slot, current_mag, ammo_snapshot)
+		manager.apply_authoritative_weapon_state(weapon_slot, current_mag, ammo_snapshot, weapon_key)
 	_emit_pickup_sync_feedback(local_player, previous_inventory_snapshot, inventory_snapshot, previous_health, health, previous_ammo_snapshot, ammo_snapshot)
 
 @rpc("any_peer", "reliable")
@@ -2253,9 +2346,9 @@ func rpc_mark_enemy_dead(enemy_id: int) -> void:
 	if enemy.has_method("force_network_dead_visual"):
 		enemy.call("force_network_dead_visual")
 
-@rpc("authority", "call_remote", "reliable")
-func rpc_spawn_projectile_visual(scene_path: String, cam_origin: Vector3, cam_forward: Vector3) -> void:
-	if _session_host:
+@rpc("authority", "call_local", "reliable")
+func rpc_spawn_projectile_visual(shooter_peer_id: int, scene_path: String, origin: Vector3, cam_forward: Vector3) -> void:
+	if shooter_peer_id == _local_peer_id:
 		return
 	var packed := load(scene_path)
 	if not (packed is PackedScene):
@@ -2276,39 +2369,63 @@ func rpc_spawn_projectile_visual(scene_path: String, cam_origin: Vector3, cam_fo
 
 	projectile.network_visual_only = true
 	projectile.direction = cam_forward.normalized()
+	projectile.monitoring = false
+	projectile.monitorable = false
+	projectile.collision_layer = 0
+	projectile.collision_mask = 0
 	spawn_parent.add_child(projectile)
 	projectile.add_to_group("network_replicated_projectile_visual")
 	_debug_network_visual_counts["projectile"] = int(_debug_network_visual_counts.get("projectile", 0)) + 1
-	projectile.global_position = cam_origin + cam_forward.normalized() * 2.0
+	projectile.global_position = origin + cam_forward.normalized() * 0.6
 	if projectile.direction.abs().is_equal_approx(Vector3(0, 1, 0)):
 		projectile.look_at(projectile.global_position + projectile.direction, Vector3.RIGHT)
 	else:
 		projectile.look_at(projectile.global_position + projectile.direction, Vector3.UP)
 
-@rpc("authority", "call_remote", "unreliable")
-func rpc_play_remote_weapon_fire_visual(peer_id: int, weapon_slot: int, weapon_key: String) -> void:
-	if _session_host:
+@rpc("authority", "call_local", "reliable")
+func rpc_spawn_weapon_fire_visual(shooter_peer_id: int, muzzle_pos: Vector3) -> void:
+	if shooter_peer_id == _local_peer_id:
 		return
-	var player_node = NetworkPlayerManager.get_player(peer_id)
-	if not (player_node is Node):
-		return
-	if not is_instance_valid(player_node):
-		return
-	var manager: WeaponManager = player_node.get("weapon_manager")
-	if manager == null:
-		return
-	if not weapon_key.is_empty() and manager.has_method("switch_to_weapon_by_key"):
-		manager.call("switch_to_weapon_by_key", weapon_key, false)
-	elif weapon_slot >= 0:
-		manager.switch_to_weapon(weapon_slot, false)
-	var weapon := manager.get_current_weapon()
-	if weapon == null or not weapon.has_method("play_remote_fire_visual"):
-		return
-	weapon.call("play_remote_fire_visual")
-	_debug_network_visual_counts["weapon_fire"] = int(_debug_network_visual_counts.get("weapon_fire", 0)) + 1
+	_spawn_weapon_fire_visual(muzzle_pos)
 
-@rpc("authority", "call_remote", "unreliable")
-func rpc_spawn_hitscan_visual(from: Vector3, to: Vector3) -> void:
+func _spawn_weapon_fire_visual(muzzle_pos: Vector3) -> void:
+	var current_scene := get_tree().current_scene
+	if current_scene == null:
+		return
+	var flash_mesh := MeshInstance3D.new()
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.32, 0.32)
+	flash_mesh.mesh = quad
+	var mat := StandardMaterial3D.new()
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = StandardMaterial3D.BLEND_MODE_ADD
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.albedo_color = Color(1.8, 1.2, 0.4, 0.85)
+	mat.emission_enabled = true
+	mat.emission = Color(1.0, 0.65, 0.15, 1.0)
+	mat.emission_energy_multiplier = 4.0
+	flash_mesh.material_override = mat
+	flash_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	current_scene.add_child(flash_mesh)
+	flash_mesh.global_position = muzzle_pos
+	var flash_light := OmniLight3D.new()
+	flash_light.light_color = Color(1.0, 0.72, 0.28, 1.0)
+	flash_light.light_energy = 2.4
+	flash_light.omni_range = 4.5
+	flash_mesh.add_child(flash_light)
+	_debug_network_visual_counts["weapon_fire"] = int(_debug_network_visual_counts.get("weapon_fire", 0)) + 1
+	var cleanup_tree := get_tree()
+	if cleanup_tree == null:
+		return
+	await cleanup_tree.create_timer(0.06).timeout
+	if is_instance_valid(flash_mesh):
+		flash_mesh.queue_free()
+
+@rpc("authority", "call_local", "reliable")
+func rpc_spawn_hitscan_visual(shooter_peer_id: int, from: Vector3, to: Vector3) -> void:
+	if shooter_peer_id == _local_peer_id:
+		return
 	var length := from.distance_to(to)
 	if length <= 0.01:
 		return

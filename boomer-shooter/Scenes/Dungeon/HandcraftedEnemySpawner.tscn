@@ -2,5 +2,13 @@
 
 [ext_resource type="Script" path="res://Scripts/Dungeon/handcrafted_enemy_spawner.gd" id="1_spawner_script"]
 
-[node name="HandcraftedEnemySpawner" type="Marker3D"]
+[sub_resource type="BoxShape3D" id="1_box_shape"]
+size = Vector3(4, 0.1, 4)
+
+[node name="HandcraftedEnemySpawner" type="Area3D"]
 script = ExtResource("1_spawner_script")
+collision_layer = 0
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("1_box_shape")

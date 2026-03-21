@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Capture the small but important global state and singleton-style scripts that are easy to miss because they are light on code but central to scene-to-scene behavior.
+Capture the small but important global state and singleton-style scripts that are central to scene-to-scene behavior.
 
 ## Key Files
 
@@ -14,40 +14,32 @@ Capture the small but important global state and singleton-style scripts that ar
 
 ## Main Data Flow
 
-- `project.godot` registers the autoload layer used across scenes:
-  - `NetworkSession`
-  - `NetSession`
-  - `NetworkPlayerManager`
-  - `GlobalEventBus`
-- `GameState` is not configured as an autoload entry, but is used like a static singleton through `class_name` and static vars.
+- `project.godot` registers the autoload layer used across scenes.
+- `GameState` is a static singleton-style script used to persist cross-scene data.
 - `GameState` currently persists:
   - player inventory snapshot
   - three hub chest snapshots
   - whether the run has already been initialized
-  - dungeon biome/grid/seed configuration
-- `EventBus` exists as an autoloaded global surface but is currently minimal, so it is more of a reserved integration point than a heavily used event hub.
+  - dungeon grid min/max and seed configuration
 
 ## Important State And Resources
 
-- `GameState` is the bridge between the hub and dungeon scene transitions.
-- `NetworkSession` and `NetworkPlayerManager` are the real always-on runtime globals that own session lifecycle and player roster state.
-- Because these scripts live outside any single scene, bugs here often affect every gameplay scene.
+- `GameState` is the bridge between hub and dungeon transitions.
+- `NetworkSession` and `NetworkPlayerManager` remain the main always-on multiplayer globals.
 
 ## Multiplayer/Authority Notes
 
-- Global state should stay narrow and explicit. Avoid turning singletons into catch-all storage for scene-local behavior.
-- Any new cross-scene multiplayer state should be reviewed carefully for ownership and reset behavior.
-- If `EventBus` starts carrying real gameplay traffic later, it should be documented and kept separate from authoritative networking responsibilities.
+- Keep global state narrow and explicit.
+- New cross-scene multiplayer state should be reviewed carefully for reset behavior and ownership.
 
 ## Safe Edit Guidance
 
-- Prefer scene-local managers for scene-local behavior and use globals only when the data or behavior truly spans scenes.
+- Prefer scene-local managers for scene-local behavior.
 - Keep `GameState` payloads serializable and stable because multiple systems assume these fields survive scene changes.
-- If you add a new autoload or expand `EventBus`, update this doc and the repo map immediately.
+- Update this doc whenever `GameState` gains or loses a field.
 
 ## Related Docs
 
-- [repo-map.md](repo-map.md)
 - [runtime-overview.md](runtime-overview.md)
+- [hub-workflow-and-persistence.md](hub-workflow-and-persistence.md)
 - [networking-and-replication.md](networking-and-replication.md)
-- [inventory-gear-and-chests.md](inventory-gear-and-chests.md)

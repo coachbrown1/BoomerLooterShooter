@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://c7x8xa01a2b3c" path="res://Scenes/UI/hud.tscn" id="5_hud"]
 [ext_resource type="PackedScene" uid="uid://y34tho2frjpg" path="res://Scenes/Props/chest.tscn" id="6_chest"]
 [ext_resource type="PackedScene" uid="uid://b5y4kr6d1rq34" path="res://Scenes/Props/portal.tscn" id="7_portal"]
+[ext_resource type="Script" uid="uid://begdii6aqui1x" path="res://Scripts/Debug/multiplayer_verifier.gd" id="8_mpverify"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_hub"]
 sky_top_color = Color(0.08, 0.06, 0.04, 1)
@@ -178,3 +179,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17, 1, 21.963017)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 1, 23.963017)
 
 [node name="HUD" parent="." unique_id=2003438820 instance=ExtResource("5_hud")]
+
+[node name="MultiplayerVerifier" type="Node" parent="." unique_id=1607269431]
+script = ExtResource("8_mpverify")

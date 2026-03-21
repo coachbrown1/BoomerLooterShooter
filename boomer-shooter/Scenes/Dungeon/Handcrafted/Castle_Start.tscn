@@ -1,11 +1,14 @@
 [gd_scene format=3 uid="uid://cf4cx855qa51f"]
 
 [ext_resource type="PackedScene" uid="uid://y34tho2frjpg" path="res://Scenes/Props/chest.tscn" id="1_chest"]
-[ext_resource type="PackedScene" path="res://Scenes/Dungeon/DungeonWallTile.tscn" id="2_wall_tile"]
 [ext_resource type="PackedScene" uid="uid://da6yle0euhfqj" path="res://Scenes/Props/Castle/propcastletorch.tscn" id="3_torch"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_crate.tscn" id="4_crate"]
 [ext_resource type="PackedScene" path="res://Scenes/Props/Common/prop_barrel.tscn" id="5_barrel"]
-[ext_resource type="PackedScene" path="res://Scenes/Props/Common/propbrokenpillar.tscn" id="6_broken_pillar"]
+[ext_resource type="Script" uid="uid://t53xeyjn3fuq" path="res://Scripts/Dungeon/handcrafted_room_layout.gd" id="7_hrl"]
+[ext_resource type="Material" uid="uid://b3ajnbfsepeqj" path="res://Assets/Environment/Castle/castle_wood_floor_mat.tres" id="8_floor_mat"]
+[ext_resource type="Material" uid="uid://bug4qhmvchpxr" path="res://Assets/Environment/Castle/castle_ceiling_mat.tres" id="9_ceil_mat"]
+[ext_resource type="Material" uid="uid://tv1rk3da012b" path="res://Assets/Environment/Castle/castle_wall_mat.tres" id="9_hg0v1"]
+[ext_resource type="PackedScene" path="res://Scenes/Dungeon/anchored_box_body.tscn" id="10_box_body"]
 
 [sub_resource type="StandardMaterial3D" id="1_pad_material"]
 albedo_color = Color(0.16, 0.15, 0.14, 1)
@@ -34,98 +37,25 @@ material = SubResource("3_room_bounds_mat")
 size = Vector3(0.25, 0.2, 20)
 
 [node name="Castle_Start" type="Node3D" unique_id=1424852170]
+script = ExtResource("7_hrl")
+room_role_tags = PackedStringArray("start")
+supported_doorway_profiles = PackedStringArray("south")
+allowed_rotation_degrees = PackedInt32Array(0, 90, 180, 270)
 
-[node name="CompactWalls" type="Node3D" parent="." unique_id=1564375748]
+[node name="Floor" parent="." unique_id=1571448701 instance=ExtResource("10_box_body")]
+base_size = Vector3(21, 1, 21)
+anchor_x = 1
+anchor_y = 2
+anchor_z = 1
+material_override = ExtResource("8_floor_mat")
 
-[node name="NorthWall01" parent="CompactWalls" unique_id=992103591 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.5, 0, -10.5)
-
-[node name="NorthWall07" parent="CompactWalls" unique_id=771060789 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.484852, 0, -10.5)
-
-[node name="NorthWall08" parent="CompactWalls" unique_id=1426833298 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.367623, 0, -10.5)
-
-[node name="NorthWall02" parent="CompactWalls" unique_id=814097646 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, 0, -10.5)
-
-[node name="NorthWall03" parent="CompactWalls" unique_id=1663629312 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, -10.5)
-
-[node name="NorthWall04" parent="CompactWalls" unique_id=1779884280 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, -10.5)
-
-[node name="NorthWall05" parent="CompactWalls" unique_id=1796412337 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0, -10.5)
-
-[node name="NorthWall06" parent="CompactWalls" unique_id=847089242 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 0, -10.5)
-
-[node name="WestWall01" parent="CompactWalls" unique_id=855956453 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, -7.5)
-
-[node name="WestWall07" parent="CompactWalls" unique_id=706063905 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, -10.47899)
-
-[node name="WestWall02" parent="CompactWalls" unique_id=1072392124 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, -4.5)
-
-[node name="WestWall03" parent="CompactWalls" unique_id=1109565883 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, -1.5)
-
-[node name="WestWall04" parent="CompactWalls" unique_id=493008344 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, 1.5)
-
-[node name="WestWall05" parent="CompactWalls" unique_id=2026708144 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, 4.5)
-
-[node name="WestWall06" parent="CompactWalls" unique_id=480660638 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, 7.5)
-
-[node name="WestWall08" parent="CompactWalls" unique_id=1930190018 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -10.5, 0, 10.220005)
-
-[node name="EastWall01" parent="CompactWalls" unique_id=1519092232 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, -7.5)
-
-[node name="EastWall07" parent="CompactWalls" unique_id=1494689956 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, -10.470303)
-
-[node name="EastWall02" parent="CompactWalls" unique_id=648547625 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, -4.5)
-
-[node name="EastWall03" parent="CompactWalls" unique_id=815587995 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, -1.5)
-
-[node name="EastWall04" parent="CompactWalls" unique_id=858992921 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, 1.5)
-
-[node name="EastWall05" parent="CompactWalls" unique_id=2121698728 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, 4.5)
-
-[node name="EastWall06" parent="CompactWalls" unique_id=1285029109 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, 7.5)
-
-[node name="EastWall08" parent="CompactWalls" unique_id=1590656146 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, 0, 10.375866)
-
-[node name="SouthWallWest01" parent="CompactWalls" unique_id=1559776865 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.5, 0, 10.5)
-
-[node name="SouthWallWest03" parent="CompactWalls" unique_id=881528073 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.530791, 0, 10.5)
-
-[node name="SouthWallWest02" parent="CompactWalls" unique_id=1507631966 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, 0, 10.5)
-
-[node name="SouthWallEast01" parent="CompactWalls" unique_id=1993070742 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.5, 0, 10.5)
-
-[node name="SouthWallEast02" parent="CompactWalls" unique_id=638509936 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 0, 10.5)
-
-[node name="SouthWallEast03" parent="CompactWalls" unique_id=715622913 instance=ExtResource("2_wall_tile")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.386345, 0, 10.5)
+[node name="Ceiling" parent="." unique_id=1242071661 instance=ExtResource("10_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12.2, 0)
+base_size = Vector3(21, 1, 21)
+anchor_x = 1
+anchor_y = 2
+anchor_z = 1
+material_override = ExtResource("9_ceil_mat")
 
 [node name="SpawnPad" type="MeshInstance3D" parent="." unique_id=2056314260]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, -3.4477577)
@@ -139,12 +69,6 @@ transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, -6.5, 
 
 [node name="TorchEast" parent="." unique_id=1065931320 instance=ExtResource("3_torch")]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 6.5, 0, -9.6)
-
-[node name="BrokenPillarWest" parent="." unique_id=1147144600 instance=ExtResource("6_broken_pillar")]
-transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, -6.2, 0, 2.8)
-
-[node name="BrokenPillarEast" parent="." unique_id=478180806 instance=ExtResource("6_broken_pillar")]
-transform = Transform3D(1.15, 0, 0, 0, 1.15, 0, 0, 0, 1.15, 6.2, 0, 2.8)
 
 [node name="SupplyCrate" parent="." unique_id=1539293732 instance=ExtResource("4_crate")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 5.2)
@@ -179,3 +103,28 @@ mesh = SubResource("5_room_bounds_short")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0.1, 0)
 cast_shadow = 0
 mesh = SubResource("5_room_bounds_short")
+
+[node name="AnchoredBoxBody" parent="." unique_id=1228610891 instance=ExtResource("10_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.895702, 0, 10.028964)
+base_size = Vector3(8.84, 12, 1)
+material_override = ExtResource("9_hg0v1")
+
+[node name="AnchoredBoxBody5" parent="." unique_id=916624690 instance=ExtResource("10_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.10071, 0, 10.028964)
+base_size = Vector3(8.84, 12, 1)
+material_override = ExtResource("9_hg0v1")
+
+[node name="AnchoredBoxBody2" parent="." unique_id=88821675 instance=ExtResource("10_box_body")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -11, 0, 10.029)
+base_size = Vector3(21, 12, 1)
+material_override = ExtResource("9_hg0v1")
+
+[node name="AnchoredBoxBody3" parent="." unique_id=57187459 instance=ExtResource("10_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.816896, 0, -11.107726)
+base_size = Vector3(21, 12, 1)
+material_override = ExtResource("9_hg0v1")
+
+[node name="AnchoredBoxBody4" parent="." unique_id=1773786092 instance=ExtResource("10_box_body")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 10.406464, 0, 10.26)
+base_size = Vector3(21, 12, 1)
+material_override = ExtResource("9_hg0v1")

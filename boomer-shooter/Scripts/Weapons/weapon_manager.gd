@@ -91,9 +91,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if InputMap.has_action("reload") and event.is_action_pressed("reload"):
 		if current_weapon and current_weapon.can_reload():
 			if _is_network_multiplayer_active() and not _is_network_host():
-				var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
-				if dungeon_manager != null and dungeon_manager.has_method("request_weapon_reload"):
-					dungeon_manager.call(
+				var combat_manager = _get_combat_network_manager()
+				if combat_manager != null and combat_manager.has_method("request_weapon_reload"):
+					combat_manager.call(
 						"request_weapon_reload",
 						_get_owner_peer_id(),
 						current_weapon_index,
@@ -239,11 +239,13 @@ func switch_to_weapon_by_key(raw_key: String, request_authority: bool = true) ->
 func get_ammo_snapshot() -> Dictionary:
 	return ammo_inventory.duplicate(true)
 
-func apply_authoritative_weapon_state(slot_index: int, current_mag_value: int, ammo_snapshot: Dictionary) -> void:
+func apply_authoritative_weapon_state(slot_index: int, current_mag_value: int, ammo_snapshot: Dictionary, weapon_key: String = "") -> void:
 	for ammo_key in ammo_snapshot.keys():
 		ammo_inventory[ammo_key] = int(ammo_snapshot[ammo_key])
 
-	if slot_index >= 0:
+	if not weapon_key.is_empty():
+		switch_to_weapon_by_key(weapon_key, false)
+	elif slot_index >= 0:
 		switch_to_weapon(slot_index, false)
 
 	if current_weapon != null:
@@ -406,12 +408,15 @@ func _show_weapon_swap_feedback() -> void:
 func _request_host_weapon_switch(slot_index: int, weapon: Weapon) -> void:
 	if not _is_network_multiplayer_active() or _is_network_host() or not _is_local_owner():
 		return
-	var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
-	if dungeon_manager == null or not dungeon_manager.has_method("request_weapon_switch"):
+	var combat_manager = _get_combat_network_manager()
+	if combat_manager == null or not combat_manager.has_method("request_weapon_switch"):
 		return
-	dungeon_manager.call(
+	combat_manager.call(
 		"request_weapon_switch",
 		_get_owner_peer_id(),
 		slot_index,
 		get_weapon_key_for_weapon(weapon)
 	)
+
+func _get_combat_network_manager() -> Node:
+	return get_node_or_null("/root/CombatNetworkManager")

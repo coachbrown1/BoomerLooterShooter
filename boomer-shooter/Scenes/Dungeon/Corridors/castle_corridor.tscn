@@ -1,0 +1,59 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Material" uid="uid://b3ajnbfsepeqj" path="res://Assets/Environment/Castle/castle_wood_floor_mat.tres" id="1_floor_mat"]
+[ext_resource type="Material" uid="uid://tv1rk3da012b" path="res://Assets/Environment/Castle/castle_wall_mat.tres" id="2_wall_mat"]
+[ext_resource type="Material" uid="uid://bug4qhmvchpxr" path="res://Assets/Environment/Castle/castle_ceiling_mat.tres" id="3_ceil_mat"]
+
+[sub_resource type="BoxMesh" id="mesh_floor"]
+size = Vector3(12, 0.2, 30)
+
+[sub_resource type="BoxShape3D" id="shape_floor"]
+size = Vector3(12, 0.2, 30)
+
+[sub_resource type="BoxMesh" id="mesh_wall"]
+size = Vector3(0.4, 12, 30)
+
+[sub_resource type="BoxShape3D" id="shape_wall"]
+size = Vector3(0.4, 12, 30)
+
+[node name="CastleCorridor" type="Node3D"]
+
+[node name="Floor" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("mesh_floor")
+surface_material_override/0 = ExtResource("1_floor_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("shape_floor")
+
+[node name="Ceiling" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12.1, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="Ceiling"]
+mesh = SubResource("mesh_floor")
+surface_material_override/0 = ExtResource("3_ceil_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="Ceiling"]
+shape = SubResource("shape_floor")
+
+[node name="WallLeft" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.2, 6, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="WallLeft"]
+mesh = SubResource("mesh_wall")
+surface_material_override/0 = ExtResource("2_wall_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="WallLeft"]
+shape = SubResource("shape_wall")
+
+[node name="WallRight" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.2, 6, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="WallRight"]
+mesh = SubResource("mesh_wall")
+surface_material_override/0 = ExtResource("2_wall_mat")
+
+[node name="Collision" type="CollisionShape3D" parent="WallRight"]
+shape = SubResource("shape_wall")

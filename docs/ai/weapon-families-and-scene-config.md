@@ -64,6 +64,7 @@ Document the project convention where most weapon behavior comes from one shared
 - Local-player weapon presentation now uses the same scene-local 3D weapon path as the world model, with a per-weapon first-person pose applied in `weapon.gd`.
 - The Blender-authored `WeaponMesh` child is the primary visual path for both local first-person presentation and non-local/world presentation.
 - The four active gameplay weapons no longer use `WeaponSprite`; any remaining sprite viewmodel textures are legacy source assets, not runtime presentation.
+- Weapon scenes now carry separate first-person (`viewmodel_*`) and remote/world (`world_*`) pose exports because the same mesh asset is used in both camera-relative and player-relative contexts.
 - `weapon.gd` applies both equipment stats and weapon-item stats, so a weapon’s effective runtime behavior is a mix of:
   - scene exports
   - inventory item rolls
@@ -76,9 +77,14 @@ Document the project convention where most weapon behavior comes from one shared
 ## Multiplayer/Authority Notes
 
 - Even though weapon tuning is scene-driven, actual fire and reload outcomes still follow host-authoritative flow.
+- Weapon scripts now resolve their multiplayer combat bridge through the autoloaded `CombatNetworkManager` singleton, so fire, reload, switch, and observer shot-VFX replication no longer depend on a per-level scene manager implementation.
 - Local client weapon switches should also round-trip through host authority when multiplayer is active so the owner and remote proxies converge on the same selected slot.
-- Remote weapon muzzle flashes are replicated separately from hitscan/projectile travel visuals; if other players cannot see a shot, inspect both the weapon-fire visual RPC path and the tracer/projectile broadcast path.
+- Remote player weapon presentation should prefer replicated weapon keys over slot indices when both are available, because slot mappings can differ until inventory state fully converges.
+- Remote weapon visuals replicate on an observer-only RPC path keyed by the shooter peer id; host and clients should both ignore their own local shots and only spawn helper muzzle flash, tracer, and projectile visuals for other players.
+- Observer muzzle flash and hitscan VFX RPCs should stay reliable. Projectile travel already uses a reliable visual RPC, and unreliable shot VFX can be dropped under snapshot load.
 - Scene changes that alter projectile versus hitscan behavior can have replication impact because the dungeon manager and verifier scenarios distinguish state sync from visual-only sync.
+- `weapon-visual-replication` should cover both `host -> client` and `client -> host` observer visibility, not just one direction.
+- Hub multiplayer coverage now uses `hub-weapon-visual-replication` so hub-only regressions do not hide behind the dungeon verifier path.
 - If a new weapon family is added, document whether it needs new verifier coverage for state, damage, or visuals.
 
 ## Safe Edit Guidance
@@ -87,6 +93,7 @@ Document the project convention where most weapon behavior comes from one shared
 - If a change affects only tuning, prefer editing the weapon scene rather than branching `weapon.gd`.
 - If a weapon visual change affects the 3D mesh path, update the Blender generator and regenerate the `.glb` assets instead of hand-editing imported scene files.
 - If a weapon needs a different first-person pose, adjust the exported `viewmodel_*` values on the weapon scene rather than reworking shared runtime code first.
+- If a weapon is hard to read on remote players, adjust the exported `world_*` values on the weapon scene instead of trying to reuse the first-person pose.
 - If a new weapon truly needs unique code, document why the shared script is no longer sufficient.
 - Keep inventory weapon keys, gear catalog weapon definitions, scene names, and HUD icon paths aligned.
 

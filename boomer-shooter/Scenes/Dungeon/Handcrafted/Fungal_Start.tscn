@@ -3,6 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://8kv1bp8iue40" path="res://Scenes/Dungeon/fungal_mushroom.tscn" id="1_mushroom"]
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/fungal_crystal.tscn" id="2_crystal"]
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/DungeonWallTile.tscn" id="3_wall_tile"]
+[ext_resource type="Script" path="res://Scripts/Dungeon/handcrafted_room_layout.gd" id="4_hrl"]
 
 [sub_resource type="StandardMaterial3D" id="1_pad_material"]
 albedo_color = Color(0.07, 0.12, 0.08, 1)
@@ -31,6 +32,7 @@ material = SubResource("3_room_bounds_mat")
 size = Vector3(0.25, 0.2, 20)
 
 [node name="Fungal_Start" type="Node3D" unique_id=1424852170]
+script = ExtResource("4_hrl")
 
 [node name="CompactWalls" type="Node3D" parent="."]
 

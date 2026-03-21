@@ -34,6 +34,10 @@ var is_reloading: bool = false
 @export var fire_kick_offset: Vector3 = Vector3(0.0, 0.015, 0.06)
 @export var reload_lower_offset: Vector3 = Vector3(0.0, -0.18, 0.10)
 
+@export_group("World Presentation")
+@export var world_position: Vector3 = Vector3(0.36, -0.22, 0.10)
+@export var world_rotation_degrees: Vector3 = Vector3.ZERO
+
 @onready var muzzle_flash: Node3D = $MuzzleFlash
 @onready var tracer: MeshInstance3D = $BulletTracer
 @onready var ejection_port: Node3D = $EjectionPort
@@ -65,7 +69,7 @@ const BLOOD_PARTICLES_SCENE = preload("res://Scenes/Effects/blood_particles.tscn
 const CASING_SCENE = preload("res://Scenes/Effects/shell_casing.tscn")
 
 func _ready() -> void:
-	_world_transform = transform
+	_world_transform = _build_world_transform()
 	_capture_base_stats()
 	muzzle_flash.visible = false
 	tracer.visible = false
@@ -100,17 +104,24 @@ func set_viewmodel_enabled(enabled: bool) -> void:
 			flash_sprite.visible = true
 
 func _apply_presentation_mode() -> void:
+	_world_transform = _build_world_transform()
 	transform = _build_viewmodel_transform() if _viewmodel_enabled else _world_transform
 	if mesh_root:
 		mesh_root.visible = visible
 
 func _build_viewmodel_transform() -> Transform3D:
+	return Transform3D(_basis_from_degrees(viewmodel_rotation_degrees), viewmodel_position)
+
+func _build_world_transform() -> Transform3D:
+	return Transform3D(_basis_from_degrees(world_rotation_degrees), world_position)
+
+func _basis_from_degrees(rotation_degrees_vector: Vector3) -> Basis:
 	var rotation_radians := Vector3(
-		deg_to_rad(viewmodel_rotation_degrees.x),
-		deg_to_rad(viewmodel_rotation_degrees.y),
-		deg_to_rad(viewmodel_rotation_degrees.z)
+		deg_to_rad(rotation_degrees_vector.x),
+		deg_to_rad(rotation_degrees_vector.y),
+		deg_to_rad(rotation_degrees_vector.z)
 	)
-	return Transform3D(Basis.from_euler(rotation_radians), viewmodel_position)
+	return Basis.from_euler(rotation_radians)
 
 func set_equipment_stats(stats: Dictionary) -> void:
 	_equipment_stats = stats.duplicate(true)
@@ -146,9 +157,9 @@ func reload(request_authority: bool = true) -> void:
 		var player_peer_id := 1
 		if current_player != null and current_player.has_method("get_network_peer_id"):
 			player_peer_id = int(current_player.call("get_network_peer_id"))
-		var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
-		if dungeon_manager != null and dungeon_manager.has_method("request_weapon_reload") and weapon_manager != null:
-			dungeon_manager.call(
+		var combat_manager = _get_combat_network_manager()
+		if combat_manager != null and combat_manager.has_method("request_weapon_reload") and weapon_manager != null:
+			combat_manager.call(
 				"request_weapon_reload",
 				player_peer_id,
 				weapon_manager.get_current_weapon_slot(),
@@ -247,7 +258,7 @@ func _request_host_fire() -> void:
 	if current_player != null and current_player.has_method("get_network_peer_id"):
 		player_peer_id = int(current_player.call("get_network_peer_id"))
 
-	var manager = get_tree().get_first_node_in_group("dungeon_manager")
+	var manager = _get_combat_network_manager()
 	if manager == null or not manager.has_method("request_weapon_fire"):
 		fire()
 		return
@@ -277,6 +288,7 @@ func _fire_with_aim(cam_origin: Vector3, cam_forward: Vector3, play_local_feedba
 	var player_rid = RID()
 	if current_player:
 		player_rid = current_player.get_rid()
+	var shooter_peer_id := _get_network_peer_id_for_node(current_player)
 
 	if play_local_feedback:
 		_play_local_feedback(current_player)
@@ -288,7 +300,7 @@ func _fire_with_aim(cam_origin: Vector3, cam_forward: Vector3, play_local_feedba
 		return
 
 	if is_projectile and projectile_scene:
-		_fire_projectile(cam_origin, cam_forward, current_player)
+		_fire_projectile(cam_origin, cam_forward, current_player, shooter_peer_id)
 		_show_muzzle_flash()
 		return
 
@@ -310,7 +322,7 @@ func _fire_with_aim(cam_origin: Vector3, cam_forward: Vector3, play_local_feedba
 				dx = cos(angle) * rad
 				dy = sin(angle) * rad
 			final_dir = (cam_forward + right * dx * spread_rad + up * dy * spread_rad).normalized()
-		_fire_hitscan(cam_origin, final_dir, player_rid, shot_damage)
+		_fire_hitscan(cam_origin, final_dir, player_rid, shot_damage, shooter_peer_id)
 	_show_muzzle_flash()
 
 func play_remote_fire_visual() -> void:
@@ -359,7 +371,7 @@ func _play_local_feedback(shooter_node: Node3D) -> void:
 			var r_yaw = _base_recoil_yaw * randf_range(-1.0, 1.0)
 			shooter.add_camera_recoil(_base_recoil_pitch, r_yaw)
 
-func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3, shooter_node: Node) -> void:
+func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3, shooter_node: Node, shooter_peer_id: int) -> void:
 	var proj = projectile_scene.instantiate() as Node3D
 	var spawn_parent = get_tree().current_scene
 	if not spawn_parent:
@@ -386,11 +398,17 @@ func _fire_projectile(cam_origin: Vector3, cam_forward: Vector3, shooter_node: N
 
 	# Host replicates projectile visuals to clients so they can see travel/explosions.
 	if _is_network_multiplayer_active() and _is_network_host():
-		var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
-		if dungeon_manager != null and dungeon_manager.has_method("broadcast_projectile_visual"):
-			dungeon_manager.call("broadcast_projectile_visual", projectile_scene.resource_path, cam_origin, cam_forward)
+		var combat_manager = _get_combat_network_manager()
+		if combat_manager != null and combat_manager.has_method("broadcast_projectile_visual"):
+			combat_manager.call(
+				"broadcast_projectile_visual",
+				projectile_scene.resource_path,
+				shooter_peer_id,
+				muzzle_flash.global_position,
+				cam_forward
+			)
 
-func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3, player_rid: RID, shot_damage: int) -> void:
+func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3, player_rid: RID, shot_damage: int, shooter_peer_id: int) -> void:
 	var space_state = get_world_3d().direct_space_state
 	var ray_end = cam_origin + cam_forward * ray_range
 
@@ -420,9 +438,9 @@ func _fire_hitscan(cam_origin: Vector3, cam_forward: Vector3, player_rid: RID, s
 
 	_show_tracer(muzzle_flash.global_position, hit_pos)
 	if _is_network_multiplayer_active() and _is_network_host():
-		var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
-		if dungeon_manager != null and dungeon_manager.has_method("broadcast_hitscan_visual"):
-			dungeon_manager.call("broadcast_hitscan_visual", muzzle_flash.global_position, hit_pos)
+		var combat_manager = _get_combat_network_manager()
+		if combat_manager != null and combat_manager.has_method("broadcast_hitscan_visual"):
+			combat_manager.call("broadcast_hitscan_visual", shooter_peer_id, muzzle_flash.global_position, hit_pos)
 
 func _get_effective_damage() -> int:
 	var exact_key := _get_exact_weapon_key()
@@ -620,18 +638,21 @@ func _is_network_host() -> bool:
 func _broadcast_remote_fire_visual(shooter_node: Node3D) -> void:
 	if not _is_network_multiplayer_active() or not _is_network_host():
 		return
-	if shooter_node == null or not shooter_node.has_method("get_network_peer_id"):
-		return
-	if weapon_manager == null:
-		return
-	var shooter_peer_id := int(shooter_node.call("get_network_peer_id"))
+	var shooter_peer_id := _get_network_peer_id_for_node(shooter_node)
 	if shooter_peer_id <= 0:
 		return
-	var dungeon_manager = get_tree().get_first_node_in_group("dungeon_manager")
-	if dungeon_manager != null and dungeon_manager.has_method("broadcast_weapon_fire_visual"):
-		dungeon_manager.call(
+	var combat_manager = _get_combat_network_manager()
+	if combat_manager != null and combat_manager.has_method("broadcast_weapon_fire_visual"):
+		combat_manager.call(
 			"broadcast_weapon_fire_visual",
 			shooter_peer_id,
-			weapon_manager.get_current_weapon_slot(),
-			weapon_manager.get_current_weapon_key()
+			muzzle_flash.global_position
 		)
+
+func _get_network_peer_id_for_node(node: Node) -> int:
+	if node == null or not node.has_method("get_network_peer_id"):
+		return 0
+	return int(node.call("get_network_peer_id"))
+
+func _get_combat_network_manager() -> Node:
+	return get_node_or_null("/root/CombatNetworkManager")

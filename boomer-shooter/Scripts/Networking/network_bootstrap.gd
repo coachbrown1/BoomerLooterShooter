@@ -185,10 +185,8 @@ func _on_match_started() -> void:
 
 func _change_to_dungeon() -> void:
 	var scene_path := HUB_SCENE_PATH
-	# Keep verifier runs on the dungeon scene so the multiplayer harness can
-	# exercise the existing debug node and dungeon-specific scenarios.
 	if _is_verifier_run():
-		scene_path = DUNGEON_SCENE_PATH
+		scene_path = _get_verifier_scene_path()
 	var err := get_tree().change_scene_to_file(scene_path)
 	if err != OK:
 		_set_status("Failed to load scene (error %d)." % err)
@@ -419,3 +417,14 @@ func _parse_automation_args(args: PackedStringArray) -> Dictionary:
 
 func _is_verifier_run() -> bool:
 	return OS.get_cmdline_user_args().has(ARG_VERIFY_SCENARIO)
+
+func _get_verifier_scene_path() -> String:
+	var args := OS.get_cmdline_user_args()
+	for i in range(args.size() - 1):
+		if String(args[i]) != ARG_VERIFY_SCENARIO:
+			continue
+		var scenario := String(args[i + 1]).strip_edges().to_lower()
+		if scenario == "hub-weapon-visual-replication":
+			return HUB_SCENE_PATH
+		break
+	return DUNGEON_SCENE_PATH

@@ -1,19 +1,15 @@
 ## DungeonConfigMenu — shown when the player interacts with the hub portal.
-## Lets the player configure biome, grid size, and seed before entering the dungeon.
+## Lets the player configure grid size and seed before entering the dungeon.
 ## Emits `confirmed` with the chosen settings, or `cancelled` if dismissed.
 extends CanvasLayer
 class_name DungeonConfigMenu
 
-signal confirmed(biome: String, grid_min: int, grid_max: int, seed_val: int)
+signal confirmed(grid_min: int, grid_max: int, seed_val: int)
 signal cancelled
 
-var _biome_option: OptionButton
 var _grid_min_spin: SpinBox
 var _grid_max_spin: SpinBox
 var _seed_spin: SpinBox
-
-const BIOME_KEYS: PackedStringArray = ["", "castle", "crypt", "fungal", "lava"]
-const BIOME_LABELS: PackedStringArray = ["Auto", "Castle", "Crypt", "Fungal", "Lava"]
 
 func _ready() -> void:
 	_build_ui()
@@ -53,15 +49,6 @@ func _build_ui() -> void:
 	vbox.add_child(title)
 
 	vbox.add_child(HSeparator.new())
-
-	# Biome row
-	vbox.add_child(_make_row("Biome", func(row: HBoxContainer) -> void:
-		_biome_option = OptionButton.new()
-		for label in BIOME_LABELS:
-			_biome_option.add_item(label)
-		_biome_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(_biome_option)
-	))
 
 	# Grid Min row
 	vbox.add_child(_make_row("Grid Min", func(row: HBoxContainer) -> void:
@@ -130,8 +117,6 @@ func _make_row(label_text: String, fill_fn: Callable) -> HBoxContainer:
 
 
 func _populate_from_game_state() -> void:
-	var biome_idx := BIOME_KEYS.find(GameState.dungeon_biome_override)
-	_biome_option.selected = maxi(0, biome_idx)
 	_grid_min_spin.value = GameState.dungeon_grid_min
 	_grid_max_spin.value = GameState.dungeon_grid_max
 	_seed_spin.value = GameState.dungeon_seed
@@ -148,7 +133,6 @@ func _on_confirm() -> void:
 	var grid_min := int(_grid_min_spin.value)
 	var grid_max := int(maxi(int(_grid_max_spin.value), grid_min))
 	confirmed.emit(
-		BIOME_KEYS[_biome_option.selected],
 		grid_min,
 		grid_max,
 		int(_seed_spin.value)

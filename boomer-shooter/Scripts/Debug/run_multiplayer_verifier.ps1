@@ -354,6 +354,16 @@ switch ($scenarioKey) {
             throw "Client did not observe both replicated weapon visuals. Output dir: $verifyDir"
         }
     }
+    "hub-weapon-visual-replication" {
+        $clientVisualPath = Join-Path $verifyDir "client_weapon_visuals.json"
+        if (-not (Test-Path $clientVisualPath)) {
+            throw "Expected verifier output missing: $clientVisualPath"
+        }
+        $clientVisual = Get-Content $clientVisualPath -Raw | ConvertFrom-Json
+        if (-not $clientVisual.passed) {
+            throw "Client did not observe both replicated weapon visuals. Output dir: $verifyDir"
+        }
+    }
     "projectile-damage-replication" {
         $hostProjectilePath = Join-Path $verifyDir "host_projectile_damage.json"
         $clientProjectilePath = Join-Path $verifyDir "client_projectile_damage.json"
@@ -521,6 +531,7 @@ $label = switch ($scenarioKey) {
     "door-replication" { "Multiplayer door replication verification PASS" }
     "weapon-state-sync" { "Multiplayer weapon state sync verification PASS" }
     "weapon-visual-replication" { "Multiplayer weapon visual replication verification PASS" }
+    "hub-weapon-visual-replication" { "Hub multiplayer weapon visual replication verification PASS" }
     "projectile-damage-replication" { "Multiplayer projectile damage replication verification PASS" }
     "enemy-damage-replication" { "Multiplayer enemy damage replication verification PASS" }
     "enemy-death-replication" { "Multiplayer enemy death replication verification PASS" }

@@ -86,6 +86,7 @@ This file is the canonical instruction set for any AI agent working in this repo
   - `door-replication`
   - `weapon-state-sync`
   - `weapon-visual-replication`
+  - `hub-weapon-visual-replication`
   - `projectile-damage-replication`
   - `enemy-damage-replication`
   - `enemy-death-replication`
@@ -171,6 +172,13 @@ This file is the canonical instruction set for any AI agent working in this repo
   - has the host fire a hitscan weapon and then a projectile weapon
   - confirms the client observes the replicated hitscan visual spawn
   - confirms the client observes the replicated projectile visual spawn
+- For replicated weapon visual effects in the hub scene, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'hub-weapon-visual-replication'
+  ```
+- What `hub-weapon-visual-replication` does:
+  - launches a local headless host and client into the hub scene
+  - validates `host -> client` and `client -> host` observer visibility for muzzle flashes, hitscan tracers, and projectile visuals
 - For authoritative projectile damage replication, run:
   ```powershell
   & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'projectile-damage-replication'

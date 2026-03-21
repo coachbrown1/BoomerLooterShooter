@@ -1,4 +1,4 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://bicporn88041g"]
 
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/DungeonWallTile.tscn" id="1_wall_tile"]
 [ext_resource type="PackedScene" uid="uid://bamyeedre1p87" path="res://Scenes/Dungeon/castle_doorway_assembly.tscn" id="2_doorway"]
@@ -7,94 +7,92 @@
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/HandcraftedEnemySpawner.tscn" id="5_enemy_spawner"]
 [ext_resource type="PackedScene" uid="uid://dprxvxrny58r5" path="res://Scenes/Enemies/skeleton.tscn" id="6_enemy"]
 
-[node name="CastleCrossroomQuadrantSkullRitual" type="Node3D"]
+[node name="CastleCrossroomQuadrantSkullRitual" type="Node3D" unique_id=1969418352]
 
-[node name="RoomShell" type="Node3D" parent="."]
+[node name="RoomShell" type="Node3D" parent="." unique_id=1492903137]
 
-[node name="EastWall01" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+[node name="EastWall01" parent="RoomShell" unique_id=2060146555 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, -12)
 
-[node name="EastWall02" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+[node name="EastWall02" parent="RoomShell" unique_id=401230121 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, -9)
 
-[node name="EastWall03" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+[node name="EastWall03" parent="RoomShell" unique_id=1397103307 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, -6)
 
-[node name="EastWall04" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+[node name="EastWall04" parent="RoomShell" unique_id=223826969 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, -3)
 
-[node name="EastWall05" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+[node name="EastWall05" parent="RoomShell" unique_id=1994001133 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, 6)
 
-[node name="EastWall07" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+[node name="EastWall07" parent="RoomShell" unique_id=908133332 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, 9)
 
-[node name="EastWall08" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+[node name="EastWall08" parent="RoomShell" unique_id=1001109786 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, 12)
 
-[node name="SouthWall01" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+[node name="SouthWall01" parent="RoomShell" unique_id=254310993 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0, 13.5)
 
-[node name="SouthWall02" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+[node name="SouthWall02" parent="RoomShell" unique_id=905489294 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, 0, 13.5)
 
-[node name="SouthWall03" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+[node name="SouthWall03" parent="RoomShell" unique_id=175950024 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 13.5)
 
-[node name="SouthWall04" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+[node name="SouthWall04" parent="RoomShell" unique_id=1286259796 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 13.5)
 
-[node name="SouthWall05" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+[node name="SouthWall05" parent="RoomShell" unique_id=1084603895 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 13.5)
 
-[node name="SouthWall07" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+[node name="SouthWall07" parent="RoomShell" unique_id=1178962609 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0, 13.5)
 
-[node name="SouthWall08" parent="RoomShell" instance=ExtResource("1_wall_tile")]
+[node name="SouthWall08" parent="RoomShell" unique_id=1348379727 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0, 13.5)
 
-[node name="EastDoorway" parent="RoomShell" instance=ExtResource("2_doorway")]
+[node name="EastDoorway" parent="RoomShell" unique_id=1587410268 instance=ExtResource("2_doorway")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 13.5, 0, 1.5)
 
-[node name="SouthDoorway" parent="RoomShell" instance=ExtResource("2_doorway")]
+[node name="SouthDoorway" parent="RoomShell" unique_id=1905922556 instance=ExtResource("2_doorway")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 13.5)
 
-[node name="NorthDaisA" parent="." instance=ExtResource("1_wall_tile")]
+[node name="NorthDaisA" parent="." unique_id=465492132 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, -10.5)
 
-[node name="NorthDaisB" parent="." instance=ExtResource("1_wall_tile")]
+[node name="NorthDaisB" parent="." unique_id=328814492 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -10.5)
 
-[node name="WestDaisA" parent="." instance=ExtResource("1_wall_tile")]
+[node name="WestDaisA" parent="." unique_id=1278019337 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -10.5, 0, -6)
 
-[node name="WestDaisB" parent="." instance=ExtResource("1_wall_tile")]
+[node name="WestDaisB" parent="." unique_id=1998529564 instance=ExtResource("1_wall_tile")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -10.5, 0, -3)
 
-[node name="MainSkullPile" parent="." instance=ExtResource("3_skullpile")]
+[node name="MainSkullPile" parent="." unique_id=1936565544 instance=ExtResource("3_skullpile")]
 transform = Transform3D(1.1, 0, 0, 0, 1.1, 0, 0, 0, 1.1, -9, 0, -9)
-placement_kind = 1
 
-[node name="SideSkullPile" parent="." instance=ExtResource("3_skullpile")]
+[node name="SideSkullPile" parent="." unique_id=1631333733 instance=ExtResource("3_skullpile")]
 transform = Transform3D(0.95, 0, 0, 0, 0.95, 0, 0, 0, 0.95, -10.5, 0, 3)
-placement_kind = 1
 
-[node name="CenterSkullPile" parent="." instance=ExtResource("3_skullpile")]
+[node name="CenterSkullPile" parent="." unique_id=1307169263 instance=ExtResource("3_skullpile")]
 transform = Transform3D(0.85, 0, 0, 0, 0.85, 0, 0, 0, 0.85, -1.5, 0, -1.5)
-placement_kind = 1
 
-[node name="SouthPile" parent="." instance=ExtResource("3_skullpile")]
+[node name="SouthPile" parent="." unique_id=1614450562 instance=ExtResource("3_skullpile")]
 transform = Transform3D(0.85, 0, 0, 0, 0.85, 0, 0, 0, 0.85, 3, 0, 9)
-placement_kind = 1
 
-[node name="NorthTorch" parent="." instance=ExtResource("4_torch")]
+[node name="NorthTorch" parent="." unique_id=1847136331 instance=ExtResource("4_torch")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 3, 0, -12.6)
 
-[node name="EastTorch" parent="." instance=ExtResource("4_torch")]
+[node name="EastTorch" parent="." unique_id=429165480 instance=ExtResource("4_torch")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 12.6, 0, 3)
 
-[node name="RitualGuardSpawner" parent="." instance=ExtResource("5_enemy_spawner")]
+[node name="RitualGuardSpawner" parent="." unique_id=1754422820 instance=ExtResource("5_enemy_spawner")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -3)
+monitoring = false
+monitorable = false
 enemy_scene = ExtResource("6_enemy")
 spawn_count = 3
-spawn_radius = 4.5
+spawn_box_size = Vector3(9, 0, 9)

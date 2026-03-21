@@ -30,7 +30,6 @@ var sampled_grid_size: int = 10
 
 var debug_generation_metrics_enabled: bool = DEFAULT_DEBUG_GENERATION_METRICS
 
-var _current_biome: String = "crypt"
 var _room_tile_owner := {}		# "x:z" -> room_id
 var _corridor_tile_owner := {}	# "x:z" -> corridor_id
 var _corridor_next_id: int = 0
@@ -44,19 +43,9 @@ const DOORWAY_SPAN_TILES: int = 4
 # -------------------------------------------------------
 # Public entry point
 # -------------------------------------------------------
-## When non-empty, overrides the biome chosen by floor number.
-## Set by DungeonManager from GameState before calling generate().
-var biome_override: String = ""
-
 func generate(floor_num: int, seed_val: int = 0) -> void:
 	rng = RandomNumberGenerator.new()
 	rng.seed = seed_val if seed_val != 0 else int(Time.get_unix_time_from_system())
-
-	if biome_override != "":
-		_current_biome = biome_override
-	else:
-		var biomes: PackedStringArray = ["castle", "crypt", "fungal", "lava"]
-		_current_biome = biomes[maxi(0, floor_num - 1) % biomes.size()]
 
 	_normalize_config()
 	sampled_grid_size = rng.randi_range(grid_size_min, grid_size_max)
@@ -76,7 +65,7 @@ func generate(floor_num: int, seed_val: int = 0) -> void:
 	_assign_room_types(start_room_id, end_room_id)
 	_carve_all_rooms()
 	_build_corridors_and_doorways()
-	_apply_room_biomes()
+	_compute_room_doorway_walls()
 
 	_log_generation_metrics(start_room_id, end_room_id)
 
@@ -128,7 +117,6 @@ func _create_lattice_rooms(grid_size: int) -> void:
 				room_size_tiles,
 				room_size_tiles
 			)
-			room.surface_profile = _make_room_surface_profile()
 			rooms.append(room)
 			_room_lookup[room.id] = room
 			_adjacency[room.id] = []
@@ -347,7 +335,6 @@ func _register_simple_doorway(room: RoomData, wall: String, corridor_id: int) ->
 		"tile": tile,
 		"orientation": orientation,
 		"wall_line_key": wall_line_key,
-		"biome": _current_biome,
 		"room_id": room.id,
 		"corridor_id": corridor_id,
 		"opening_tiles": opening_tiles,
@@ -552,17 +539,34 @@ func _grid_key(x: int, z: int) -> String:
 # -------------------------------------------------------
 # Misc helpers
 # -------------------------------------------------------
-func _make_room_surface_profile() -> Dictionary:
-	return {
-		"floor_variant": rng.randi_range(0, 2),
-		"wall_variant": rng.randi_range(0, 2),
-		"ceiling_variant": rng.randi_range(0, 2),
-	}
-
-func _apply_room_biomes() -> void:
+func _compute_room_doorway_walls() -> void:
+	var doorway_walls_by_room := {}
+	for doorway_variant in doorways:
+		var doorway: Dictionary = doorway_variant
+		var room_id: int = doorway.get("room_id", OWNER_NONE)
+		if room_id < 0:
+			continue
+		var room: RoomData = _room_lookup.get(room_id, null)
+		if room == null:
+			continue
+		if not doorway_walls_by_room.has(room_id):
+			doorway_walls_by_room[room_id] = []
+		var tile: Vector2i = doorway.get("tile", Vector2i.ZERO)
+		var rect := room.grid_rect
+		var wall := ""
+		if tile.x <= rect.position.x:
+			wall = "west"
+		elif tile.x >= rect.position.x + rect.size.x - 1:
+			wall = "east"
+		elif tile.y <= rect.position.y:
+			wall = "north"
+		elif tile.y >= rect.position.y + rect.size.y - 1:
+			wall = "south"
+		if wall != "" and wall not in doorway_walls_by_room[room_id]:
+			doorway_walls_by_room[room_id].append(wall)
 	for room_variant in rooms:
 		var room: RoomData = room_variant
-		room.biome = _current_biome
+		room.doorway_walls = doorway_walls_by_room.get(room.id, [])
 
 func _log_generation_metrics(start_room_id: int, end_room_id: int) -> void:
 	if not debug_generation_metrics_enabled:

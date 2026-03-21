@@ -5,7 +5,7 @@ Editor dock for dungeon-focused tuning.
 ## What it edits
 
 - `DungeonManager` values from `res://Scenes/World/dungeon.tscn`
-- Biome resources from `res://Data/biomes/biome_dungeon_database.tres`
+- Default dungeon content from `res://Data/dungeons/default_dungeon_content.tres`
 
 ## Typical workflow
 
@@ -16,21 +16,22 @@ Editor dock for dungeon-focused tuning.
    - Room Size (tiles)
    - Corridor Width/Length (tiles)
 4. Click `Apply + Save Layout`.
-5. Switch to the `Biome Data` tab and pick a biome.
+5. Switch to the `Dungeon Content` tab.
 6. Use the custom sections to edit:
-   - Surface textures
-   - Doors + handcrafted room scenes
-   - Lighting (ambient + wall/floor prop lights)
-   - Prop scene pools
-   - Enemy scene roster
-7. Click `Validate Selected Biome` to catch missing required fields.
-8. Click `Save Selected Biome`.
+   - start room scene
+   - default room scene
+   - special room scene pool + chance
+   - corridor scene
+   - fog color
+   - enemy scene roster
+7. Click `Validate Dungeon Content` to catch missing required fields.
+8. Click `Save Dungeon Content`.
 
 ## Tabs
 
 - `Dungeon Layout`: generation values, preview generation, and preview-room jumping.
-- `Biome Data`: biome resource editing and validation.
-- `Handcrafted Rooms`: handcrafted room scene creation through the room wizard and single-room playtesting.
+- `Dungeon Content`: default dungeon content editing and validation.
+- `Handcrafted Rooms`: authored room scene creation through the room wizard and single-room playtesting.
 
 ## Preview workflow
 
@@ -46,39 +47,33 @@ Editor dock for dungeon-focused tuning.
 1. Switch to the `Handcrafted Rooms` tab.
 2. In `Handcrafted Room Wizard`, enter a scene name.
 3. Choose a base type:
-   - `Start Room Skeleton`
-   - `Normal Room Skeleton`
-   - `Quadrant Composite Room`
-4. Optionally register the new scene into the currently selected biome as:
+   - `Start Room Template`
+   - `Default Room Template`
+   - `Special Room Template`
+4. Optionally register the new scene into the active default dungeon content as:
    - start room
-   - normal room
-   - quadrant module pool
+   - default room
+   - special room pool
 5. Click `Create Handcrafted Room`.
 6. The tool saves the scene under `res://Scenes/Dungeon/Handcrafted/` and opens it immediately.
 
 ### Wizard output
 
-- Start room skeletons include:
-  - `PlayerSpawn`
-  - a spawn pad
-  - doorway socket markers
-  - room bounds debug guides
-- Normal room skeletons include:
-  - the same crossroom shell setup used by `Castle_Crossroom`
-  - an `Encounter/EnemySpawner` marker
-  - the crossroom's built-in quadrant anchors and room guides
-- Quadrant composite rooms start from the existing crossroom shell so designers can focus on quadrant content first.
+- Templates are cloned from the active stitched room scenes instead of building runtime-generated shells.
+- New rooms keep authored geometry, doorway filler nodes, and exported room metadata (`room_role_tags`, `supported_doorway_profiles`, `allowed_rotation_degrees`).
+- Designers should edit those saved scenes directly; gameplay should match the authored scene apart from intentional rotation and doorway open/closed state.
 
 ## Single-room playtest
 
 1. Switch to the `Handcrafted Rooms` tab.
 2. Open the room you want to test, or pick one from `Room Playtest`.
 3. Click `Playtest Selected Room`.
-4. The tool writes the selected room + biome into `.tmp`, then launches `res://Scenes/World/handcrafted_room_playtest.tscn`.
+4. The tool writes the selected room scene into `.tmp`, then launches `res://Scenes/World/handcrafted_room_playtest.tscn`.
 
 ### Playtest behavior
 
 - The harness spawns the selected handcrafted room on a large flat floor.
 - If the room has a `PlayerSpawn`, the player starts there and uses its facing.
 - If the room contains `HandcraftedEnemySpawner` markers with assigned enemy scenes, those enemies spawn for local combat testing.
+- Handcrafted enemy spawners now use a box volume preview and box-based spawn area sizing instead of a capped radius field.
 - `RoomBoundsDebug` guides are hidden during the playtest run.

@@ -37,6 +37,7 @@ enum AnchorMode {
 @onready var _mesh_instance: MeshInstance3D = $MeshInstance3D
 
 func _ready() -> void:
+	_ensure_local_resources()
 	_rebuild()
 
 func _notification(what: int) -> void:
@@ -46,16 +47,19 @@ func _notification(what: int) -> void:
 func _rebuild() -> void:
 	if _collision == null or _mesh_instance == null:
 		return
+	_ensure_local_resources()
 
 	var shape := _collision.shape as BoxShape3D
 	if shape == null:
 		shape = BoxShape3D.new()
+		shape.resource_local_to_scene = true
 		_collision.shape = shape
 	shape.size = base_size
 
 	var mesh := _mesh_instance.mesh as BoxMesh
 	if mesh == null:
 		mesh = BoxMesh.new()
+		mesh.resource_local_to_scene = true
 		_mesh_instance.mesh = mesh
 	mesh.size = base_size
 	mesh.material = material_override
@@ -68,6 +72,15 @@ func _rebuild() -> void:
 	)
 	_collision.position = offset
 	_mesh_instance.position = offset
+
+func _ensure_local_resources() -> void:
+	if _collision != null and _collision.shape != null and not _collision.shape.resource_local_to_scene:
+		_collision.shape = _collision.shape.duplicate()
+		_collision.shape.resource_local_to_scene = true
+
+	if _mesh_instance != null and _mesh_instance.mesh != null and not _mesh_instance.mesh.resource_local_to_scene:
+		_mesh_instance.mesh = _mesh_instance.mesh.duplicate()
+		_mesh_instance.mesh.resource_local_to_scene = true
 
 func _resolve_anchor_offset(half_extent: float, anchor: AnchorMode) -> float:
 	match anchor:

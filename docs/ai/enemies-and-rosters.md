@@ -18,7 +18,7 @@ Document the enemy script hierarchy, the role of roster resources, and the conve
 
 ## Main Data Flow
 
-- `EncounterSystem` selects enemy scenes from biome data or the fallback roster and instantiates them into dungeon rooms.
+- `EncounterSystem` selects enemy scenes from the active default dungeon content resource or the fallback roster and instantiates them into dungeon rooms.
 - `EnemyBase` provides the shared runtime contract:
   - health and hitbox wiring
   - target selection
@@ -43,7 +43,7 @@ Document the enemy script hierarchy, the role of roster resources, and the conve
   - visual scale multiplier, which drives billboard size and the collision height recalculated in `EnemyBase`
   - visual ground offset pixels for spritesheets that include extra transparent padding below the feet
 - `EnemyRosterData` is intentionally simple: it is just an array of enemy scenes.
-- Biome-specific enemy pools usually come from biome data, with `fallback_enemy_roster.tres` acting as a safety net.
+- Dungeon enemy pools usually come from `default_dungeon_content.tres`, with `fallback_enemy_roster.tres` acting as a safety net.
 - Enemy scene files under `Scenes/Enemies/` are the runtime prefabs consumed by encounter spawning and multiplayer replication.
 
 ## Multiplayer/Authority Notes
@@ -59,7 +59,7 @@ Document the enemy script hierarchy, the role of roster resources, and the conve
 - Start from the nearest shared base class before creating one-off logic in a concrete enemy.
 - If a new enemy needs custom movement or attacks, keep shared replication and death behavior aligned with `EnemyBase` unless there is a strong reason not to.
 - When changing spawn cost or min-floor behavior, remember `EncounterSystem` uses those fields to build its budgeted spawn pool.
-- If you add a new enemy family, update the relevant biome enemy scenes or fallback roster resource rather than relying on code-only discovery.
+- If you add a new enemy family, update the active dungeon content enemy pool or the fallback roster resource rather than relying on code-only discovery.
 
 ## Related Docs
 

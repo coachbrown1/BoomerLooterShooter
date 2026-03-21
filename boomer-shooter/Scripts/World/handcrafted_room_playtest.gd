@@ -1,12 +1,12 @@
 extends Node3D
 
 const PLAYTEST_CONFIG_PATH := "res://.tmp/handcrafted_room_playtest.cfg"
-const BIOME_DB_PATH := "res://Data/biomes/biome_dungeon_database.tres"
-
+const LOOT_PICKUP_SCENE: PackedScene = preload("res://Scenes/Props/loot_pickup.tscn")
 const FLOOR_HALF_EXTENT := 45.0
 const FLOOR_THICKNESS := 1.0
 const FALLBACK_SPAWN_POS := Vector3(0.0, 1.0, -8.0)
 
+@onready var _nav_region: NavigationRegion3D = $NavigationRegion3D
 @onready var _floor_shape: CollisionShape3D = $NavigationRegion3D/Floor/CollisionShape3D
 @onready var _floor_mesh: MeshInstance3D = $NavigationRegion3D/Floor/MeshInstance3D
 @onready var _player: CharacterBody3D = $Player
@@ -38,10 +38,10 @@ func _ready() -> void:
 
 	var room_root: Node3D = room_variant
 	room_root.position = Vector3.ZERO
-	add_child(room_root)
+	_nav_region.add_child(room_root)
 
-	var biome_data := _load_biome_resource(String(cfg.get("biome_resource_path", "")))
-	_prepare_room_for_playtest(room_root, biome_data)
+	_prepare_room_for_playtest(room_root)
+	await _bake_nav()
 	_spawn_handcrafted_enemies(room_root)
 	_place_player(room_root)
 
@@ -60,50 +60,28 @@ func _load_playtest_config() -> Dictionary:
 		return {}
 	return {
 		"room_scene_path": String(cfg.get_value("playtest", "room_scene_path", "")),
-		"biome_resource_path": String(cfg.get_value("playtest", "biome_resource_path", "")),
 	}
 
-func _load_biome_resource(path: String) -> Resource:
-	if not path.is_empty():
-		var direct := load(path)
-		if direct is Resource:
-			return direct
-	var db_variant := load(BIOME_DB_PATH)
-	if db_variant == null:
-		return null
-	var db: Resource = db_variant
-	if not _resource_has_property(db, "biomes"):
-		return null
-	var biome_list: Variant = db.get("biomes")
-	if typeof(biome_list) != TYPE_ARRAY:
-		return null
-	for biome_variant in biome_list:
-		if biome_variant is Resource:
-			return biome_variant
-	return null
-
-func _prepare_room_for_playtest(room_root: Node3D, biome_data: Resource) -> void:
+func _prepare_room_for_playtest(room_root: Node3D) -> void:
 	var debug_root := room_root.get_node_or_null("RoomBoundsDebug") as Node3D
 	if debug_root != null:
 		debug_root.visible = false
 
-	if room_root is HandcraftedQuadrantCompositeRoom:
-		var composite_room: HandcraftedQuadrantCompositeRoom = room_root
-		var rng := RandomNumberGenerator.new()
-		rng.randomize()
-		composite_room.populate_quadrants(_get_quadrant_scene_pool(biome_data), rng)
-
-func _get_quadrant_scene_pool(biome_data: Resource) -> Array[PackedScene]:
-	var out: Array[PackedScene] = []
-	if biome_data == null or not _resource_has_property(biome_data, "handcrafted_quadrant_room_scenes"):
-		return out
-	var pool_variant: Variant = biome_data.get("handcrafted_quadrant_room_scenes")
-	if typeof(pool_variant) != TYPE_ARRAY:
-		return out
-	for scene_variant in pool_variant:
-		if scene_variant is PackedScene:
-			out.append(scene_variant)
-	return out
+func _bake_nav() -> void:
+	if _nav_region == null:
+		return
+	var nav_mesh := NavigationMesh.new()
+	nav_mesh.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
+	nav_mesh.cell_size = 0.25
+	nav_mesh.cell_height = 0.25
+	nav_mesh.agent_height = 1.8
+	nav_mesh.agent_radius = 0.4
+	nav_mesh.agent_max_climb = 0.3
+	nav_mesh.filter_walkable_low_height_spans = true
+	_nav_region.navigation_mesh = nav_mesh
+	await get_tree().process_frame
+	_nav_region.bake_navigation_mesh(false)
+	await get_tree().physics_frame
 
 func _spawn_handcrafted_enemies(room_root: Node3D) -> void:
 	for spawner_variant in _collect_spawners(room_root):
@@ -150,6 +128,21 @@ func _place_player(room_root: Node3D) -> void:
 	_player.global_position = FALLBACK_SPAWN_POS
 	_player.rotation.y = 0.0
 
+func spawn_network_item_pickup(item_payload: Dictionary, drop_origin: Vector3, launch_direction: Vector3) -> void:
+	var pickup_variant: Variant = LOOT_PICKUP_SCENE.instantiate()
+	if not (pickup_variant is LootPickup):
+		if pickup_variant is Node:
+			(pickup_variant as Node).queue_free()
+		return
+	var pickup: LootPickup = pickup_variant
+	var item_data := InventoryItemData.from_dict(item_payload)
+	if item_data == null:
+		pickup.queue_free()
+		return
+	pickup.configure_item_pickup(item_data)
+	add_child(pickup)
+	pickup.launch(drop_origin, launch_direction)
+
 func _yaw_from_basis(basis: Basis) -> float:
 	var forward := basis * Vector3(0.0, 0.0, 1.0)
 	forward.y = 0.0
@@ -157,13 +150,3 @@ func _yaw_from_basis(basis: Basis) -> float:
 		return 0.0
 	forward = forward.normalized()
 	return atan2(forward.x, forward.z)
-
-func _resource_has_property(resource: Resource, property_name: String) -> bool:
-	if resource == null:
-		return false
-	for property_variant in resource.get_property_list():
-		if typeof(property_variant) != TYPE_DICTIONARY:
-			continue
-		if str(property_variant.get("name", "")) == property_name:
-			return true
-	return false

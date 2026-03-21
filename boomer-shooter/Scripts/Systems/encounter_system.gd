@@ -15,7 +15,7 @@ func _init() -> void:
 	rng.randomize()
 
 # Populate a room with enemies — returns Array of instanced nodes (not yet added to tree)
-func populate_room(room: RoomData, floor_num: int, parent: Node3D, biome_data: Resource = null) -> Array:
+func populate_room(room: RoomData, floor_num: int, parent: Node3D, dungeon_content: Resource = null) -> Array:
 	var spawned: Array = []
 	# Skip start room
 	if room.room_type == RoomData.RoomType.START:
@@ -28,9 +28,9 @@ func populate_room(room: RoomData, floor_num: int, parent: Node3D, biome_data: R
 	if room.room_type == RoomData.RoomType.EXIT:
 		budget = ceil(budget * 0.5)
 
-	var roster_scenes := _get_roster_scenes(biome_data)
+	var roster_scenes := _get_roster_scenes(dungeon_content)
 	if roster_scenes.is_empty():
-		push_error("EncounterSystem: No enemy_scenes resolved for biome '%s' on floor %d." % [room.biome, floor_num])
+		push_error("EncounterSystem: no enemy_scenes resolved for floor %d." % floor_num)
 		return spawned
 
 	var valid: Array = []
@@ -45,7 +45,7 @@ func populate_room(room: RoomData, floor_num: int, parent: Node3D, biome_data: R
 			valid.append(spawn_def)
 
 	if valid.is_empty():
-		push_warning("EncounterSystem: no eligible enemy scenes for floor %d in biome '%s'." % [floor_num, room.biome])
+		push_warning("EncounterSystem: no eligible enemy scenes for floor %d." % floor_num)
 		return spawned
 
 	# Spend budget
@@ -75,7 +75,7 @@ func populate_handcrafted_spawners(
 	room: RoomData,
 	floor_num: int,
 	parent: Node3D,
-	_biome_data: Resource,
+	_dungeon_content: Resource,
 	spawners: Array
 ) -> Array:
 	var spawned: Array = []
@@ -96,12 +96,12 @@ func populate_handcrafted_spawners(
 			_spawn_enemy_scene(parent, spawner.enemy_scene, spawner.get_spawn_position(i), spawned)
 	return spawned
 
-func _get_roster_scenes(biome_data: Resource) -> Array:
-	if _has_biome_data(biome_data):
-		var from_biome: Variant = biome_data.get("enemy_scenes")
-		var from_biome_scenes := _to_packed_scene_array(from_biome)
-		if not from_biome_scenes.is_empty():
-			return from_biome_scenes
+func _get_roster_scenes(dungeon_content: Resource) -> Array:
+	if _has_enemy_scene_property(dungeon_content):
+		var from_content: Variant = dungeon_content.get("enemy_scenes")
+		var from_content_scenes := _to_packed_scene_array(from_content)
+		if not from_content_scenes.is_empty():
+			return from_content_scenes
 
 	if FALLBACK_ROSTER_DATA != null:
 		return _to_packed_scene_array(FALLBACK_ROSTER_DATA.enemy_scenes)
@@ -153,10 +153,10 @@ func _spawn_enemy_scene(parent: Node3D, packed: PackedScene, spawn_pos: Vector3,
 	spawned.append(enemy)
 	enemy.global_position = spawn_pos
 
-func _has_biome_data(biome_data: Resource) -> bool:
-	if biome_data == null:
+func _has_enemy_scene_property(resource: Resource) -> bool:
+	if resource == null:
 		return false
-	for p in biome_data.get_property_list():
+	for p in resource.get_property_list():
 		if typeof(p) == TYPE_DICTIONARY and str(p.get("name", "")) == "enemy_scenes":
 			return true
 	return false

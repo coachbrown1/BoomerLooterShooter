@@ -18,9 +18,15 @@ var _did_impact: bool = false
 const EXPLOSION_SCENE = preload("res://Scenes/Effects/fireball_explosion.tscn")
 
 func _ready() -> void:
-	monitoring = true
-	area_entered.connect(_on_area_entered)
-	body_entered.connect(_on_body_entered)
+	if network_visual_only:
+		monitoring = false
+		monitorable = false
+		collision_layer = 0
+		collision_mask = 0
+	else:
+		monitoring = true
+		area_entered.connect(_on_area_entered)
+		body_entered.connect(_on_body_entered)
 	
 	velocity = direction.normalized() * speed
 
