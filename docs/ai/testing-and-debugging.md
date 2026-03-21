@@ -28,6 +28,7 @@ Summarize the project’s automated checks, multiplayer verifier workflows, and 
 ## Important State And Resources
 
 - `multiplayer_verifier.gd` supports scenarios such as:
+  - dungeon generation sync
   - player replication
   - health replication
   - chest sync
@@ -47,6 +48,7 @@ Summarize the project’s automated checks, multiplayer verifier workflows, and 
 - Multiplayer changes should prefer the existing verifier over reasoning alone whenever there is already scenario coverage.
 - When adding a replicated feature, consider whether a new verifier scenario is justified so regressions can be caught locally.
 - Verifier scenarios implicitly document the expected authority model for a feature. Keep code and scenario expectations aligned.
+- `dungeon-generation-sync` is the focused verifier for host/client dungeon floor parity: it compares the generated floor contract after sync rather than only checking spawn/floor settling.
 
 ## Safe Edit Guidance
 

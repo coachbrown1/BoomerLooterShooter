@@ -45,15 +45,11 @@ This file is the canonical instruction set for any AI agent working in this repo
 
 - Surface blockers early: risky Git state, missing assets, unclear intent, failing tests, or inability to validate.
 - State assumptions when they affect implementation decisions.
-- When a task is complete, ask the user whether they want the completed changes committed and pushed.
-- If you prepare a commit, include only files changed by the work you performed.
-- If `git status` includes files you did not modify, do not include those files in the commit. Leave them in the changelist untouched and mention them in the handoff when relevant.
 - In the final handoff, report:
   - what changed
   - what documentation was updated or why no documentation update was needed
   - how it was validated
   - any risks, assumptions, or unverified areas
-- Inspect `git status` again before handoff so the reported change set matches the actual repo state.
 
 ## 6. Practical Best Practices
 
@@ -79,6 +75,7 @@ This file is the canonical instruction set for any AI agent working in this repo
   & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario '<scenario>'
   ```
 - Current supported scenarios:
+  - `dungeon-generation-sync`
   - `spawn-floor-stability`
   - `player-replication`
   - `player-health-replication`
@@ -118,6 +115,15 @@ This file is the canonical instruction set for any AI agent working in this repo
   - verifies each peer gets a local player
   - samples the player's Y position and floor contact during the initial settle window
   - fails if the client never stabilizes on the floor or drops too far below its spawn point
+- For host/client dungeon layout parity on floor generation, run:
+  ```powershell
+  & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'dungeon-generation-sync'
+  ```
+- What `dungeon-generation-sync` does:
+  - launches a local headless host and client directly into the dungeon scene
+  - captures the generated floor contract on each peer after floor sync completes
+  - compares seed, floor config, room graph, corridor list, doorway list, assigned room scenes, and chosen room rotations across peers
+  - fails if the client-generated dungeon layout diverges from the host-authoritative floor contract
 - For player roster and snapshot replication, run:
   ```powershell
   & 'J:\BoomerShooter\boomer-shooter\Scripts\Debug\run_multiplayer_verifier.ps1' -Scenario 'player-replication'
@@ -244,4 +250,4 @@ This file is the canonical instruction set for any AI agent working in this repo
   - verifies player replication and enemy replication continue producing updates during the soak
 - Harness artifacts are written under `boomer-shooter/.tmp/mp_verify_*`.
 - If the harness fails, inspect `launcher.log`, `host.log`, `host.err.log`, `client.log`, `client.err.log`, and any `*_error.json` files in that run directory.
-- Current automated coverage includes client spawn/floor stability, player roster/snapshot replication, player health replication, client disconnect cleanup, door interaction replication, weapon fire/reload state sync, replicated weapon visual effects, authoritative projectile damage replication, authoritative enemy damage replication, enemy death/despawn replication, enemy loot replication, client loot pickup state sync, enemy animation replication, a long-run multiplayer soak pass, and shared chest loot/chest sync behavior. It does not validate all multiplayer systems.
+- Current automated coverage includes dungeon generation sync, client spawn/floor stability, player roster/snapshot replication, player health replication, client disconnect cleanup, door interaction replication, weapon fire/reload state sync, replicated weapon visual effects, authoritative projectile damage replication, authoritative enemy damage replication, enemy death/despawn replication, enemy loot replication, client loot pickup state sync, enemy animation replication, a long-run multiplayer soak pass, and shared chest loot/chest sync behavior. It does not validate all multiplayer systems.

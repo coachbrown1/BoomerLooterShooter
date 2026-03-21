@@ -2041,6 +2041,84 @@ func _reset_debug_network_visual_counts() -> void:
 func get_debug_network_visual_counts() -> Dictionary:
 	return _debug_network_visual_counts.duplicate(true)
 
+func get_debug_floor_generation_snapshot() -> Dictionary:
+	var rooms: Array = []
+	for room_variant in _rooms:
+		var room: RoomData = room_variant
+		if room == null:
+			continue
+		rooms.append({
+			"id": room.id,
+			"room_type": int(room.room_type),
+			"lattice_coord": {"x": room.lattice_coord.x, "y": room.lattice_coord.y},
+			"grid_rect": {
+				"x": room.grid_rect.position.x,
+				"y": room.grid_rect.position.y,
+				"w": room.grid_rect.size.x,
+				"h": room.grid_rect.size.y,
+			},
+			"connected_to": _sorted_int_array(room.connected_to),
+			"corridor_ids": _sorted_int_array(room.corridor_ids),
+			"doorway_ids": _sorted_int_array(room.doorway_ids),
+			"doorway_walls": _sort_wall_set(room.doorway_walls),
+			"assigned_scene_path": room.assigned_scene_path,
+			"assigned_scene_role": room.assigned_scene_role,
+			"chosen_rotation_degrees": room.chosen_rotation_degrees,
+		})
+	rooms.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.get("id", 0)) < int(b.get("id", 0))
+	)
+
+	var corridors: Array = []
+	for corridor_variant in _generator.corridors:
+		if typeof(corridor_variant) != TYPE_DICTIONARY:
+			continue
+		var corridor: Dictionary = corridor_variant
+		corridors.append({
+			"id": int(corridor.get("id", -1)),
+			"room_a_id": int(corridor.get("room_a_id", -1)),
+			"room_b_id": int(corridor.get("room_b_id", -1)),
+		})
+	corridors.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.get("id", 0)) < int(b.get("id", 0))
+	)
+
+	var doorways: Array = []
+	for doorway_variant in _generator.doorways:
+		if typeof(doorway_variant) != TYPE_DICTIONARY:
+			continue
+		var doorway: Dictionary = doorway_variant
+		var tile: Vector2i = doorway.get("tile", Vector2i.ZERO)
+		doorways.append({
+			"id": int(doorway.get("id", -1)),
+			"room_id": int(doorway.get("room_id", -1)),
+			"corridor_id": int(doorway.get("corridor_id", -1)),
+			"orientation": String(doorway.get("orientation", "")),
+			"wall": String(doorway.get("wall", "")),
+			"tile": {"x": tile.x, "y": tile.y},
+		})
+	doorways.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.get("id", 0)) < int(b.get("id", 0))
+	)
+
+	return {
+		"floor_number": floor_number,
+		"generation_seed": generation_seed,
+		"grid_size_min": grid_size_min,
+		"grid_size_max": grid_size_max,
+		"min_start_end_distance_rooms": min_start_end_distance_rooms,
+		"room_size_tiles": room_size_tiles,
+		"corridor_width_tiles": corridor_width_tiles,
+		"corridor_length_tiles": corridor_length_tiles,
+		"sampled_grid_size": int(_generator.sampled_grid_size),
+		"room_count": rooms.size(),
+		"corridor_count": corridors.size(),
+		"doorway_count": doorways.size(),
+		"rooms": rooms,
+		"corridors": corridors,
+		"doorways": doorways,
+	}
+
 func get_debug_network_enemy_states() -> Array:
 	var result: Array = []
 	for enemy_id_variant in _enemy_by_network_id.keys():
@@ -2066,6 +2144,13 @@ func get_debug_network_enemy_states() -> Array:
 		return int(a.get("id", 0)) < int(b.get("id", 0))
 	)
 	return result
+
+func _sorted_int_array(source: Array) -> Array:
+	var normalized: Array = []
+	for value_variant in source:
+		normalized.append(int(value_variant))
+	normalized.sort()
+	return normalized
 
 @rpc("any_peer", "reliable")
 func rpc_client_ready_for_sync(peer_id: int) -> void:

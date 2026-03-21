@@ -41,6 +41,8 @@ func _run_verification() -> void:
 	match scenario:
 		"shared-chest":
 			await _run_shared_chest_verification()
+		"dungeon-generation-sync":
+			await _run_dungeon_generation_sync_verification()
 		"spawn-floor-stability":
 			await _run_spawn_floor_stability_verification()
 		"player-replication":
@@ -175,6 +177,69 @@ func _run_shared_chest_client(chest: Node, inventory_system: InventorySystem, ti
 
 	_write_json_file(_path_in_dir("client_after.json"), {"items": _get_chest_item_ids(inventory_system)})
 	get_tree().quit(0)
+
+func _run_dungeon_generation_sync_verification() -> void:
+	var role := _get_role()
+	var timeout_sec := _get_timeout_sec()
+	var dungeon_manager := get_parent()
+	if dungeon_manager == null:
+		_write_json_file(_path_in_dir("%s_dungeon_generation_error.json" % role), {"role": role, "error": "dungeon_manager_missing"})
+		get_tree().quit(15)
+		return
+	if not dungeon_manager.has_method("get_debug_floor_generation_snapshot"):
+		_write_json_file(_path_in_dir("%s_dungeon_generation_error.json" % role), {"role": role, "error": "snapshot_api_missing"})
+		get_tree().quit(16)
+		return
+
+	var snapshot_variant: Variant = dungeon_manager.call("get_debug_floor_generation_snapshot")
+	if typeof(snapshot_variant) != TYPE_DICTIONARY:
+		_write_json_file(_path_in_dir("%s_dungeon_generation_error.json" % role), {"role": role, "error": "snapshot_invalid_type"})
+		get_tree().quit(17)
+		return
+	var snapshot: Dictionary = snapshot_variant
+	var snapshot_path := _path_in_dir("%s_dungeon_generation_snapshot.json" % role)
+	var result_path := _path_in_dir("%s_dungeon_generation_sync.json" % role)
+	_write_json_file(snapshot_path, snapshot)
+	_touch_file(_path_in_dir("%s_dungeon_generation_snapshot.flag" % role))
+
+	var other_role := "client" if role == "host" else "host"
+	if not await _wait_for_file(_path_in_dir("%s_dungeon_generation_snapshot.flag" % other_role), timeout_sec):
+		_write_json_file(_path_in_dir("%s_dungeon_generation_error.json" % role), {"role": role, "error": "peer_snapshot_missing"})
+		get_tree().quit(18)
+		return
+
+	var peer_snapshot := _read_json_file(_path_in_dir("%s_dungeon_generation_snapshot.json" % other_role))
+	if peer_snapshot.is_empty():
+		_write_json_file(_path_in_dir("%s_dungeon_generation_error.json" % role), {"role": role, "error": "peer_snapshot_invalid"})
+		get_tree().quit(19)
+		return
+	var local_snapshot_text := _read_text_file(snapshot_path)
+	var peer_snapshot_text := _read_text_file(_path_in_dir("%s_dungeon_generation_snapshot.json" % other_role))
+
+	var comparison := _compare_floor_generation_snapshots(snapshot, peer_snapshot, local_snapshot_text == peer_snapshot_text)
+	comparison["role"] = role
+	_write_json_file(result_path, comparison)
+	_touch_file(_path_in_dir("%s_dungeon_generation_sync.flag" % role))
+
+	if role == "host":
+		if not await _wait_for_file(_path_in_dir("client_dungeon_generation_sync.flag"), timeout_sec):
+			_write_json_file(_path_in_dir("host_dungeon_generation_error.json"), {"role": role, "error": "client_result_missing"})
+			get_tree().quit(20)
+			return
+	elif role == "client":
+		if not await _wait_for_file(_path_in_dir("host_dungeon_generation_sync.flag"), timeout_sec):
+			_write_json_file(_path_in_dir("client_dungeon_generation_error.json"), {"role": role, "error": "host_result_missing"})
+			get_tree().quit(21)
+			return
+	else:
+		_write_json_file(_path_in_dir("error.json"), {"role": role, "error": "invalid_role"})
+		get_tree().quit(5)
+		return
+
+	if bool(comparison.get("passed", false)):
+		get_tree().quit(0)
+		return
+	get_tree().quit(22 if role == "client" else 23)
 
 func _run_spawn_floor_stability_verification() -> void:
 	var role := _get_role()
@@ -2572,6 +2637,67 @@ func _switch_weapon_by_key(manager: WeaponManager, key: String) -> bool:
 		return false
 	return bool(manager.call("switch_to_weapon_by_key", key))
 
+func _compare_floor_generation_snapshots(local_snapshot: Dictionary, peer_snapshot: Dictionary, raw_text_match: bool = false) -> Dictionary:
+	if raw_text_match:
+		return {
+			"passed": true,
+			"mismatches": [],
+			"room_count": int(local_snapshot.get("room_count", -1)),
+			"peer_room_count": int(peer_snapshot.get("room_count", -1)),
+			"corridor_count": int(local_snapshot.get("corridor_count", -1)),
+			"peer_corridor_count": int(peer_snapshot.get("corridor_count", -1)),
+			"doorway_count": int(local_snapshot.get("doorway_count", -1)),
+			"peer_doorway_count": int(peer_snapshot.get("doorway_count", -1)),
+			"generation_seed": int(local_snapshot.get("generation_seed", -1)),
+			"peer_generation_seed": int(peer_snapshot.get("generation_seed", -1)),
+			"sampled_grid_size": int(local_snapshot.get("sampled_grid_size", -1)),
+			"peer_sampled_grid_size": int(peer_snapshot.get("sampled_grid_size", -1)),
+		}
+	var fields := [
+		"floor_number",
+		"generation_seed",
+		"grid_size_min",
+		"grid_size_max",
+		"min_start_end_distance_rooms",
+		"room_size_tiles",
+		"corridor_width_tiles",
+		"corridor_length_tiles",
+		"sampled_grid_size",
+		"room_count",
+		"corridor_count",
+		"doorway_count",
+	]
+	var mismatches: Array = []
+	for field_variant in fields:
+		var field := String(field_variant)
+		if local_snapshot.get(field) != peer_snapshot.get(field):
+			mismatches.append(field)
+
+	var rooms_match: bool = JSON.stringify(local_snapshot.get("rooms", [])) == JSON.stringify(peer_snapshot.get("rooms", []))
+	var corridors_match: bool = JSON.stringify(local_snapshot.get("corridors", [])) == JSON.stringify(peer_snapshot.get("corridors", []))
+	var doorways_match: bool = JSON.stringify(local_snapshot.get("doorways", [])) == JSON.stringify(peer_snapshot.get("doorways", []))
+	if not rooms_match:
+		mismatches.append("rooms")
+	if not corridors_match:
+		mismatches.append("corridors")
+	if not doorways_match:
+		mismatches.append("doorways")
+
+	return {
+		"passed": mismatches.is_empty(),
+		"mismatches": mismatches,
+		"room_count": int(local_snapshot.get("room_count", -1)),
+		"peer_room_count": int(peer_snapshot.get("room_count", -1)),
+		"corridor_count": int(local_snapshot.get("corridor_count", -1)),
+		"peer_corridor_count": int(peer_snapshot.get("corridor_count", -1)),
+		"doorway_count": int(local_snapshot.get("doorway_count", -1)),
+		"peer_doorway_count": int(peer_snapshot.get("doorway_count", -1)),
+		"generation_seed": int(local_snapshot.get("generation_seed", -1)),
+		"peer_generation_seed": int(peer_snapshot.get("generation_seed", -1)),
+		"sampled_grid_size": int(local_snapshot.get("sampled_grid_size", -1)),
+		"peer_sampled_grid_size": int(peer_snapshot.get("sampled_grid_size", -1)),
+	}
+
 func _wait_for_condition(predicate: Callable, timeout_sec: float) -> bool:
 	var start_ms := Time.get_ticks_msec()
 	while float(Time.get_ticks_msec() - start_ms) * 0.001 <= timeout_sec:
@@ -2672,6 +2798,16 @@ func _read_json_file(path: String) -> Dictionary:
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return {}
 	return parsed
+
+func _read_text_file(path: String) -> String:
+	if not FileAccess.file_exists(path):
+		return ""
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return ""
+	var content := file.get_as_text()
+	file.close()
+	return content
 
 func _get_role() -> String:
 	return String(_cfg.get("role", ""))

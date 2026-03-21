@@ -172,6 +172,28 @@ switch ($scenarioKey) {
             throw "Client spawn/floor stability verification failed. Output dir: $verifyDir"
         }
     }
+    "dungeon-generation-sync" {
+        $hostSnapshotPath = Join-Path $verifyDir "host_dungeon_generation_snapshot.json"
+        $clientSnapshotPath = Join-Path $verifyDir "client_dungeon_generation_snapshot.json"
+        $hostResultPath = Join-Path $verifyDir "host_dungeon_generation_sync.json"
+        $clientResultPath = Join-Path $verifyDir "client_dungeon_generation_sync.json"
+        foreach ($path in @($hostSnapshotPath, $clientSnapshotPath, $hostResultPath, $clientResultPath)) {
+            if (-not (Test-Path $path)) {
+                throw "Expected verifier output missing: $path"
+            }
+        }
+
+        $hostResult = Get-Content $hostResultPath -Raw | ConvertFrom-Json
+        $clientResult = Get-Content $clientResultPath -Raw | ConvertFrom-Json
+
+        if (-not $hostResult.passed) {
+            throw "Host did not match the client dungeon generation snapshot. Output dir: $verifyDir"
+        }
+
+        if (-not $clientResult.passed) {
+            throw "Client did not match the host dungeon generation snapshot. Output dir: $verifyDir"
+        }
+    }
     "player-replication" {
         $hostRosterPath = Join-Path $verifyDir "host_player_roster.json"
         $clientRosterPath = Join-Path $verifyDir "client_player_roster.json"
@@ -497,7 +519,7 @@ switch ($scenarioKey) {
 }
 
 if ($hostTimedOut -or $clientTimedOut) {
-    if ($scenarioKey -in @("weapon-state-sync", "client-disconnect")) {
+    if ($scenarioKey -in @("weapon-state-sync", "client-disconnect", "dungeon-generation-sync")) {
         if ($hostTimedOut) {
             $hostProcess.Kill()
             "Host process was still running after successful validation; killed after artifact verification." | Add-Content -Path $launcherLog
@@ -522,6 +544,7 @@ if ($hostTimedOut -or $clientTimedOut) {
 $label = switch ($scenarioKey) {
     "shared-chest" { "Multiplayer shared chest verification PASS" }
     "spawn-floor-stability" { "Multiplayer spawn/floor stability verification PASS" }
+    "dungeon-generation-sync" { "Multiplayer dungeon generation sync verification PASS" }
     "player-replication" { "Multiplayer player replication verification PASS" }
     "player-health-replication" { "Multiplayer player health replication verification PASS" }
     "mobility-dash-replication" { "Multiplayer dash mobility replication verification PASS" }

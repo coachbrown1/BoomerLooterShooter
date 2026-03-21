@@ -91,6 +91,7 @@ Explain how the dungeon scene is built after the single-default-dungeon cutover,
 - The host remains authoritative for gameplay-critical floor state, enemy spawning, loot, exits, and other shared world objects.
 - Clients still rely on deterministic layout generation plus replicated world state from the host.
 - Geometry is now simpler to reason about because the runtime no longer generates structural meshes, material overrides, props, or doorway assemblies after the fact.
+- Use the multiplayer verifier `dungeon-generation-sync` scenario when a change could affect host/client floor parity. It compares the generated floor contract across peers, including room graph, assigned scenes, doorway layout, and chosen rotations.
 
 ## Safe Edit Guidance
 

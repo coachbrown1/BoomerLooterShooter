@@ -7,6 +7,10 @@
 [ext_resource type="PackedScene" path="res://Scenes/Dungeon/HandcraftedEnemySpawner.tscn" id="6_enemy_spawner"]
 [ext_resource type="PackedScene" uid="uid://cxltf3ak1243t" path="res://Scenes/Enemies/death_knight_boss.tscn" id="7_umd4n"]
 [ext_resource type="Script" uid="uid://t53xeyjn3fuq" path="res://Scripts/Dungeon/handcrafted_room_layout.gd" id="9_room_layout"]
+[ext_resource type="PackedScene" path="res://Scenes/Dungeon/anchored_box_body.tscn" id="10_box_body"]
+[ext_resource type="Material" uid="uid://b3ajnbfsepeqj" path="res://Assets/Environment/Castle/castle_wood_floor_mat.tres" id="11_floor_mat"]
+[ext_resource type="Material" uid="uid://bug4qhmvchpxr" path="res://Assets/Environment/Castle/castle_ceiling_mat.tres" id="12_ceil_mat"]
+[ext_resource type="Material" uid="uid://tv1rk3da012b" path="res://Assets/Environment/Castle/castle_wall_mat.tres" id="13_wall_mat"]
 
 [node name="CastleInnerChamber" type="Node3D" unique_id=235771710]
 script = ExtResource("9_room_layout")
@@ -217,6 +221,36 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.5, 0, 12)
 
 [node name="InnerDoorway" parent="." unique_id=1824057077 instance=ExtResource("3_doorway")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 12)
+
+[node name="SouthApproachFloor" parent="." unique_id=2010001001 instance=ExtResource("10_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 19.5)
+base_size = Vector3(9, 1, 21)
+anchor_x = 1
+anchor_y = 2
+anchor_z = 1
+material_override = ExtResource("11_floor_mat")
+
+[node name="SouthApproachCeiling" parent="." unique_id=2010001002 instance=ExtResource("10_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12.2, 19.5)
+base_size = Vector3(9, 1, 21)
+anchor_x = 1
+anchor_y = 2
+anchor_z = 1
+material_override = ExtResource("12_ceil_mat")
+
+[node name="SouthApproachWestWall" parent="." unique_id=2010001003 instance=ExtResource("10_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.8, 0, 19.5)
+base_size = Vector3(0.6, 12, 21)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("13_wall_mat")
+
+[node name="SouthApproachEastWall" parent="." unique_id=2010001004 instance=ExtResource("10_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.8, 0, 19.5)
+base_size = Vector3(0.6, 12, 21)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("13_wall_mat")
 
 [node name="TorchNorthWest" parent="." unique_id=1180848285 instance=ExtResource("1_torch")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -7, 0, -11.667566)
