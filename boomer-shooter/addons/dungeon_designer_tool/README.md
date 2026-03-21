@@ -13,8 +13,7 @@ Editor dock for dungeon-focused tuning.
 2. In the `Dungeon Designer` dock, use the `Dungeon Layout` tab and click `Open Dungeon Scene`.
 3. In `Quick Layout Controls`, edit:
    - Grid Size Min/Max
-   - Room Size (tiles)
-   - Corridor Width/Length (tiles)
+   - Generation Seed
 4. Click `Apply + Save Layout`.
 5. Switch to the `Dungeon Content` tab.
 6. Use the custom sections to edit:
@@ -29,14 +28,14 @@ Editor dock for dungeon-focused tuning.
 
 ## Tabs
 
-- `Dungeon Layout`: generation values, preview generation, and preview-room jumping.
+- `Dungeon Layout`: grid size, generation seed, preview generation, and preview-room jumping.
 - `Dungeon Content`: default dungeon content editing and validation.
 - `Handcrafted Rooms`: authored room scene creation through the room wizard and single-room playtesting.
 
 ## Preview workflow
 
 1. In `Dungeon Layout`, set `Generation Seed` (or leave `0` to auto-pick one on preview).
-2. Click `Create Preview` to build the level directly in the editor scene.
+2. Click `Create Preview` to save the current seed/layout settings, then build the level directly in the editor scene.
 3. Inspect the generated level in-editor.
 4. Use `Preview Room Jump` to select START/EXIT/custom rooms and jump focus.
 5. Press Play to run the same layout (seed is saved into the scene).

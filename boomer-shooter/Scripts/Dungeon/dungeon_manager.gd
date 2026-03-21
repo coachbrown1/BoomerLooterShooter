@@ -161,6 +161,7 @@ func generate_floor(floor_num: int, preview_mode: bool = false) -> void:
 	_stitcher.stitch(
 		_rooms,
 		_generator.corridors,
+		_generator.doorways,
 		nav_region,
 		_active_dungeon_content
 	)
@@ -268,6 +269,10 @@ func get_editor_preview_room_targets() -> Array:
 		if room.assigned_scene_path != "":
 			var scene_name := room.assigned_scene_path.get_file().get_basename()
 			scene_tag = " | %s" % scene_name
+		var preview_position: Vector3 = room.get_world_center(TILE_SIZE)
+		var room_instance: Variant = _room_instances_by_id.get(room.id, null)
+		if room_instance is Node3D and is_instance_valid(room_instance):
+			preview_position = (room_instance as Node3D).global_position
 		var label := "%s%s%s | room %d | lattice (%d,%d)" % [
 			type_name,
 			custom_tag,
@@ -281,7 +286,7 @@ func get_editor_preview_room_targets() -> Array:
 			"label": label,
 			"room_type": int(room.room_type),
 			"lattice_coord": room.lattice_coord,
-			"world_position": room.get_world_center(TILE_SIZE),
+			"world_position": preview_position,
 			"is_custom": is_custom,
 			"assigned_scene_path": room.assigned_scene_path,
 		})
@@ -739,7 +744,7 @@ func _rotate_walls(walls: Array, rotation_degrees: int) -> Array:
 	return _sort_wall_set(rotated)
 
 func _rotate_wall_name(wall: String, rotation_degrees: int) -> String:
-	var wall_order := ["north", "east", "south", "west"]
+	var wall_order := ["north", "west", "south", "east"]
 	var wall_index := wall_order.find(wall)
 	if wall_index < 0:
 		return wall

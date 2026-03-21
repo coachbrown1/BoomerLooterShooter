@@ -28,7 +28,7 @@ Explain how the dungeon scene is built after the single-default-dungeon cutover,
    - rotating the scene to a valid orientation
    - pruning only non-critical side branches when a special room intentionally supports fewer openings
    - falling back to another scene or the default room if no valid fit exists
-4. `DungeonStitcher` instantiates only authored room scenes and authored corridor scenes. Runtime structural work is limited to scene rotation and doorway filler enable/disable.
+4. `DungeonStitcher` instantiates only authored room scenes and authored corridor scenes. Runtime structural work is limited to scene rotation, compact start-room alignment toward their single corridor, and doorway filler enable/disable.
 5. `EncounterSystem` consumes the active dungeon content resource for enemy scene selection.
 
 ## Room And Corridor Contract
@@ -48,11 +48,13 @@ Explain how the dungeon scene is built after the single-default-dungeon cutover,
 - It no longer generates shell meshes, floors, ceilings, or walls at runtime.
 - Designers must author final geometry, collision, props, and lights directly in the scene.
 - Scenes can intentionally support reduced doorway sets such as a single-door start room or special room.
+- Compact single-door start rooms are translated toward their open wall during stitching so their authored doorway meets the standard corridor seam.
 
 ### Corridors
 
 - Corridors are fully authored scenes referenced by `DefaultDungeonContent.corridor_scene`.
 - Runtime instantiates and rotates them for east-west versus north-south placement only.
+- Generated room-to-corridor seams can also instantiate a doorway assembly from `DefaultDungeonContent.doorway_assembly_scene`, with fallback to the plain door scene if no assembly is configured.
 
 ## Main Data Flow
 

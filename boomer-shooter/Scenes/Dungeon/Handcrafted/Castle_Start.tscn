@@ -105,12 +105,12 @@ cast_shadow = 0
 mesh = SubResource("5_room_bounds_short")
 
 [node name="AnchoredBoxBody" parent="." unique_id=1228610891 instance=ExtResource("10_box_body")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.895702, 0, 10.028964)
+transform = Transform3D(0.7212626, 0, 0, 0, 1, 0, 0, 0, 1, -11.895702, 0, 10.028964)
 base_size = Vector3(8.84, 12, 1)
 material_override = ExtResource("9_hg0v1")
 
 [node name="AnchoredBoxBody5" parent="." unique_id=916624690 instance=ExtResource("10_box_body")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.10071, 0, 10.028964)
+transform = Transform3D(0.6536912, 0, 0, 0, 1, 0, 0, 0, 1, 4.5282946, 0, 10.028964)
 base_size = Vector3(8.84, 12, 1)
 material_override = ExtResource("9_hg0v1")
 

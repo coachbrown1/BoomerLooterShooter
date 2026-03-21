@@ -26,6 +26,7 @@ Explain where authored gameplay content lives and how scripts consume resource-b
   - default room scene
   - special room scene pool and chance
   - corridor scene
+  - doorway assembly scene
   - fog color
   - enemy scene pool
 - `DungeonManager` reads `default_dungeon_content.tres` and passes that resource into room assignment, scene stitching, environment updates, and encounter selection.

@@ -43,9 +43,6 @@ var _wizard_register_selector: OptionButton
 var _playtest_room_selector: OptionButton
 var _grid_min_spin: SpinBox
 var _grid_max_spin: SpinBox
-var _room_size_spin: SpinBox
-var _corridor_width_spin: SpinBox
-var _corridor_length_spin: SpinBox
 var _seed_spin: SpinBox
 
 var _biome_db: Resource = null
@@ -130,9 +127,6 @@ func _build_ui() -> void:
 
 	_grid_min_spin = _add_spin_row(quick_layout_grid, "Grid Size Min", 2, 100, 1)
 	_grid_max_spin = _add_spin_row(quick_layout_grid, "Grid Size Max", 2, 100, 1)
-	_room_size_spin = _add_spin_row(quick_layout_grid, "Room Size (tiles)", 3, 200, 1)
-	_corridor_width_spin = _add_spin_row(quick_layout_grid, "Corridor Width (tiles)", 1, 20, 1)
-	_corridor_length_spin = _add_spin_row(quick_layout_grid, "Corridor Length (tiles)", 1, 200, 1)
 	_seed_spin = _add_spin_row(quick_layout_grid, "Generation Seed (0=random)", 0, 2147483647, 1)
 
 	var quick_layout_actions := HFlowContainer.new()
@@ -439,15 +433,21 @@ func _on_create_preview_pressed() -> void:
 		manager.set("generation_seed", seed)
 		_seed_spin.value = seed
 
+	var err := plugin.get_editor_interface().save_scene()
+	if err != OK:
+		_set_status("Could not save the scene before preview generation (error %d)." % err, true)
+		return
+
+	manager = await _ensure_open_manager()
+	if manager == null:
+		_set_status("Could not reload DungeonManager after saving the scene.", true)
+		return
+
 	manager.call("generate_floor", int(manager.get("floor_number")), true)
 	await get_tree().process_frame
 
-	var err := plugin.get_editor_interface().save_scene()
-	if err == OK:
-		_refresh_preview_room_targets(manager)
-		_set_status("Preview generated with seed %d. Press Play to run this exact layout." % seed)
-	else:
-		_set_status("Preview generated, but save failed with error %d." % err, true)
+	_refresh_preview_room_targets(manager)
+	_set_status("Preview generated with seed %d. Press Play to run this exact layout." % seed)
 
 func _on_clear_preview_pressed() -> void:
 	if plugin == null:
@@ -931,6 +931,7 @@ func _rebuild_biome_editor() -> void:
 	_add_resource_array_editor(scenes, "Special Room Scenes", "special_room_scenes", _room_scene_options, "scene")
 	_add_float_row(scenes, "Special Room Chance", "special_room_chance", 0.0, 1.0, 0.01)
 	_add_resource_picker_row(scenes, "Corridor Scene", "corridor_scene", _corridor_scene_options, "scene")
+	_add_resource_picker_row(scenes, "Doorway Assembly Scene", "doorway_assembly_scene", _door_scene_options, "scene")
 
 	var environment := _make_biome_section("Environment")
 	_add_color_row(environment, "Fog Light Color", "fog_light_color")
@@ -1395,9 +1396,6 @@ func _pull_layout_from_manager(manager: Node) -> void:
 		return
 	_grid_min_spin.value = int(manager.get("grid_size_min"))
 	_grid_max_spin.value = int(manager.get("grid_size_max"))
-	_room_size_spin.value = int(manager.get("room_size_tiles"))
-	_corridor_width_spin.value = int(manager.get("corridor_width_tiles"))
-	_corridor_length_spin.value = int(manager.get("corridor_length_tiles"))
 	_seed_spin.value = int(manager.get("generation_seed"))
 
 func _push_layout_to_manager(manager: Node) -> void:
@@ -1410,20 +1408,26 @@ func _push_layout_to_manager(manager: Node) -> void:
 		_grid_max_spin.value = grid_max
 	manager.set("grid_size_min", grid_min)
 	manager.set("grid_size_max", grid_max)
-	manager.set("room_size_tiles", int(_room_size_spin.value))
-	manager.set("corridor_width_tiles", int(_corridor_width_spin.value))
-	manager.set("corridor_length_tiles", int(_corridor_length_spin.value))
 	manager.set("generation_seed", int(_seed_spin.value))
 
 func _ensure_open_manager() -> Node:
 	var manager := _get_dungeon_manager_from_edited_scene()
-	if manager != null:
+	if _manager_supports_editor_preview(manager):
 		return manager
 	if plugin == null:
 		return null
 	plugin.get_editor_interface().open_scene_from_path(DUNGEON_SCENE_PATH)
 	await get_tree().process_frame
-	return _get_dungeon_manager_from_edited_scene()
+	await get_tree().process_frame
+	manager = _get_dungeon_manager_from_edited_scene()
+	if _manager_supports_editor_preview(manager):
+		return manager
+	return null
+
+func _manager_supports_editor_preview(manager: Node) -> bool:
+	if manager == null:
+		return false
+	return manager.has_method("generate_floor") and manager.has_method("clear_editor_preview")
 
 func _has_property(target: Object, property_name: String) -> bool:
 	if target == null:

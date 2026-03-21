@@ -20,12 +20,13 @@ Document the project-specific editor tooling that now targets single default dun
   - `Dungeon Layout`
   - `Dungeon Content`
   - `Handcrafted Rooms`
-- The layout tab edits `DungeonManager` settings on `res://Scenes/World/dungeon.tscn`, generates preview floors, and jumps to preview room locations.
+- The layout tab edits the active grid size range and generation seed on `res://Scenes/World/dungeon.tscn`, saves those settings, generates temporary preview floors in the open editor scene, and jumps to preview room locations.
 - The content tab edits `res://Data/dungeons/default_dungeon_content.tres`:
   - start room scene
   - default room scene
   - special room pool and chance
   - corridor scene
+  - doorway assembly scene
   - fog color
   - enemy scene pool
 - The room wizard clones authored template scenes from the active content resource instead of generating runtime-shell skeletons.
