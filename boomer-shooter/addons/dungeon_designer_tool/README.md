@@ -1,78 +1,100 @@
 # Dungeon Designer Tool
 
-Editor dock for dungeon-focused tuning.
+Editor dock for dungeon-focused tuning. Three tabs, each with a clearly labeled panel layout.
 
 ## What it edits
 
 - `DungeonManager` values from `res://Scenes/World/dungeon.tscn`
 - Default dungeon content from `res://Data/dungeons/default_dungeon_content.tres`
 
-## Typical workflow
-
-1. Open Godot editor (plugin auto-enabled in `project.godot`).
-2. In the `Dungeon Designer` dock, use the `Dungeon Layout` tab and click `Open Dungeon Scene`.
-3. In `Quick Layout Controls`, edit:
-   - Grid Size Min/Max
-   - Generation Seed
-4. Click `Apply + Save Layout`.
-5. Switch to the `Dungeon Content` tab.
-6. Use the custom sections to edit:
-   - start room scene
-   - default room scene
-   - special room scene pool + chance
-   - corridor scene
-   - fog color
-   - enemy scene roster
-7. Click `Validate Dungeon Content` to catch missing required fields.
-8. Click `Save Dungeon Content`.
+---
 
 ## Tabs
 
-- `Dungeon Layout`: grid size, generation seed, preview generation, and preview-room jumping.
-- `Dungeon Content`: default dungeon content editing and validation.
-- `Handcrafted Rooms`: authored room scene creation through the room wizard and single-room playtesting.
+### Dungeon Layout
 
-## Preview workflow
+**Quick Layout** — Grid Size Min/Max and Generation Seed spinboxes.
+- `Load From Scene` — pulls current values from the DungeonManager in the open scene.
+- `Apply + Save Layout` — pushes spinbox values to DungeonManager and saves the scene.
 
-1. In `Dungeon Layout`, set `Generation Seed` (or leave `0` to auto-pick one on preview).
-2. Click `Create Preview` to save the current seed/layout settings, then build the level directly in the editor scene.
-3. Inspect the generated level in-editor.
-4. Use `Preview Room Jump` to select START/EXIT/custom rooms and jump focus.
-5. Press Play to run the same layout (seed is saved into the scene).
-6. Click `Clear Preview` to remove generated preview geometry from the editor scene.
+**Preview Generation** — Builds the dungeon in-editor so you can inspect room placement without pressing Play.
+- `Create Preview` — saves current layout, then calls `generate_floor()` on the manager.
+- `Clear Preview` — removes generated preview geometry.
 
-## Handcrafted room wizard
+**Preview Room Jump** — Navigate the editor camera to any room in a generated preview.
+- Pick a room from the dropdown (START / EXIT / handcrafted rooms).
+- `Refresh Rooms` — repopulates the dropdown from the current preview.
+- `Go To Room` — moves the editor camera, a PreviewRoomFocus marker, and the Player node.
 
-1. Switch to the `Handcrafted Rooms` tab.
-2. In `Handcrafted Room Wizard`, enter a scene name.
-3. Choose a base type:
-   - `Start Room Template`
-   - `Default Room Template`
-   - `Special Room Template`
-4. Optionally register the new scene into the active default dungeon content as:
-   - start room
-   - default room
-   - special room pool
-5. Click `Create Handcrafted Room`.
-6. The tool saves the scene under `res://Scenes/Dungeon/Handcrafted/` and opens it immediately.
+**Layout Inspector** — Full EditorInspector for all DungeonManager exported fields.
 
-### Wizard output
+---
 
-- Templates are cloned from the active stitched room scenes instead of building runtime-generated shells.
-- New rooms keep authored geometry, doorway filler nodes, and exported room metadata (`room_role_tags`, `supported_doorway_profiles`, `allowed_rotation_degrees`).
-- Designers should edit those saved scenes directly; gameplay should match the authored scene apart from intentional rotation and doorway open/closed state.
+### Dungeon Content
 
-## Single-room playtest
+Directly edits `res://Data/dungeons/default_dungeon_content.tres`.
 
-1. Switch to the `Handcrafted Rooms` tab.
-2. Open the room you want to test, or pick one from `Room Playtest`.
-3. Click `Playtest Selected Room`.
-4. The tool writes the selected room scene into `.tmp`, then launches `res://Scenes/World/handcrafted_room_playtest.tscn`.
+**Stitched Scenes**
+- Start Room Scene, Default Room Scene — single-scene pickers with an `Open` button each.
+- Special Room Scenes — list with Add (searchable picker + Add button), Remove, ↑, ↓, Open.
+  The picker always re-scans for new scenes when opened, so newly created rooms appear immediately.
+- Special Room Chance — 0–1 float.
+- Corridor Scene, Doorway Assembly Scene — single-scene pickers.
 
-### Playtest behavior
+**Environment** — Fog Light Color picker.
 
-- The harness spawns the selected handcrafted room on a large flat floor.
-- If the room has a `PlayerSpawn`, the player starts there and uses its facing.
-- If the room contains `HandcraftedEnemySpawner` markers with assigned enemy scenes, those enemies spawn for local combat testing.
-- Handcrafted enemy spawners now use a box volume preview and box-based spawn area sizing instead of a capped radius field.
-- `RoomBoundsDebug` guides are hidden during the playtest run.
+**Enemies** — Enemy Scenes array editor (same controls as Special Room Scenes).
+
+**Validation** — `Validate Dungeon Content` checks required fields and reports any missing ones.
+
+Action buttons at the top: `Refresh`, `Save Dungeon Content`, `Open Content Resource`.
+
+---
+
+### Handcrafted Rooms
+
+Three clearly separated panels, scrollable.
+
+#### Room Wizard
+
+Create an authored room scene from the active dungeon templates and optionally register it.
+
+1. Enter a **Scene Name** (alphanumeric + underscores; placeholder derives prefix from the active start room, e.g. `Castle_`).
+2. Choose a **Base Type**: Start Room Template, Default Room Template, or Special Room Template.
+3. Choose **Register In Content**:
+   - *Do Not Register* — saves the scene only.
+   - *Set As Start Room* / *Set As Default Room* — replaces the current slot (confirmation dialog shown if a scene is already assigned).
+   - *Add To Special Room Pool* — appends to the pool.
+4. Click `Create Handcrafted Room`.
+
+The tool clones the matching template scene, saves it under `res://Scenes/Dungeon/Handcrafted/`, registers it if requested, then opens it automatically. The Content tab options refresh immediately so the new scene is available in all pickers.
+
+#### Room Playtest
+
+- Dropdown shows all scenes under `Scenes/Dungeon/Handcrafted/` and `Scenes/Dungeon/Rooms/`, labeled with their directory (`Handcrafted/Castle_Start`, `Rooms/castle_default_room`) so they're easy to tell apart.
+- `Refresh Room List` — rescans and repopulates the dropdown.
+- `Open Selected Room` — opens exactly the scene selected in the dropdown (ignores the currently edited scene).
+- `Playtest Selected Room` — if the currently open scene is a room, uses that; otherwise uses the dropdown selection. Saves a playtest config to `.tmp` and launches `handcrafted_room_playtest.tscn`.
+
+#### Content Pool
+
+Toggles the selected (or currently open) room in the active special room pool.
+- Removing from the pool shows a confirmation dialog before making the change.
+- Status line shows whether the current room is in the pool.
+
+---
+
+## Status Bar
+
+The three-line rolling log at the top of the dock shows the most recent messages. Newer messages appear at the top; older entries dim progressively. Errors are shown in red.
+
+---
+
+## Typical workflow
+
+1. Open the **Dungeon Designer** dock (auto-enabled in `project.godot`).
+2. **Dungeon Layout** tab → `Open Dungeon Scene` → set Grid Size Min/Max and Seed → `Apply + Save Layout`.
+3. `Create Preview` → use **Preview Room Jump** to inspect room placement.
+4. **Dungeon Content** tab → edit Stitched Scenes, Environment, Enemies → `Save Dungeon Content`.
+5. **Handcrafted Rooms** tab → use the **Room Wizard** to create new room scenes → edit geometry → use **Room Playtest** to test them in isolation.
+6. Use **Content Pool** to add finished rooms to the special room pool.

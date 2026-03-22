@@ -15,7 +15,7 @@
 [node name="CastleInnerChamber" type="Node3D" unique_id=235771710]
 script = ExtResource("9_room_layout")
 room_role_tags = PackedStringArray("special")
-supported_doorway_profiles = PackedStringArray("south")
+doorway_south = true
 
 [node name="FloorInlay" type="Node3D" parent="." unique_id=1260157415]
 

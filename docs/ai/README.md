@@ -47,6 +47,7 @@ Current pilot coverage:
 - [weapon-families-and-scene-config.md](weapon-families-and-scene-config.md)
 - [hub-workflow-and-persistence.md](hub-workflow-and-persistence.md)
 - [scene-organization-and-conventions.md](scene-organization-and-conventions.md)
+- [meta-progression-and-hub-stations.md](meta-progression-and-hub-stations.md)
 
 Known gaps in this first pass:
 

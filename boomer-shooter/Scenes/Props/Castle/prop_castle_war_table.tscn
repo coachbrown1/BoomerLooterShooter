@@ -1,0 +1,92 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://Scripts/Props/war_table_station.gd" id="1_station"]
+
+[sub_resource type="StandardMaterial3D" id="1_wood"]
+albedo_color = Color(0.2, 0.11, 0.05, 1)
+roughness = 0.92
+specular = 0.28
+
+[sub_resource type="StandardMaterial3D" id="2_brass"]
+albedo_color = Color(0.56, 0.42, 0.18, 1)
+metallic = 0.65
+roughness = 0.34
+specular = 0.5
+
+[sub_resource type="StandardMaterial3D" id="3_cloth"]
+albedo_color = Color(0.11, 0.2, 0.15, 1)
+roughness = 0.98
+specular = 0.08
+
+[sub_resource type="BoxMesh" id="4_base"]
+material = SubResource("1_wood")
+size = Vector3(2.92, 0.22, 1.92)
+
+[sub_resource type="BoxMesh" id="5_deck"]
+material = SubResource("1_wood")
+size = Vector3(2.58, 0.12, 1.58)
+
+[sub_resource type="BoxMesh" id="6_surface"]
+material = SubResource("3_cloth")
+size = Vector3(1.56, 0.06, 0.92)
+
+[sub_resource type="BoxMesh" id="7_crest"]
+material = SubResource("2_brass")
+size = Vector3(0.38, 0.32, 0.24)
+
+[sub_resource type="BoxMesh" id="8_post"]
+material = SubResource("1_wood")
+size = Vector3(0.14, 0.78, 0.14)
+
+[sub_resource type="BoxMesh" id="9_shelf"]
+material = SubResource("1_wood")
+size = Vector3(0.84, 0.16, 0.34)
+
+[sub_resource type="BoxShape3D" id="10_collision"]
+size = Vector3(2.98, 1.02, 1.98)
+
+[node name="PropCastleWarTable" type="Node3D"]
+
+[node name="BasePlinth" type="MeshInstance3D" parent="."]
+mesh = SubResource("4_base")
+position = Vector3(0, 0.11, 0)
+
+[node name="TableDeck" type="MeshInstance3D" parent="."]
+mesh = SubResource("5_deck")
+position = Vector3(0, 0.29, 0)
+
+[node name="MapSurface" type="MeshInstance3D" parent="."]
+mesh = SubResource("6_surface")
+position = Vector3(0, 0.38, 0)
+
+[node name="CommandShelf" type="MeshInstance3D" parent="."]
+mesh = SubResource("9_shelf")
+position = Vector3(0, 0.54, -0.48)
+
+[node name="CenterCrest" type="MeshInstance3D" parent="."]
+mesh = SubResource("7_crest")
+position = Vector3(0, 0.55, 0)
+
+[node name="NorthWestPost" type="MeshInstance3D" parent="."]
+mesh = SubResource("8_post")
+position = Vector3(-1.08, 0.50, -0.70)
+
+[node name="NorthEastPost" type="MeshInstance3D" parent="."]
+mesh = SubResource("8_post")
+position = Vector3(1.08, 0.50, -0.70)
+
+[node name="SouthWestPost" type="MeshInstance3D" parent="."]
+mesh = SubResource("8_post")
+position = Vector3(-1.08, 0.50, 0.70)
+
+[node name="SouthEastPost" type="MeshInstance3D" parent="."]
+mesh = SubResource("8_post")
+position = Vector3(1.08, 0.50, 0.70)
+
+[node name="CollisionBody" type="StaticBody3D" parent="." groups=["interactable", "war_table_station"]]
+script = ExtResource("1_station")
+interact_prompt = "War Table"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CollisionBody"]
+shape = SubResource("10_collision")
+position = Vector3(0, 0.51, 0)

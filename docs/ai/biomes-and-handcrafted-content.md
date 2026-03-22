@@ -23,6 +23,7 @@ Describe the current stitched dungeon content contract and how handcrafted room 
 ## Important State And Resources
 
 - The current castle-authored content acts as the canonical default dungeon presentation.
+- The active castle special-room pool now mixes single-door chambers with a multi-door landmark room (`Castle_SunkenArchive`) so authored specials do not all rely on branch pruning.
 - Handcrafted room roots should export:
   - `room_role_tags`
   - `supported_doorway_profiles`

@@ -39,7 +39,7 @@ size = Vector3(0.25, 0.2, 20)
 [node name="Castle_Start" type="Node3D" unique_id=1424852170]
 script = ExtResource("7_hrl")
 room_role_tags = PackedStringArray("start")
-supported_doorway_profiles = PackedStringArray("south")
+doorway_south = true
 allowed_rotation_degrees = PackedInt32Array(0, 90, 180, 270)
 
 [node name="Floor" parent="." unique_id=1571448701 instance=ExtResource("10_box_body")]

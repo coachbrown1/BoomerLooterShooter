@@ -439,7 +439,9 @@ func _update_loot_tooltip() -> void:
 			hud.show_interaction_prompt("Use", "Portal", "interact")
 			return
 		if collider.has_method("interact") and hud.has_method("show_interaction_prompt"):
-			var target_name := String(collider.get("interact_prompt", collider.name))
+			var target_name := String(collider.get("interact_prompt"))
+			if target_name.is_empty():
+				target_name = String(collider.name)
 			hud.show_interaction_prompt("Use", target_name, "interact")
 			return
 	if hud.has_method("hide_world_item_tooltip"):

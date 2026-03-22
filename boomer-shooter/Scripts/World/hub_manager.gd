@@ -8,6 +8,7 @@ const LOOT_PICKUP_SCENE: PackedScene = preload("res://Scenes/Props/loot_pickup.t
 var _entering_dungeon: bool = false
 var _loot_pickup_by_network_id: Dictionary = {}
 var _next_loot_pickup_network_id: int = 1
+var _war_table_menu: WarTableMenu = null
 var _debug_network_visual_counts := {
 	"hitscan": 0,
 	"projectile": 0,
@@ -19,6 +20,7 @@ func _ready() -> void:
 	add_to_group("world_item_drop_manager")
 	_configure_chests()
 	_connect_portal()
+	_connect_war_table()
 	_bake_nav()
 	NetworkPlayerManager.players_ready.connect(_on_players_ready)
 	NetworkPlayerManager.setup(_get_spawn_positions())
@@ -78,6 +80,13 @@ func _connect_portal() -> void:
 		return
 	portal.player_interacted.connect(_on_portal_interacted)
 
+func _connect_war_table() -> void:
+	for station_variant in get_tree().get_nodes_in_group("war_table_station"):
+		if station_variant is WarTableStation:
+			var station := station_variant as WarTableStation
+			if not station.player_interacted.is_connected(_on_war_table_interacted):
+				station.player_interacted.connect(_on_war_table_interacted)
+
 func _on_portal_interacted(body: Node3D) -> void:
 	if not body.is_in_group("player") or _entering_dungeon:
 		return
@@ -95,6 +104,28 @@ func _show_dungeon_config_menu() -> void:
 	var local := NetworkPlayerManager.get_local_player()
 	if is_instance_valid(local) and local.has_method("set_gameplay_input_enabled"):
 		local.call("set_gameplay_input_enabled", false)
+
+func _on_war_table_interacted(body: Node3D) -> void:
+	if not body.is_in_group("player"):
+		return
+	var local := NetworkPlayerManager.get_local_player()
+	if not is_instance_valid(local) or body != local:
+		return
+	_show_war_table_menu()
+
+func _show_war_table_menu() -> void:
+	if is_instance_valid(_war_table_menu):
+		return
+	_war_table_menu = WarTableMenu.new()
+	add_child(_war_table_menu)
+	_war_table_menu.closed.connect(_on_war_table_menu_closed)
+	var local := NetworkPlayerManager.get_local_player()
+	if is_instance_valid(local) and local.has_method("set_gameplay_input_enabled"):
+		local.call("set_gameplay_input_enabled", false)
+
+func _on_war_table_menu_closed() -> void:
+	_war_table_menu = null
+	_restore_player_input()
 
 func _restore_player_input() -> void:
 	var local := NetworkPlayerManager.get_local_player()

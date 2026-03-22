@@ -30,13 +30,15 @@ Document the project-specific editor tooling that now targets single default dun
   - fog color
   - enemy scene pool
 - The room wizard clones authored template scenes from the active content resource instead of generating runtime-shell skeletons.
-- The playtest harness now only needs a room scene path; it no longer carries biome data.
+- The handcrafted room tab can also add or remove the currently edited or selected room scene from the active `special_room_scenes` pool without switching back to the content tab.
+- The playtest harness now only needs a room scene path; it no longer carries biome data or injects fallback floor geometry under authored rooms.
 
 ## Important State And Resources
 
 - The dock's runtime-facing content contract is `DefaultDungeonContent`.
 - Room playtests write `res://.tmp/handcrafted_room_playtest.cfg`.
 - Room authoring still happens under `res://Scenes/Dungeon/Handcrafted/`, but the playtest picker also includes stitched room scenes under `res://Scenes/Dungeon/Rooms/`.
+- Reusable authored geometry helpers can live under `res://Scenes/Dungeon/`; `res://Scenes/Dungeon/smart_stairs.tscn` is the stair helper for visible step meshes plus a hidden smooth ramp collider driven by one shared slope angle.
 
 ## Multiplayer/Authority Notes
 

@@ -20,16 +20,6 @@ glow_intensity = 0.8
 glow_bloom = 0.3
 glow_hdr_threshold = 0.5
 
-[sub_resource type="BoxShape3D" id="4_floor_shape"]
-size = Vector3(90, 1, 90)
-
-[sub_resource type="StandardMaterial3D" id="5_floor_mat"]
-albedo_color = Color(0.3, 0.3, 0.3, 1)
-
-[sub_resource type="BoxMesh" id="6_floor_mesh"]
-material = SubResource("5_floor_mat")
-size = Vector3(90, 1, 90)
-
 [sub_resource type="NavigationMesh" id="7_nav_mesh"]
 
 [node name="HandcraftedRoomPlaytest" type="Node3D"]
@@ -44,15 +34,6 @@ shadow_enabled = true
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
 navigation_mesh = SubResource("7_nav_mesh")
-
-[node name="Floor" type="StaticBody3D" parent="NavigationRegion3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/Floor"]
-shape = SubResource("4_floor_shape")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="NavigationRegion3D/Floor"]
-mesh = SubResource("6_floor_mesh")
 
 [node name="Player" parent="." instance=ExtResource("2_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -8)

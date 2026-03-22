@@ -18,6 +18,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+MetaProgression="*res://Scripts/System/meta_progression.gd"
 NetworkSession="*res://Scripts/Networking/network_session.gd"
 NetSession="*res://Scripts/Networking/network_session.gd"
 CombatNetworkManager="*res://Scripts/Networking/combat_network_manager.gd"

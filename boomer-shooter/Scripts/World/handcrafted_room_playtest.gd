@@ -2,17 +2,12 @@ extends Node3D
 
 const PLAYTEST_CONFIG_PATH := "res://.tmp/handcrafted_room_playtest.cfg"
 const LOOT_PICKUP_SCENE: PackedScene = preload("res://Scenes/Props/loot_pickup.tscn")
-const FLOOR_HALF_EXTENT := 45.0
-const FLOOR_THICKNESS := 1.0
 const FALLBACK_SPAWN_POS := Vector3(0.0, 1.0, -8.0)
 
 @onready var _nav_region: NavigationRegion3D = $NavigationRegion3D
-@onready var _floor_shape: CollisionShape3D = $NavigationRegion3D/Floor/CollisionShape3D
-@onready var _floor_mesh: MeshInstance3D = $NavigationRegion3D/Floor/MeshInstance3D
 @onready var _player: CharacterBody3D = $Player
 
 func _ready() -> void:
-	_configure_floor()
 	var cfg := _load_playtest_config()
 	if cfg.is_empty():
 		push_error("HandcraftedRoomPlaytest: missing playtest config at %s." % PLAYTEST_CONFIG_PATH)
@@ -44,14 +39,6 @@ func _ready() -> void:
 	await _bake_nav()
 	_spawn_handcrafted_enemies(room_root)
 	_place_player(room_root)
-
-func _configure_floor() -> void:
-	var shape := _floor_shape.shape as BoxShape3D
-	if shape != null:
-		shape.size = Vector3(FLOOR_HALF_EXTENT * 2.0, FLOOR_THICKNESS, FLOOR_HALF_EXTENT * 2.0)
-	var mesh := _floor_mesh.mesh as BoxMesh
-	if mesh != null:
-		mesh.size = Vector3(FLOOR_HALF_EXTENT * 2.0, FLOOR_THICKNESS, FLOOR_HALF_EXTENT * 2.0)
 
 func _load_playtest_config() -> Dictionary:
 	var cfg := ConfigFile.new()

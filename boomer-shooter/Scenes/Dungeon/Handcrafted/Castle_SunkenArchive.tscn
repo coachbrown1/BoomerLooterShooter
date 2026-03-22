@@ -1,0 +1,385 @@
+[gd_scene format=3 uid="uid://clquithhbhfv6"]
+
+[ext_resource type="Script" uid="uid://t53xeyjn3fuq" path="res://Scripts/Dungeon/handcrafted_room_layout.gd" id="1_room_layout"]
+[ext_resource type="PackedScene" path="res://Scenes/Dungeon/anchored_box_body.tscn" id="2_box_body"]
+[ext_resource type="PackedScene" uid="uid://da6yle0euhfqj" path="res://Scenes/Props/Castle/propcastletorch.tscn" id="3_torch"]
+[ext_resource type="PackedScene" uid="uid://vrtb4f0lwkrb" path="res://Scenes/Props/Castle/prop_castle_candelabra.tscn" id="4_candelabra"]
+[ext_resource type="PackedScene" path="res://Scenes/Props/Castle/prop_castle_rug.tscn" id="5_rug"]
+[ext_resource type="PackedScene" path="res://Scenes/Dungeon/HandcraftedEnemySpawner.tscn" id="6_enemy_spawner"]
+[ext_resource type="PackedScene" uid="uid://dprxvxrny58r5" path="res://Scenes/Enemies/skeleton.tscn" id="7_skeleton"]
+[ext_resource type="PackedScene" uid="uid://gobarc483377" path="res://Scenes/Enemies/goblin_archer.tscn" id="8_archer"]
+[ext_resource type="PackedScene" path="res://Scenes/Enemies/court_mage.tscn" id="9_mage"]
+[ext_resource type="Material" uid="uid://b3ajnbfsepeqj" path="res://Assets/Environment/Castle/castle_wood_floor_mat.tres" id="10_floor_mat"]
+[ext_resource type="Material" uid="uid://bug4qhmvchpxr" path="res://Assets/Environment/Castle/castle_ceiling_mat.tres" id="11_ceil_mat"]
+[ext_resource type="Material" uid="uid://tv1rk3da012b" path="res://Assets/Environment/Castle/castle_wall_mat.tres" id="12_wall_mat"]
+[ext_resource type="PackedScene" path="res://Scenes/Dungeon/smart_stairs.tscn" id="13_smart_stairs"]
+
+[node name="Castle_SunkenArchive" type="Node3D" unique_id=334761075]
+script = ExtResource("1_room_layout")
+doorway_wildcard = true
+room_role_tags = PackedStringArray("special")
+allowed_rotation_degrees = PackedInt32Array(0, 90, 180, 270)
+
+[node name="Floor" parent="." unique_id=1122045352 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.024180412, -23)
+base_size = Vector3(60, 1, 14)
+anchor_x = 1
+anchor_y = 2
+anchor_z = 1
+material_override = ExtResource("10_floor_mat")
+
+[node name="Floor2" parent="." unique_id=77408207 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 23)
+base_size = Vector3(60, 1, 14)
+anchor_x = 1
+anchor_y = 2
+anchor_z = 1
+material_override = ExtResource("10_floor_mat")
+
+[node name="Floor3" parent="." unique_id=501748218 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23, 0, 0)
+base_size = Vector3(14, 1, 32)
+anchor_x = 1
+anchor_y = 2
+anchor_z = 1
+material_override = ExtResource("10_floor_mat")
+
+[node name="Floor4" parent="." unique_id=1983783373 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 0, 0)
+base_size = Vector3(14, 1, 32)
+anchor_x = 1
+anchor_y = 2
+anchor_z = 1
+material_override = ExtResource("10_floor_mat")
+
+[node name="SunkenFloor" parent="." unique_id=1304308719 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -4, 0)
+base_size = Vector3(32, 1, 32)
+anchor_x = 1
+anchor_y = 2
+anchor_z = 1
+material_override = ExtResource("10_floor_mat")
+
+[node name="NorthStairs" parent="." unique_id=518399757 instance=ExtResource("13_smart_stairs")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -16)
+visual_step_count = 7
+collision_thickness = 0.6895264
+material_override = ExtResource("10_floor_mat")
+
+[node name="SouthStairs" parent="." unique_id=1598127637 instance=ExtResource("13_smart_stairs")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 0, 0, 16)
+visual_step_count = 7
+collision_thickness = 0.6895264
+material_override = ExtResource("10_floor_mat")
+
+[node name="WestStairs" parent="." unique_id=1297305598 instance=ExtResource("13_smart_stairs")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -16, 0, 0)
+visual_step_count = 7
+collision_thickness = 0.6895264
+material_override = ExtResource("10_floor_mat")
+
+[node name="EastStairs" parent="." unique_id=2142968012 instance=ExtResource("13_smart_stairs")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 16, 0, 0)
+visual_step_count = 7
+collision_thickness = 0.6895264
+material_override = ExtResource("10_floor_mat")
+
+[node name="PitWallNorth" parent="." unique_id=573981216 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -4, -16.3)
+base_size = Vector3(32, 3.6, 0.6)
+anchor_x = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="PitWallSouth" parent="." unique_id=731120930 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -4, 15.968931)
+base_size = Vector3(32, 3.6, 0.6)
+anchor_x = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="PitWallWest" parent="." unique_id=1227170526 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.290535, -4, 0)
+base_size = Vector3(0.6, 3.6, 32)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="PitWallEast" parent="." unique_id=143160817 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.18749, -4, 0)
+base_size = Vector3(0.6, 3.6, 32)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="CenterRug" parent="." unique_id=729760004 instance=ExtResource("5_rug")]
+transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 2.4, 0, -3.94, 0)
+
+[node name="Ceiling" parent="." unique_id=305114169 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 12.2, 0)
+base_size = Vector3(60, 1, 60)
+anchor_x = 1
+anchor_y = 2
+anchor_z = 1
+material_override = ExtResource("11_ceil_mat")
+
+[node name="Walls" type="Node3D" parent="." unique_id=1157672865]
+
+[node name="WallNorth" type="Node3D" parent="Walls" unique_id=1282408589]
+
+[node name="WallNorth_Left" parent="Walls/WallNorth" unique_id=329203830 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -30)
+base_size = Vector3(24, 12, 0.6)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="WallNorth_Right" parent="Walls/WallNorth" unique_id=1390732716 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -30)
+base_size = Vector3(24, 12, 0.6)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="WallNorth_Fill" parent="Walls/WallNorth" unique_id=1673456269 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -30)
+base_size = Vector3(12, 12, 0.6)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="WallSouth" type="Node3D" parent="Walls" unique_id=546779346]
+
+[node name="WallSouth_Left" parent="Walls/WallSouth" unique_id=1498732436 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, 30)
+base_size = Vector3(24, 12, 0.6)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="WallSouth_Right" parent="Walls/WallSouth" unique_id=714851214 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, 30)
+base_size = Vector3(24, 12, 0.6)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="WallSouth_Fill" parent="Walls/WallSouth" unique_id=1351777714 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 30)
+base_size = Vector3(12, 12, 0.6)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="WallEast" type="Node3D" parent="Walls" unique_id=881024059]
+
+[node name="WallEast_Left" parent="Walls/WallEast" unique_id=690954550 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 0, -18)
+base_size = Vector3(0.6, 12, 24)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="WallEast_Right" parent="Walls/WallEast" unique_id=991015306 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 0, 18)
+base_size = Vector3(0.6, 12, 24)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="WallEast_Fill" parent="Walls/WallEast" unique_id=523592968 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 0, 0)
+base_size = Vector3(0.6, 12, 12)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="WallWest" type="Node3D" parent="Walls" unique_id=1241698537]
+
+[node name="WallWest_Left" parent="Walls/WallWest" unique_id=1253531522 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 0, -18)
+base_size = Vector3(0.6, 12, 24)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="WallWest_Right" parent="Walls/WallWest" unique_id=1381266070 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 0, 18)
+base_size = Vector3(0.6, 12, 24)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="WallWest_Fill" parent="Walls/WallWest" unique_id=1216586331 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, 0, 0)
+base_size = Vector3(0.6, 12, 12)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="ArchiveStacks" type="Node3D" parent="." unique_id=1447074983]
+
+[node name="StackNorthWest" parent="ArchiveStacks" unique_id=160536549 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, -24.5)
+base_size = Vector3(8, 5, 1.4)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="StackNorthEast" parent="ArchiveStacks" unique_id=634005777 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, -24.5)
+base_size = Vector3(8, 5, 1.4)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="StackSouthWest" parent="ArchiveStacks" unique_id=14244221 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 0, 24.5)
+base_size = Vector3(8, 5, 1.4)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="StackSouthEast" parent="ArchiveStacks" unique_id=1983672207 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0, 24.5)
+base_size = Vector3(8, 5, 1.4)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="StackWestNorth" parent="ArchiveStacks" unique_id=1627142642 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24.5, 0, -18)
+base_size = Vector3(1.4, 5, 8)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="StackWestSouth" parent="ArchiveStacks" unique_id=958919052 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24.5, 0, 18)
+base_size = Vector3(1.4, 5, 8)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="StackEastNorth" parent="ArchiveStacks" unique_id=1090940671 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.5, 0, -18)
+base_size = Vector3(1.4, 5, 8)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="StackEastSouth" parent="ArchiveStacks" unique_id=1543952589 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.5, 0, 18)
+base_size = Vector3(1.4, 5, 8)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="PillarNorthWest" parent="." unique_id=1820780818 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, -4, -12)
+base_size = Vector3(2.5, 6.5, 2.5)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="PillarNorthWestPlinth" parent="." unique_id=739707972 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, -4, -12)
+base_size = Vector3(8, 2.4, 8)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="PillarNorthEast" parent="." unique_id=857153920 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, -4, -12)
+base_size = Vector3(2.5, 6.5, 2.5)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="PillarNorthEastPlinth" parent="." unique_id=1890213772 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, -4, -12)
+base_size = Vector3(8, 2.4, 8)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="PillarSouthWest" parent="." unique_id=1483797289 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, -4, 12)
+base_size = Vector3(2.5, 6.5, 2.5)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="PillarSouthWestPlinth" parent="." unique_id=576223523 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, -4, 12)
+base_size = Vector3(8, 2.4, 8)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="PillarSouthEast" parent="." unique_id=403284285 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, -4, 12)
+base_size = Vector3(2.5, 6.5, 2.5)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="PillarSouthEastPlinth" parent="." unique_id=1584616081 instance=ExtResource("2_box_body")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, -4, 12)
+base_size = Vector3(8, 2.4, 8)
+anchor_x = 1
+anchor_z = 1
+material_override = ExtResource("12_wall_mat")
+
+[node name="TorchNorthWest" parent="." unique_id=896975988 instance=ExtResource("3_torch")]
+transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, -7.5, 0, -29.4)
+
+[node name="TorchNorthEast" parent="." unique_id=560379673 instance=ExtResource("3_torch")]
+transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 7.5, 0, -29.4)
+
+[node name="TorchSouthWest" parent="." unique_id=1013949034 instance=ExtResource("3_torch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.5, 0, 29.4)
+
+[node name="TorchSouthEast" parent="." unique_id=166659159 instance=ExtResource("3_torch")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 0, 29.4)
+
+[node name="CandelabraNorthWest" parent="." unique_id=1788217336 instance=ExtResource("4_candelabra")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, -20)
+
+[node name="CandelabraNorthEast" parent="." unique_id=157525962 instance=ExtResource("4_candelabra")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, -20)
+
+[node name="CandelabraSouthWest" parent="." unique_id=861019198 instance=ExtResource("4_candelabra")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0, 20)
+
+[node name="CandelabraSouthEast" parent="." unique_id=40353811 instance=ExtResource("4_candelabra")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, 20)
+
+[node name="Encounter" type="Node3D" parent="." unique_id=825492666]
+
+[node name="PitGuardSpawner" parent="Encounter" unique_id=1256954289 instance=ExtResource("6_enemy_spawner")]
+monitoring = false
+monitorable = false
+enemy_scene = ExtResource("7_skeleton")
+spawn_count = 2
+spawn_box_size = Vector3(18, 0, 18)
+vertical_offset = -4.0
+
+[node name="NorthArchivistSpawner" parent="Encounter" unique_id=1484162176 instance=ExtResource("6_enemy_spawner")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -19)
+monitoring = false
+monitorable = false
+enemy_scene = ExtResource("9_mage")
+spawn_box_size = Vector3(10, 0, 4)
+
+[node name="EastArcherSpawner" parent="Encounter" unique_id=923900777 instance=ExtResource("6_enemy_spawner")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 0, 0)
+monitoring = false
+monitorable = false
+enemy_scene = ExtResource("8_archer")
+spawn_box_size = Vector3(4, 0, 10)
+
+[node name="WestArcherSpawner" parent="Encounter" unique_id=1511912006 instance=ExtResource("6_enemy_spawner")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19, 0, 0)
+monitoring = false
+monitorable = false
+enemy_scene = ExtResource("8_archer")
+spawn_box_size = Vector3(4, 0, 10)
